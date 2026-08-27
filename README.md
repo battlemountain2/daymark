@@ -2,6 +2,9 @@
 
 A one-page dashboard: what's due, what's next, what matters.
 
+Created by Brayan Quinonez with implementation assistance from Claude by
+Anthropic. See [CONTRIBUTORS.md](CONTRIBUTORS.md).
+
 Built for one person — a UNM student in Albuquerque — and deliberately not
 general-purpose. It reads assignments from Canvas, weather from the National
 Weather Service, and keeps your ticks and to-dos in a database so checking
