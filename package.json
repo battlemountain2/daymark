@@ -1,0 +1,29 @@
+{
+  "name": "daymark",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "setup": "node scripts/setup.mjs",
+    "gen-vapid": "node scripts/gen-vapid.mjs",
+    "prune": "node scripts/prune.mjs"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.14.0",
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/web-push": "^3.6.4",
+    "typescript": "^5.7.0"
+  }
+}

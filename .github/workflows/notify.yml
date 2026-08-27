@@ -1,0 +1,28 @@
+# Pokes the notification endpoint every 15 minutes.
+#
+# Vercel's Hobby plan caps cron jobs at once per day with ±59 minutes of slop,
+# which cannot serve "an hour before your first class" — that moves with the
+# timetable. GitHub Actions runs this free.
+#
+# Set two repository secrets: DASHBOARD_URL (https://your-app.vercel.app) and
+# CRON_SECRET (the same value as in Vercel).
+#
+# GitHub's scheduler is best-effort and can run late under load; the fifteen
+# minute windows in src/lib/notify.ts are sized for that.
+name: notify
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  poke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ask the dashboard whether anything is due
+        run: |
+          curl -sS -o /tmp/out.json -w "%{http_code}\n" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.DASHBOARD_URL }}/api/cron/notify"
+          cat /tmp/out.json
