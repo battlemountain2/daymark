@@ -1,18 +1,7 @@
-const CACHE_NAME = "daymark-v3";
-const PRECACHE = [
-  "/",
-  "/study",
-  "/sky",
-  "/term",
-  "/manifest.webmanifest",
-];
+// Daymark Service Worker - Static Asset Cache Only
+const CACHE_NAME = "daymark-static-v3";
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(PRECACHE).catch(() => {});
-    })
-  );
   self.skipWaiting();
 });
 
@@ -30,21 +19,26 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  // Stale-while-revalidate for static assets, network-first for HTML
+  // Only cache immutable static assets (_next/static and web fonts)
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
 
-  if (url.origin === location.origin && (url.pathname.startsWith("/_next/static/") || url.pathname.endsWith(".png"))) {
+  if (
+    (url.origin === location.origin && url.pathname.startsWith("/_next/static/")) ||
+    url.hostname.includes("fonts.gstatic.com") ||
+    url.hostname.includes("fonts.googleapis.com")
+  ) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
-        return (
-          cached ||
-          fetch(event.request).then((res) => {
-            const clone = res.clone();
-            caches.open(CACHE_NAME).then((c) => c.put(event.request, clone));
+        if (cached) return cached;
+        return fetch(event.request).then((res) => {
+          if (!res || res.status !== 200 || res.type !== "basic" && res.type !== "cors") {
             return res;
-          })
-        );
+          }
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then((c) => c.put(event.request, clone));
+          return res;
+        });
       })
     );
   }
