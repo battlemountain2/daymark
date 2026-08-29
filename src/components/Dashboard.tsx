@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Suspense, use, useEffect, useMemo, useState } from "react";
 import type { State } from "@/lib/db";
 import type { CanvasResult, WeatherResult } from "@/app/page";
-import type { StudyHubData } from "@/lib/study-hub";
+import type { StudyHubData } from "@/lib/study-hub-types";
 import Weather from "@/components/Weather";
 import TodoPanel, { TodoSkeleton, buildItems } from "@/components/TodoPanel";
 import Offline from "@/components/Offline";
@@ -19,6 +19,8 @@ import type { Music } from "@/lib/music";
 import MusicPanel, { MusicSkeleton } from "@/components/MusicPanel";
 import StudyGlance, { StudyGlanceSkeleton } from "@/components/StudyGlance";
 import CampusHopMap from "@/components/CampusHopMap";
+import PreClassBriefModal from "@/components/PreClassBriefModal";
+import { getPreClassBrief, type PreClassBrief, PRE_CLASS_BRIEFS } from "@/lib/pre-class-briefs";
 import {
   classesOn, gaps, hhmm, localParts, leaveAdvice, building, type ClassBlock,
 } from "@/lib/schedule";
@@ -133,15 +135,6 @@ function jumpToCard(heading: string) {
   }
 }
 
-const CLASS_PRE_BRIEFS: Record<string, string> = {
-  "POLS 2120": "Cohn: Technostrategic language & defense intellectual abstraction",
-  "GEOG 1160": "Earth systems: Insolation, solar angles, and 4 spheres",
-  "HIST 300": "Worster & Sutter: Hydraulic societies & second-nature infrastructure",
-  "GEOG 1150": "Pinchot vs Muir & Cronon wilderness myth critique",
-  "GEOG 1115L": "Map projections, GCS/PCS datums, raster vs vector distortion",
-  "PHED 2996": "Cardiorespiratory physiology & FITT-VP principle",
-};
-
 export default function Dashboard({
   state, term, canvasPromise, newsPromise, musicPromise, weatherPromise, studyPromise, sun, renderedAt,
 }: Props) {
@@ -153,6 +146,7 @@ export default function Dashboard({
   const [palette, setPalette] = useState("forest");
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState(0);
+  const [activeBrief, setActiveBrief] = useState<PreClassBrief | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -287,6 +281,18 @@ export default function Dashboard({
         run: () => router.push("/term") },
     ];
 
+    // Pre-Class Briefs in ⌘K
+    for (const [code, b] of Object.entries(PRE_CLASS_BRIEFS)) {
+      out.push({
+        id: `brief-${code}`,
+        group: "1-Min Pre-Class Briefs",
+        label: `${code}: ${b.title}`,
+        keywords: `brief cheat sheet questions reading thesis ${code}`,
+        hint: b.where,
+        run: () => setActiveBrief(b),
+      });
+    }
+
     for (const h of [
       "Study Hub",
       "Weather",
@@ -381,7 +387,7 @@ export default function Dashboard({
               )}
               {todayClasses.map((c, i) => {
                 const isNextClass = leave && leave.next.code === c.code;
-                const preBrief = CLASS_PRE_BRIEFS[c.code];
+                const brief = getPreClassBrief(c.code);
 
                 return (
                   <div key={`${c.code}-${i}`}>
@@ -397,7 +403,7 @@ export default function Dashboard({
                           <div className="gtxt">
                             open block — {fmtTime(hhmm(g.from))} to {fmtTime(hhmm(g.to))}
                             <Link href="/study" className="mono gap-study-link">
-                              ✦ Start {m}m Focus
+                              ✦ Start Focus
                             </Link>
                           </div>
                         </div>
@@ -409,14 +415,21 @@ export default function Dashboard({
                         {fmtTime(hhmm(c.start))}<br />{fmtTime(hhmm(c.end))}
                       </div>
                       <div style={{ flex: 1 }}>
-                        <div className="mono" style={{ fontSize: 10, color: "var(--ink-3)" }}>{c.code}</div>
+                        <div className="cls-head-row">
+                          <span className="mono" style={{ fontSize: 10, color: "var(--ink-3)" }}>{c.code}</span>
+                          {brief && (
+                            <button
+                              type="button"
+                              className="brief-trigger mono"
+                              onClick={() => setActiveBrief(brief)}
+                              title="Open 1-minute pre-class cheat sheet"
+                            >
+                              ⚡ 1-Min Brief
+                            </button>
+                          )}
+                        </div>
                         <div className="title">{c.title}</div>
                         <div className="sub">{c.where}</div>
-                        {isNextClass && preBrief && (
-                          <div className="pre-brief-pill mono">
-                            💡 Thesis: {preBrief}
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -492,6 +505,9 @@ export default function Dashboard({
       </div>
 
       <PushToggle />
+
+      {/* Pre-Class Brief Modal */}
+      <PreClassBriefModal brief={activeBrief} onClose={() => setActiveBrief(null)} />
 
       <footer>
         Assignments come from your Canvas calendar feed, and your ticks live in a database — so

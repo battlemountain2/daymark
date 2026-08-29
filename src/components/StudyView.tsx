@@ -2,15 +2,18 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import type { StudyHubData } from "@/lib/study-hub";
+import type { StudyHubData } from "@/lib/study-hub-types";
 import FlashcardDeckViewer from "@/components/FlashcardDeckViewer";
 import EvidenceBank from "@/components/EvidenceBank";
 import FocusTimer from "@/components/FocusTimer";
+import PreClassBriefModal from "@/components/PreClassBriefModal";
+import { getPreClassBrief, type PreClassBrief } from "@/lib/pre-class-briefs";
 import { longDate } from "@/lib/localtime";
 
 export default function StudyView({ data }: { data: StudyHubData }) {
   const [activeTab, setActiveTab] = useState<"cards" | "courses" | "review" | "evidence" | "focus">("cards");
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
+  const [activeBrief, setActiveBrief] = useState<PreClassBrief | null>(null);
 
   const { courses, weeklyReview, allCards, overallDeckStats } = data;
   const verifiedPct = allCards.length > 0 ? Math.round((overallDeckStats.verified / allCards.length) * 100) : 0;
@@ -133,6 +136,8 @@ export default function StudyView({ data }: { data: StudyHubData }) {
                 {courses.map((c) => {
                   const totalC = c.deckStats.total;
                   const vPct = totalC > 0 ? Math.round((c.deckStats.verified / totalC) * 100) : 0;
+                  const brief = getPreClassBrief(c.code);
+
                   return (
                     <div key={c.code} className={`course-card ${c.ck}`}>
                       <div className="course-card-top">
@@ -177,12 +182,21 @@ export default function StudyView({ data }: { data: StudyHubData }) {
                       </div>
 
                       <div className="course-card-actions">
+                        {brief && (
+                          <button
+                            type="button"
+                            className="brief-open-btn mono"
+                            onClick={() => setActiveBrief(brief)}
+                          >
+                            ⚡ 1-Min Brief
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="open-deck-btn mono"
                           onClick={() => handleOpenDeck(c.code)}
                         >
-                          Study Deck ({c.cards.length} cards) →
+                          Study Deck ({c.cards.length}) →
                         </button>
                       </div>
                     </div>
@@ -270,6 +284,9 @@ export default function StudyView({ data }: { data: StudyHubData }) {
           </section>
         )}
       </div>
+
+      {/* Pre-Class Brief Modal */}
+      <PreClassBriefModal brief={activeBrief} onClose={() => setActiveBrief(null)} />
     </div>
   );
 }
