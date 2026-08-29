@@ -6,7 +6,7 @@ import { getForecast, sunTimes, type Forecast } from "@/lib/weather";
 import { getStories, type Story } from "@/lib/feeds";
 import { getMusic, type Music } from "@/lib/music";
 import { getTerm } from "@/lib/get-term";
-import type { Term } from "@/lib/term";
+import { getStudyHubData, type StudyHubData } from "@/lib/study-hub";
 import Dashboard from "@/components/Dashboard";
 
 /** Always render fresh; every panel is time-sensitive. */
@@ -58,6 +58,22 @@ export default async function Page() {
     totalScrobbles: null, error: "Music source unreachable.", note: null,
   }));
 
+  // Academic study hub: reads Anki CSVs, course-status.json, weekly takeaways and decks.
+  const studyPromise: Promise<StudyHubData> = getStudyHubData().catch((err) => ({
+    activeTerm: "Fall 2026",
+    currentWeekNumber: 2,
+    lastSynced: new Date().toISOString(),
+    weeklyReview: {
+      weekTitle: "Week 2 Synthesis & Review",
+      scheduledReviewDate: "Friday, 8:00 PM (Weekly)",
+      takeaways: [],
+      weakAreas: [],
+    },
+    courses: [],
+    allCards: [],
+    overallDeckStats: { total: 0, verified: 0, needsReview: 0, draft: 0, exported: 0 },
+  }));
+
   // State is the one thing worth waiting for: it is a single fast query, and
   // rendering to-dos unticked before it lands would flash the wrong answer.
   // Both are fast and both are needed before anything renders: the schedule
@@ -76,6 +92,7 @@ export default async function Page() {
       newsPromise={newsPromise}
       musicPromise={musicPromise}
       weatherPromise={weatherPromise}
+      studyPromise={studyPromise}
       sun={sunTimes(Number(lat), Number(lon))}
       renderedAt={new Date().toISOString()}
     />

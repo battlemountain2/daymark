@@ -1,0 +1,190 @@
+{
+  "activeTerm": "Fall 2026",
+  "currentWeekNumber": 2,
+  "lastSynced": "2026-08-29T12:00:00-06:00",
+  "weeklyReview": {
+    "weekTitle": "Week 2 Synthesis & Review",
+    "scheduledReviewDate": "Friday, 8:00 PM (Weekly)",
+    "takeaways": [
+      {
+        "course": "POLS 2120",
+        "title": "Technostrategic Language & Nuclear Defense Abstraction",
+        "detail": "Carol Cohn demonstrates that nuclear defense intellectuals sanitize catastrophic destruction through mathematical modeling and clinical euphemisms ('clean bombs', 'collateral damage'), placing planners in an active, detached control position while excluding victim perspectives.",
+        "ck": "pol"
+      },
+      {
+        "course": "GEOG 1160",
+        "title": "Earth's Four Spheres & Planetary Energy Budget",
+        "detail": "Planetary stability relies on dynamic equilibrium across the lithosphere, atmosphere, hydrosphere, and biosphere. Earth operates as an open system for energy (~1361 W/m² solar constant minus 30% planetary albedo) but an essentially closed material system.",
+        "ck": "geo"
+      },
+      {
+        "course": "HIST 300",
+        "title": "Hydraulic Empires & Second-Nature Infrastructures",
+        "detail": "Paul Sutter and Donald Worster show that the modern American West is not an empty frontier but a highly orchestrated 'hydraulic society' where federal Bureau of Reclamation mega-dams commodified water to subsidize corporate agriculture and urban growth.",
+        "ck": "his"
+      },
+      {
+        "course": "GEOG 1150",
+        "title": "Conservation (Pinchot) vs Preservation (Muir) Paradigms",
+        "detail": "The Hetch Hetchy dispute codified the enduring tension between utilitarian resource conservation and romantic preservation, while modern geography critiques the erasure of Indigenous stewardship in the traditional 'Wilderness Myth'.",
+        "ck": "geo"
+      },
+      {
+        "course": "GEOG 1115L & PHED",
+        "title": "Spatial Projections & Exercise Progression (FITT-VP)",
+        "detail": "All 2D map projections mathematically distort area, shape, or distance (GCS vs PCS). Concurrently, physical training relies on systematic progressive overload structured via Frequency, Intensity, Time, Type, Volume, and Progression.",
+        "ck": "fit"
+      }
+    ],
+    "weakAreas": [
+      {
+        "course": "POLS 2120",
+        "topic": "Carol Cohn: Sexual Imagery & Gendered Domination",
+        "reason": "Review specific citations on missile naming conventions and masculine control metaphors (Cohn 1987, p. 701).",
+        "cardId": "pols-005",
+        "ck": "pol"
+      },
+      {
+        "course": "GEOG 1160",
+        "topic": "Equilibrium Climate Feedback Mechanisms",
+        "reason": "Clarify distinctions between positive ice-albedo loops and negative cloud-thermal damping mechanisms.",
+        "cardId": "geog1160-003",
+        "ck": "geo"
+      },
+      {
+        "course": "HIST 300",
+        "topic": "First Nature vs Second Nature Dialectics",
+        "reason": "Strengthen differentiation between biophysical environments and engineered commodified infrastructures in Sutter's framework.",
+        "cardId": "hist300-003",
+        "ck": "his"
+      },
+      {
+        "course": "GEOG 1115L",
+        "topic": "GCS vs PCS Datum Transformations",
+        "reason": "Practice identifying ellipsoid reference systems vs projected UTM Easting/Northing coordinates.",
+        "cardId": "gis-003",
+        "ck": "geo"
+      }
+    ]
+  },
+  "courses": [
+    {
+      "code": "POLS 2120",
+      "name": "International Relations",
+      "where": "Mitchell Hall 101",
+      "ck": "pol",
+      "currentWeek": "Week 2",
+      "currentTopic": "Feminist IR Theory & Technostrategic Discourse (Carol Cohn)",
+      "readings": [
+        "Cohn - Signs 1987 (Sex and Death in the Rational World of Defense Intellectuals)",
+        "Waltz - Realist Theory Foundations"
+      ],
+      "nextAssessment": {
+        "title": "IR Theoretical Frameworks Brief",
+        "due": "2026-09-04",
+        "type": "Assignment"
+      }
+    },
+    {
+      "code": "GEOG 1160",
+      "name": "Home Planet: Land, Water, Life",
+      "where": "Bandelier Hall East 105",
+      "ck": "geo",
+      "currentWeek": "Week 2",
+      "currentTopic": "Earth System Spheres, Insolation & Seasonality (Ch 1)",
+      "readings": [
+        "Geog 1160 Chapter 1: Earth as a Rotating Sphere",
+        "Lecture Slides Set 1"
+      ],
+      "nextAssessment": {
+        "title": "Earth Systems & Insolation Quiz 1",
+        "due": "2026-09-03",
+        "type": "Quiz"
+      }
+    },
+    {
+      "code": "HIST 300",
+      "name": "Water in History",
+      "where": "Ortega Hall 115",
+      "ck": "his",
+      "currentWeek": "Week 2",
+      "currentTopic": "American Environmental Historiography & Hydraulic Societies",
+      "readings": [
+        "Sutter - The World with Us (2013)",
+        "Donald Worster - History as Natural History (1984)"
+      ],
+      "nextAssessment": {
+        "title": "Primary Source Water Dossier",
+        "due": "2026-09-08",
+        "type": "Assignment"
+      }
+    },
+    {
+      "code": "GEOG 1150",
+      "name": "Intro to Environmental Studies",
+      "where": "Mitchell Hall 120",
+      "ck": "geo",
+      "currentWeek": "Week 2",
+      "currentTopic": "Conservation vs Preservation & The Wilderness Myth",
+      "readings": [
+        "Geog 1150 Unit 1a: Foundations of Conservation",
+        "Geog 1150 Unit 1b: Hetch Hetchy & Cronon Wilderness"
+      ],
+      "nextAssessment": {
+        "title": "Film 01 Assignment: The Wilderness Idea",
+        "due": "2026-09-01",
+        "type": "Assignment"
+      }
+    },
+    {
+      "code": "GEOG 1115L",
+      "name": "Maps & GIScience Laboratory",
+      "where": "Bandelier Hall East 106",
+      "ck": "geo",
+      "currentWeek": "Week 2",
+      "currentTopic": "Geospatial Coordinate Systems & Vector vs Raster Models",
+      "readings": [
+        "Lab 01: Coordinate Projections and Datums",
+        "GIScience Lab Manual"
+      ],
+      "nextAssessment": {
+        "title": "Lab 01 Map Projection Deliverable",
+        "due": "2026-09-02",
+        "type": "Lab"
+      }
+    },
+    {
+      "code": "GEOG 1160L",
+      "name": "Home Planet Laboratory",
+      "where": "Bandelier Hall East 106",
+      "ck": "geo",
+      "currentWeek": "Week 2",
+      "currentTopic": "Solar Angle & Planetary Temperature Models",
+      "readings": [
+        "Lab 01 Manual: Insolation and Solar Angles"
+      ],
+      "nextAssessment": {
+        "title": "Solar Angle Measurement Lab",
+        "due": "2026-08-31",
+        "type": "Lab"
+      }
+    },
+    {
+      "code": "PHED 2996",
+      "name": "Intro to Fitness",
+      "where": "Online",
+      "ck": "fit",
+      "currentWeek": "Week 2",
+      "currentTopic": "Cardiorespiratory Physiology & The FITT-VP Principle",
+      "readings": [
+        "Module 01: Five Components of Health-Related Fitness"
+      ],
+      "nextAssessment": {
+        "title": "Weekly Fitness Activity Log 1",
+        "due": "2026-09-06",
+        "type": "Journal"
+      }
+    }
+  ]
+}

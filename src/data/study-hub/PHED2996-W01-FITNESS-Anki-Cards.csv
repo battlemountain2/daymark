@@ -1,0 +1,4 @@
+id,front,back,source,tags,status
+phed-001,"What are the five health-related components of physical fitness?","Cardiorespiratory endurance, muscular strength, muscular endurance, flexibility, and body composition.","PHED 2996 Syllabus & Mod 1","PHED2996::W01::FitnessComponents::Health",Verified
+phed-002,"What does the FITT-VP exercise prescription framework represent?","Frequency, Intensity, Time (duration), Type (mode), Volume (total work), and Progression (systematic overload over time).","PHED 2996 Mod 1 Notes","PHED2996::W01::Principles::FITT-VP",Verified
+phed-003,"How is target heart rate zone estimated using the Karvonen formula (Heart Rate Reserve)?","Target HR = ((Max HR − Resting HR) × % Intensity) + Resting HR, where Max HR is approximately 220 − Age.","PHED 2996 Mod 1 Notes","PHED2996::W01::Cardio::HRR-Formula",Needs review

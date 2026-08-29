@@ -33,27 +33,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@400;600;700&display=swap"
         />
-        {/* Apply the saved palette before first paint, or the page flashes the
-            wrong theme on every load. */}
+        {/* Apply the saved palette before first paint */}
         <script
           dangerouslySetInnerHTML={{
             __html:
-              `try{var p=localStorage.getItem("hb:pal");` +
+              `try{var p=localStorage.getItem("hb:pal")||localStorage.getItem("palette");` +
               `if(p&&p!=="forest")document.documentElement.setAttribute("data-palette",p);` +
-              // Only on /sky. A rough hour check there avoids a white flash
-              // before the real solar calculation runs a frame later and
-              // corrects it.
-              //
-              // This used to run on every page, and stamping *any* explicit
-              // `data-theme` defeats the whole `:root:not([data-theme="light"])`
-              // arrangement in the stylesheet: between 6am and 8pm it wrote
-              // `light`, so a phone set to dark mode got a light dashboard all
-              // day, every day, and no setting could override it. Only the sky
-              // page is supposed to follow the sun instead of the system.
               `if(location.pathname.indexOf("/sky")===0){` +
               `var h=new Date().toLocaleString("en-US",{timeZone:"America/Denver",hour:"numeric",hour12:false});` +
               `document.documentElement.setAttribute("data-theme",(+h<6||+h>=20)?"dark":"light");}` +
-              `}catch(e){}`,
+              `}catch(e){}` +
+              `if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}`,
           }}
         />
       </head>

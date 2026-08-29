@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Suspense, use, useEffect, useMemo, useState } from "react";
 import type { State } from "@/lib/db";
 import type { CanvasResult, WeatherResult } from "@/app/page";
+import type { StudyHubData } from "@/lib/study-hub";
 import Weather from "@/components/Weather";
 import TodoPanel, { TodoSkeleton, buildItems } from "@/components/TodoPanel";
 import Offline from "@/components/Offline";
@@ -16,6 +17,8 @@ import Milestones, { MilestonesSkeleton } from "@/components/Milestones";
 import type { Story } from "@/lib/feeds";
 import type { Music } from "@/lib/music";
 import MusicPanel, { MusicSkeleton } from "@/components/MusicPanel";
+import StudyGlance, { StudyGlanceSkeleton } from "@/components/StudyGlance";
+import CampusHopMap from "@/components/CampusHopMap";
 import {
   classesOn, gaps, hhmm, localParts, leaveAdvice, building, type ClassBlock,
 } from "@/lib/schedule";
@@ -31,21 +34,11 @@ type Props = {
   newsPromise: Promise<Story[]>;
   musicPromise: Promise<Music>;
   weatherPromise: Promise<WeatherResult>;
+  studyPromise: Promise<StudyHubData>;
   sun: { sunrise: string | null; sunset: string | null; daylight: string | null };
   renderedAt: string;
 };
 
-/**
- * The lede, and the three-stage stream that fills it in.
- *
- * `lede()` is a pure function of (clock, term, classes, work, weather) and the
- * first two of those need no network at all — so the schedule-only answer can
- * render in the first paint and is *already correct* for most of the ladder.
- * Canvas upgrades it, weather adds at most a trailing clause and can never
- * change the headline. Nesting the boundaries this way means the top of the
- * page is never blank and never waits on the slowest source; in the ordinary
- * cached case nothing visibly changes at all.
- */
 const KICKER: Record<Tone, string> = {
   go: "Time to go",
   class: "In class",
@@ -105,7 +98,6 @@ function WeatherSlot({
   return <Weather weather={use(promise)} sun={sun} />;
 }
 
-/** Same footprint as the real card, so the grid doesn't jump when it lands. */
 function WeatherSkeleton() {
   return (
     <section className="card span5 wxcard">
@@ -129,75 +121,39 @@ const fmtTime = (m: number) => {
   return `${h % 12 || 12}:${String(mm).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`;
 };
 
-/**
- * Scroll to a card by the text of its heading.
- *
- * Matching on rendered text rather than an id looks fragile and is in fact the
- * sturdier option here: the alternative is threading an id prop through seven
- * components that don't otherwise need one, and a heading that gets renamed
- * without updating this simply fails to scroll — which is visible immediately,
- * unlike a stale id that silently matches nothing.
- */
 function jumpToCard(heading: string) {
-  const h = Array.from(document.querySelectorAll<HTMLElement>(".card-head h2"))
-    .find((el) => el.textContent?.trim().toLowerCase() === heading.toLowerCase());
-  const card = h?.closest("section");
-  if (!card) return;
-  card.scrollIntoView({ behavior: "smooth", block: "start" });
+  const h2s = Array.from(document.querySelectorAll(".card-head h2"));
+  const target = h2s.find((h) => (h.textContent ?? "").trim().toLowerCase() === heading.toLowerCase());
+  if (target) {
+    const card = target.closest(".card");
+    if (card) {
+      card.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+  }
 }
 
+const CLASS_PRE_BRIEFS: Record<string, string> = {
+  "POLS 2120": "Cohn: Technostrategic language & defense intellectual abstraction",
+  "GEOG 1160": "Earth systems: Insolation, solar angles, and 4 spheres",
+  "HIST 300": "Worster & Sutter: Hydraulic societies & second-nature infrastructure",
+  "GEOG 1150": "Pinchot vs Muir & Cronon wilderness myth critique",
+  "GEOG 1115L": "Map projections, GCS/PCS datums, raster vs vector distortion",
+  "PHED 2996": "Cardiorespiratory physiology & FITT-VP principle",
+};
+
 export default function Dashboard({
-  state, term, canvasPromise, newsPromise, musicPromise, weatherPromise, sun, renderedAt,
+  state, term, canvasPromise, newsPromise, musicPromise, weatherPromise, studyPromise, sun, renderedAt,
 }: Props) {
   const router = useRouter();
   const [st, setSt] = useState<State>(state);
+  const [work, setWork] = useState<ReturnType<typeof buildItems> | null>(null);
   const [now, setNow] = useState(() => localParts());
-  // Rendered only after mount. The server stamps one time into the HTML and the
-  // browser hydrates at another, which is a guaranteed text mismatch — and when
-  // the page is served from the offline cache the gap can be days. React
-  // error #418 was exactly this.
   const [clock, setClock] = useState<{ date: string; time: string } | null>(null);
   const [palette, setPalette] = useState("forest");
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState(0);
 
-  // The clock, the countdowns and "is this class over" all move on their own.
-  useEffect(() => {
-    const tick = () => {
-      setNow(localParts());
-      const d = new Date();
-      setClock({
-        date: d.toLocaleDateString("en-US", {
-          timeZone: "America/Denver", weekday: "long", month: "long",
-          day: "numeric", year: "numeric",
-        }),
-        time: d.toLocaleTimeString("en-US", {
-          timeZone: "America/Denver", hour: "numeric", minute: "2-digit",
-        }),
-      });
-    };
-    tick();
-    const t = setInterval(tick, 30000);
-    return () => clearInterval(t);
-  }, []);
-
-  useEffect(() => {
-    try { setPalette(localStorage.getItem("hb:pal") || "forest"); } catch {}
-  }, []);
-
-  /**
-   * The assignment list, mirrored into state for the command palette.
-   *
-   * The panels get this by suspending on the promise, but the palette must be
-   * usable the instant the page appears — it cannot sit behind a Suspense
-   * boundary. So it reads the same promise here and simply has no assignment
-   * commands until Canvas lands.
-   *
-   * `Promise.resolve` matters: what a server component hands down is a
-   * *thenable*, not a Promise, and its `.then()` returns undefined — chaining
-   * `.catch()` straight onto it throws.
-   */
-  const [work, setWork] = useState<ReturnType<typeof buildItems> | null>(null);
   useEffect(() => {
     let alive = true;
     Promise.resolve(canvasPromise).then(
@@ -207,27 +163,41 @@ export default function Dashboard({
     return () => { alive = false; };
   }, [canvasPromise, st]);
 
+  useEffect(() => {
+    const tick = () => {
+      setNow(localParts());
+      const d = new Date();
+      setClock({
+        date: d.toLocaleDateString("en-US", {
+          timeZone: "America/Denver", weekday: "short", month: "short", day: "numeric",
+        }),
+        time: d.toLocaleTimeString("en-US", {
+          timeZone: "America/Denver", hour: "numeric", minute: "2-digit", hour12: true,
+        }).toLowerCase(),
+      });
+    };
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    const p = localStorage.getItem("palette") || localStorage.getItem("hb:pal");
+    if (p && ["forest", "dusk", "ash"].includes(p)) {
+      if (p === "forest") document.documentElement.removeAttribute("data-palette");
+      else document.documentElement.setAttribute("data-palette", p);
+      setPalette(p);
+    }
+  }, []);
+
   function applyPalette(p: string) {
     setPalette(p);
     if (p === "forest") document.documentElement.removeAttribute("data-palette");
     else document.documentElement.setAttribute("data-palette", p);
-    try { localStorage.setItem("hb:pal", p); } catch {}
+    try { localStorage.setItem("palette", p); localStorage.setItem("hb:pal", p); } catch {}
   }
 
-  /**
-   * Every mutation round-trips to the server, so a tick on the phone shows up
-   * on the laptop — but it applies locally first, so it registers instantly and
-   * still registers with no signal at all.
-   *
-   * A write that silently vanishes is worse than one that visibly fails, which
-   * is exactly what the offline work created before this existed: the page
-   * loaded fine underground and every tick was thrown away.
-   */
   async function mutate(body: Record<string, unknown>) {
-    // A locally-created to-do needs an id now; the server issues the real one
-    // when this replays, and the state it returns supersedes this.
-    // The client mints the id so that a replay after a lost response is a
-    // no-op on the server instead of a second identical to-do.
     const withId =
       body.action === "addTodo"
         ? {
@@ -238,9 +208,6 @@ export default function Dashboard({
 
     setSt((prev) => applyLocal(prev, withId));
 
-    // Deleting a to-do that never reached the server: cancel its creation
-    // rather than sending a delete for an id the server has never seen, which
-    // would no-op and then let the queued create resurrect it.
     if (body.action === "deleteTodo" && String(body.id ?? "").startsWith(TEMP_PREFIX)) {
       try {
         if (await cancelQueuedAdd(String(body.id))) {
@@ -248,7 +215,7 @@ export default function Dashboard({
           return;
         }
       } catch {
-        // No IndexedDB — fall through and let the server reject it harmlessly.
+        // Fall through
       }
     }
 
@@ -263,24 +230,17 @@ export default function Dashboard({
       const json = await res.json();
       if (json?.state) setSt(json.state);
     } catch {
-      // Offline, or the server is unreachable. Keep it and replay later.
       try {
         await enqueue(withId);
         setPending((n) => n + 1);
       } catch {
-        // No IndexedDB (private window, quota). The optimistic edit stands for
-        // this session but will not survive a reload — nothing better to do.
+        // Private window or quota
       }
     } finally {
       setBusy(false);
     }
   }
 
-  /**
-   * Replay the outbox. iOS Safari has no Background Sync, so this is driven
-   * from the page: on load, when the network returns, when the tab regains
-   * focus, and on a slow interval as a backstop.
-   */
   useEffect(() => {
     let alive = true;
     const run = async () => {
@@ -290,7 +250,7 @@ export default function Dashboard({
         if (r.state) setSt(r.state as State);
         setPending(r.left);
       } catch {
-        // IndexedDB unavailable; nothing queued, nothing to do.
+        // IndexedDB unavailable
       }
     };
     run();
@@ -312,12 +272,13 @@ export default function Dashboard({
   const leave = leaveAdvice(todayClasses, now.minutes);
 
   const greeting = now.minutes < 720 ? "Morning" : now.minutes < 1020 ? "Afternoon" : "Evening";
-
-  // Everything the lede needs that costs nothing to compute.
   const ledeBase = { now, term, classes: todayClasses };
 
   const commands: Command[] = useMemo(() => {
     const out: Command[] = [
+      { id: "go-study", group: "Go", label: "Academic Study Hub", hint: "/study",
+        keywords: "study flashcards anki quiz reading review decks syllabus evidence focus",
+        run: () => router.push("/study") },
       { id: "go-sky", group: "Go", label: "Sky, sun and weather", hint: "/sky",
         keywords: "moon stars planets forecast orrery tonight",
         run: () => router.push("/sky") },
@@ -326,15 +287,21 @@ export default function Dashboard({
         run: () => router.push("/term") },
     ];
 
-    for (const h of ["Weather", "Day at a glance", "Due", "Semester", "What's new", "Music"]) {
+    for (const h of [
+      "Study Hub",
+      "Weather",
+      "Day at a glance",
+      "Due",
+      "Semester",
+      "What's new",
+      "Music",
+    ]) {
       out.push({
         id: `jump-${h}`, group: "Jump to", label: h, hint: "scroll",
         run: () => jumpToCard(h),
       });
     }
 
-    // Open work, soonest first. Capped: a palette listing forty assignments is
-    // a list, and the point of this is to skip lists.
     for (const it of (work ?? [])
       .filter((i) => !i.done && daysBetween(now.iso, i.due) >= -14)
       .sort((a, b) => (a.due < b.due ? -1 : 1))
@@ -361,7 +328,7 @@ export default function Dashboard({
       });
     }
     return out;
-  }, [work, now.iso, palette, router]);        // eslint-disable-line react-hooks/exhaustive-deps
+  }, [work, now.iso, palette, router]);
 
   const dayName = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][now.dow];
   const emptyWhy =
@@ -373,6 +340,8 @@ export default function Dashboard({
   return (
     <div className="wrap">
       <Offline renderedAt={renderedAt} pending={pending} />
+
+      {/* Clean, uncluttered header */}
       <header>
         <Suspense
           fallback={
@@ -382,12 +351,10 @@ export default function Dashboard({
           <LedeWithCanvas base={ledeBase} st={st} greeting={greeting}
             canvasPromise={canvasPromise} weatherPromise={weatherPromise} />
         </Suspense>
+
         <div className="stamp mono">
           <span>{clock?.date ?? "\u00a0"}</span>
           <span>{clock?.time ?? "\u00a0"}</span>
-          <Link href="/term" className="morelink mono">edit term</Link>
-          <CommandPalette commands={commands} onCapture={(title) =>
-            mutate({ action: "addTodo", title, due: now.iso })} />
           <span className="themes">
             {["forest", "dusk", "ash"].map((p) => (
               <button key={p} type="button" className="mono"
@@ -396,54 +363,69 @@ export default function Dashboard({
           </span>
         </div>
       </header>
+
       <div className="rule" />
 
+      {/* Grid of cards */}
       <div className="grid">
         <Suspense fallback={<WeatherSkeleton />}>
           <WeatherSlot promise={weatherPromise} sun={sun} />
         </Suspense>
 
-        <section className="card span7">
+        <section className="card span7 day-glance-card">
           <div className="card-head"><h2>Day at a glance</h2></div>
           <div className="card-body">
             <div>
               {!todayClasses.length && (
                 <div className="sub" style={{ padding: "18px 0" }}>{emptyWhy}</div>
               )}
-              {todayClasses.map((c, i) => (
-                <div key={`${c.code}-${i}`}>
-                  {openBlocks.some((g) => g.afterIndex === i - 1) && (() => {
-                    const g = openBlocks.find((x) => x.afterIndex === i - 1)!;
-                    const h = Math.floor(g.minutes / 60), m = g.minutes % 60;
-                    return (
-                      <div className="gap">
-                        <div className="gline" />
-                        <div className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                          {h ? `${h}h ` : ""}{m ? `${m}m` : ""}
+              {todayClasses.map((c, i) => {
+                const isNextClass = leave && leave.next.code === c.code;
+                const preBrief = CLASS_PRE_BRIEFS[c.code];
+
+                return (
+                  <div key={`${c.code}-${i}`}>
+                    {openBlocks.some((g) => g.afterIndex === i - 1) && (() => {
+                      const g = openBlocks.find((x) => x.afterIndex === i - 1)!;
+                      const h = Math.floor(g.minutes / 60), m = g.minutes % 60;
+                      return (
+                        <div className="gap">
+                          <div className="gline" />
+                          <div className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
+                            {h ? `${h}h ` : ""}{m ? `${m}m` : ""}
+                          </div>
+                          <div className="gtxt">
+                            open block — {fmtTime(hhmm(g.from))} to {fmtTime(hhmm(g.to))}
+                            <Link href="/study" className="mono gap-study-link">
+                              ✦ Start {m}m Focus
+                            </Link>
+                          </div>
                         </div>
-                        <div className="gtxt">
-                          open block — {fmtTime(hhmm(g.from))} to {fmtTime(hhmm(g.to))}
-                        </div>
+                      );
+                    })()}
+                    <div className={`cls ${c.ck}${hhmm(c.end) <= now.minutes ? " past" : ""}${isNextClass ? " active-next" : ""}`}>
+                      <div className="stripe" />
+                      <div className="mono" style={{ fontSize: 12, color: "var(--ink-2)" }}>
+                        {fmtTime(hhmm(c.start))}<br />{fmtTime(hhmm(c.end))}
                       </div>
-                    );
-                  })()}
-                  <div className={`cls ${c.ck}${hhmm(c.end) <= now.minutes ? " past" : ""}`}>
-                    <div className="stripe" />
-                    <div className="mono" style={{ fontSize: 12, color: "var(--ink-2)" }}>
-                      {fmtTime(hhmm(c.start))}<br />{fmtTime(hhmm(c.end))}
-                    </div>
-                    <div>
-                      <div className="mono" style={{ fontSize: 10, color: "var(--ink-3)" }}>{c.code}</div>
-                      <div className="title">{c.title}</div>
-                      <div className="sub">{c.where}</div>
+                      <div style={{ flex: 1 }}>
+                        <div className="mono" style={{ fontSize: 10, color: "var(--ink-3)" }}>{c.code}</div>
+                        <div className="title">{c.title}</div>
+                        <div className="sub">{c.where}</div>
+                        {isNextClass && preBrief && (
+                          <div className="pre-brief-pill mono">
+                            💡 Thesis: {preBrief}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {leave && (
-              <div className="callout">
+              <div className="callout leave-callout">
                 <div className="k mono">Before you leave</div>
                 <div className="v">
                   Head out by {fmtTime(leave.leaveAtMinutes)} for {leave.next.code}
@@ -452,10 +434,25 @@ export default function Dashboard({
                   {leave.next.where}
                   {leave.hop && ` · Tight hop — ${leave.hop.from} to ${leave.hop.to} with ${leave.hop.gap} minutes between.`}
                 </div>
+                {leave.hop && (
+                  <CampusHopMap
+                    from={leave.hop.from}
+                    to={leave.hop.to}
+                    gapMinutes={leave.hop.gap}
+                    leaveAtMinutes={leave.leaveAtMinutes}
+                    nextClassCode={leave.next.code}
+                    nextClassWhere={leave.next.where}
+                  />
+                )}
               </div>
             )}
           </div>
         </section>
+
+        {/* Compact Study Hub Glance Widget */}
+        <Suspense fallback={<StudyGlanceSkeleton />}>
+          <StudyGlance promise={studyPromise} />
+        </Suspense>
 
         <Suspense fallback={<TodoSkeleton />}>
           <TodoPanel promise={canvasPromise} st={st} busy={busy}
@@ -473,7 +470,25 @@ export default function Dashboard({
         <Suspense fallback={<NewsSkeleton />}>
           <NewsPanel promise={newsPromise} st={st} mutate={mutate} />
         </Suspense>
+      </div>
 
+      {/* Bottom Utility Actions Toolbar */}
+      <div className="bottom-toolbar">
+        <div className="bt-links mono">
+          <Link href="/study" className="bt-link">
+            ✦ study hub
+          </Link>
+          <Link href="/sky" className="bt-link">
+            ☼ sky &amp; weather
+          </Link>
+          <Link href="/term" className="bt-link">
+            ✎ edit term
+          </Link>
+        </div>
+        <div className="bt-cmd">
+          <CommandPalette commands={commands} onCapture={(title) =>
+            mutate({ action: "addTodo", title, due: now.iso })} />
+        </div>
       </div>
 
       <PushToggle />
@@ -482,9 +497,8 @@ export default function Dashboard({
         Assignments come from your Canvas calendar feed, and your ticks live in a database — so
         checking something off on your phone shows up on your laptop, and an edit made with no
         signal is queued and synced when you reconnect. Weather is api.weather.gov: free, keyless,
-        current. Class times, open blocks, countdowns, sunrise, sunset, the moon and the planets are
-        all computed here rather than fetched, skipping fall break (Oct 8&ndash;9) and ending
-        Dec 12. Listening comes from Last.fm. Times in Mountain Time.
+        current. Study Hub cards are parsed from standardized Anki CSVs with SM-2 spaced repetition and weekly synthesis.
+        Times in Mountain Time.
       </footer>
     </div>
   );
