@@ -52,6 +52,9 @@ export type CourseStudyInfo = {
   currentWeek: string;
   currentTopic: string;
   readings: string[];
+  resourceStatus?: "Ready" | "Partial" | "Waiting on Canvas";
+  resourceNote?: string;
+  driveUrl?: string;
   nextAssessment?: {
     title: string;
     due: string;
@@ -158,9 +161,10 @@ export function parseAnkiCsv(csvContent: string): Flashcard[] {
     const row = rows[r];
     if (row.length < 3) continue;
 
-    const id = idIdx >= 0 && row[idIdx] ? row[idIdx] : `card_${r}_${Date.now()}`;
     const front = frontIdx >= 0 ? row[frontIdx] : row[1] || "";
     const back = backIdx >= 0 ? row[backIdx] : row[2] || "";
+    const fallbackSlug = front.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 40);
+    const id = idIdx >= 0 && row[idIdx] ? row[idIdx] : `card_${r}_${fallbackSlug || "untitled"}`;
     const source = sourceIdx >= 0 ? row[sourceIdx] : row[3] || "";
     const tags = tagsIdx >= 0 ? row[tagsIdx] : row[4] || "";
     const rawStatus = (statusIdx >= 0 ? row[statusIdx] : row[5] || "Draft").trim();

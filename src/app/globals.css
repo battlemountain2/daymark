@@ -1967,13 +1967,57 @@ details.tl[open] summary::after{content:"\2212";}
   }
   .study-stats-ribbon {
     grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    padding: 12px 14px;
+  }
+  .study-page-wrap {
+    padding-top: 22px;
+  }
+  .study-hero {
+    gap: 12px;
+  }
+  .study-main-title {
+    font-size: clamp(34px, 11vw, 48px);
   }
   .study-view-tabs {
     width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .study-view-tabs::-webkit-scrollbar,
+  .deck-nav-pills::-webkit-scrollbar {
+    display: none;
   }
   .sv-tab {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     text-align: center;
+    min-height: 40px;
+  }
+  .deck-nav-pills {
+    width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .deck-pill,
+  .sm-btn,
+  .deck-filter-pill,
+  .file-drop-cta {
+    min-height: 40px;
+  }
+  .deck-search-input,
+  .eb-search-input,
+  .ft-task-input {
+    font-size: 16px;
+  }
+  .srs-session-ribbon {
+    row-gap: 10px;
+  }
+  .flashcard-face {
+    padding: 20px;
   }
 }
 
@@ -2106,6 +2150,8 @@ details.tl[open] summary::after{content:"\2212";}
   border-radius: 4px;
   border: 1px dashed var(--line-strong);
   transition: all .12s ease;
+  background: transparent;
+  color: inherit;
 }
 .file-drop-cta:hover {
   background: var(--surface);
@@ -2299,12 +2345,25 @@ details.tl[open] summary::after{content:"\2212";}
   padding-left: 10px;
 }
 
+.eb-quote.is-note {
+  font-style: normal;
+}
+
 .eb-pages {
   display: block;
   font-style: normal;
   font-size: 10.5px;
   color: var(--ink-3);
   margin-top: 4px;
+}
+
+.eb-empty {
+  grid-column: 1 / -1;
+  padding: 28px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 8px;
+  color: var(--ink-3);
+  text-align: center;
 }
 
 .eb-tags {
@@ -2794,4 +2853,21 @@ details.tl[open] summary::after{content:"\2212";}
 .brief-esc-hint {
   font-size: 10.5px;
   color: var(--ink-3);
+}
+
+/* Final responsive overrides live after component styles so mobile controls stay compact and tappable. */
+@media (max-width: 640px) {
+  .deck-search-input,
+  .eb-search-input,
+  .ft-task-input {
+    font-size: 16px;
+  }
+
+  .srs-session-ribbon {
+    row-gap: 10px;
+  }
+
+  .file-drop-cta {
+    min-height: 40px;
+  }
 }

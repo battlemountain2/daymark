@@ -105,6 +105,13 @@ export default function StudyHubPanel({ promise }: Props) {
                       <div className="topic-v">{c.currentTopic}</div>
                     </div>
 
+                    {c.resourceStatus && (
+                      <div className="course-topic-box">
+                        <span className="topic-k mono">Resources: {c.resourceStatus}</span>
+                        <div className="topic-v">{c.resourceNote}</div>
+                      </div>
+                    )}
+
                     {c.nextAssessment && (
                       <div className="course-next-deadline mono">
                         <span className="d-icon">⏳</span>
@@ -124,6 +131,16 @@ export default function StudyHubPanel({ promise }: Props) {
                     </div>
 
                     <div className="course-card-actions">
+                      {c.driveUrl && (
+                        <a
+                          className="open-deck-btn mono"
+                          href={c.driveUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Open Drive ↗
+                        </a>
+                      )}
                       <button
                         type="button"
                         className="open-deck-btn mono"

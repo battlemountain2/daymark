@@ -68,11 +68,13 @@ export default function StudyView({ data }: { data: StudyHubData }) {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="study-view-tabs mono">
+        <div className="study-view-tabs mono" role="tablist" aria-label="Study Hub sections">
           <button
             type="button"
             className={`sv-tab ${activeTab === "cards" ? "on" : ""}`}
             onClick={() => setActiveTab("cards")}
+            role="tab"
+            aria-selected={activeTab === "cards"}
           >
             ✦ Active Recall ({allCards.length})
           </button>
@@ -80,6 +82,8 @@ export default function StudyView({ data }: { data: StudyHubData }) {
             type="button"
             className={`sv-tab ${activeTab === "courses" ? "on" : ""}`}
             onClick={() => setActiveTab("courses")}
+            role="tab"
+            aria-selected={activeTab === "courses"}
           >
             Course Matrix &amp; Syllabi
           </button>
@@ -87,6 +91,8 @@ export default function StudyView({ data }: { data: StudyHubData }) {
             type="button"
             className={`sv-tab ${activeTab === "review" ? "on" : ""}`}
             onClick={() => setActiveTab("review")}
+            role="tab"
+            aria-selected={activeTab === "review"}
           >
             Weekly Review &amp; Takeaways
           </button>
@@ -94,6 +100,8 @@ export default function StudyView({ data }: { data: StudyHubData }) {
             type="button"
             className={`sv-tab ${activeTab === "evidence" ? "on" : ""}`}
             onClick={() => setActiveTab("evidence")}
+            role="tab"
+            aria-selected={activeTab === "evidence"}
           >
             📖 Evidence Bank
           </button>
@@ -101,6 +109,8 @@ export default function StudyView({ data }: { data: StudyHubData }) {
             type="button"
             className={`sv-tab ${activeTab === "focus" ? "on" : ""}`}
             onClick={() => setActiveTab("focus")}
+            role="tab"
+            aria-selected={activeTab === "focus"}
           >
             ⏱️ Focus &amp; Sounds
           </button>

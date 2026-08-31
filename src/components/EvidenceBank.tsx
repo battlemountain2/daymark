@@ -12,6 +12,7 @@ export type EvidenceItem = {
   pages: string;
   thesis: string;
   quote: string;
+  evidenceKind: "verified-quote" | "reading-note";
   chicagoNotes: string;
   chicagoBib: string;
   tags: string[];
@@ -25,10 +26,11 @@ const EVIDENCE_DATABASE: EvidenceItem[] = [
     author: "Carol Cohn",
     work: "Sex and Death in the Rational World of Defense Intellectuals",
     year: "1987",
-    pages: "687–718",
+    pages: "691",
     thesis: "Technostrategic language sanitizes nuclear annihilation through clinical euphemism and gendered imagery, trapping planners within its militarized logic.",
-    quote: "The language does not allow its speakers to be seen as victims; it constructs them exclusively as users, launchers, and planners of weapons.",
-    chicagoNotes: "Carol Cohn, “Sex and Death in the Rational World of Defense Intellectuals,” Signs: Journal of Women in Culture and Society 12, no. 4 (1987): 690.",
+    quote: "Human death, in nuclear parlance, is most often referred to as ‘collateral damage’.",
+    evidenceKind: "verified-quote",
+    chicagoNotes: "Carol Cohn, “Sex and Death in the Rational World of Defense Intellectuals,” Signs: Journal of Women in Culture and Society 12, no. 4 (1987): 691.",
     chicagoBib: "Cohn, Carol. “Sex and Death in the Rational World of Defense Intellectuals.” Signs: Journal of Women in Culture and Society 12, no. 4 (1987): 687–718.",
     tags: ["technostrategic", "nuclear discourse", "feminist IR", "euphemisms"],
     ck: "pol",
@@ -42,6 +44,7 @@ const EVIDENCE_DATABASE: EvidenceItem[] = [
     pages: "94–119",
     thesis: "Environmental history has transitioned from romantic declensionist wilderness narratives toward analyzing hybrid socio-ecological landscapes, state infrastructures, and labor.",
     quote: "Nature is not a pristine baseline separate from human affairs, but a dynamic historical actor continually co-produced through labor, politics, and technology.",
+    evidenceKind: "reading-note",
     chicagoNotes: "Paul S. Sutter, “The World with Us: The State of American Environmental History,” Journal of American History 100, no. 1 (2013): 102.",
     chicagoBib: "Sutter, Paul S. “The World with Us: The State of American Environmental History.” Journal of American History 100, no. 1 (2013): 94–119.",
     tags: ["hybridity", "environmental historiography", "infrastructure", "second nature"],
@@ -56,6 +59,7 @@ const EVIDENCE_DATABASE: EvidenceItem[] = [
     pages: "1–19",
     thesis: "Arid environments necessitate concentrated capital and state power, transforming the American West into a modern 'hydraulic society' commanded by mega-dams.",
     quote: "The domination of nature inevitably leads to the domination of human beings by those who control the apparatus of technological manipulation.",
+    evidenceKind: "reading-note",
     chicagoNotes: "Donald Worster, “History as Natural History: An Essay on Theory and Method,” Pacific Historical Review 53, no. 1 (1984): 8.",
     chicagoBib: "Worster, Donald. “History as Natural History: An Essay on Theory and Method.” Pacific Historical Review 53, no. 1 (1984): 1–19.",
     tags: ["hydraulic society", "water politics", "Bureau of Reclamation", "dams"],
@@ -70,6 +74,7 @@ const EVIDENCE_DATABASE: EvidenceItem[] = [
     pages: "69–90",
     thesis: "The cultural myth of uninhabited wilderness alienates society from everyday urban/suburban ecological responsibility while historically dispossessing Indigenous peoples.",
     quote: "Wilderness embodies a dualistic vision in which the human is outside the natural, leaving us with no comfortable place to actually live sustainably.",
+    evidenceKind: "reading-note",
     chicagoNotes: "William Cronon, “The Trouble with Wilderness; or, Getting Back to the Wrong Nature,” in Uncommon Ground: Rethinking the Human Place in Nature, ed. William Cronon (New York: W. W. Norton & Co., 1995), 81.",
     chicagoBib: "Cronon, William. “The Trouble with Wilderness; or, Getting Back to the Wrong Nature.” In Uncommon Ground: Rethinking the Human Place in Nature, edited by William Cronon, 69–90. New York: W. W. Norton & Co., 1995.",
     tags: ["wilderness myth", "preservation critique", "indigenous erasure", "conservation"],
@@ -84,6 +89,7 @@ const EVIDENCE_DATABASE: EvidenceItem[] = [
     pages: "Lab Manual W01",
     thesis: "Transforming 3D spherical coordinates (GCS) to 2D planar coordinates (PCS) introduces systematic distortion across area, shape, or distance.",
     quote: "Every flat map is an intentional compromise between conformality, equivalence, and azimuthal fidelity.",
+    evidenceKind: "reading-note",
     chicagoNotes: "UNM Department of Geography, Foundations of Spatial Analysis & Map Projections (Albuquerque: University of New Mexico, 2026), 14.",
     chicagoBib: "Department of Geography. Foundations of Spatial Analysis & Map Projections. Albuquerque: University of New Mexico, 2026.",
     tags: ["projections", "coordinate systems", "datums", "raster-vector"],
@@ -112,10 +118,14 @@ export default function EvidenceBank() {
     });
   }, [search, selectedCourse]);
 
-  const copyToClipboard = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+  const copyToClipboard = async (text: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      setCopiedId(null);
+    }
   };
 
   return (
@@ -135,6 +145,7 @@ export default function EvidenceBank() {
             placeholder="Search authors, theses, keywords (e.g. Cohn, hydraulic, wilderness)..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search the evidence bank"
           />
           <div className="eb-course-pills">
             {["ALL", "POLS 2120", "HIST 300", "GEOG 1150", "GEOG 1115L"].map((c) => (
@@ -143,6 +154,7 @@ export default function EvidenceBank() {
                 type="button"
                 className={`mono eb-pill ${selectedCourse === c ? "on" : ""}`}
                 onClick={() => setSelectedCourse(c)}
+                aria-pressed={selectedCourse === c}
               >
                 {c}
               </button>
@@ -166,10 +178,19 @@ export default function EvidenceBank() {
               <div className="eb-v">{item.thesis}</div>
             </div>
 
-            <blockquote className="eb-quote">
-              &ldquo;{item.quote}&rdquo;
-              <span className="eb-pages mono">— p. {item.pages}</span>
-            </blockquote>
+            {item.evidenceKind === "verified-quote" ? (
+              <blockquote className="eb-quote">
+                &ldquo;{item.quote}&rdquo;
+                <span className="eb-pages mono">Verified quotation · p. {item.pages}</span>
+              </blockquote>
+            ) : (
+              <div className="eb-quote is-note">
+                {item.quote}
+                <span className="eb-pages mono">
+                  Reading note · coverage pp. {item.pages} · verify against the source before quoting
+                </span>
+              </div>
+            )}
 
             <div className="eb-tags mono">
               {item.tags.map((t) => (
@@ -195,6 +216,9 @@ export default function EvidenceBank() {
             </div>
           </div>
         ))}
+        {filtered.length === 0 && (
+          <div className="eb-empty mono">No evidence matches this search and course filter.</div>
+        )}
       </div>
     </div>
   );

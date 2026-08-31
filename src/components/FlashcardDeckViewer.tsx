@@ -18,6 +18,11 @@ type Props = {
   selectedCourseFilter?: string | null;
 };
 
+function mergeUniqueCards(existing: Flashcard[], incoming: Flashcard[]): Flashcard[] {
+  const ids = new Set(existing.map((card) => card.id));
+  return [...existing, ...incoming.filter((card) => !ids.has(card.id))];
+}
+
 export default function FlashcardDeckViewer({
   initialCards,
   courses,
@@ -59,7 +64,7 @@ export default function FlashcardDeckViewer({
       if (activeCourse !== "ALL") {
         const normCourse = activeCourse.replace(/\s+/g, "").toUpperCase();
         const normCard = card.courseCode.replace(/\s+/g, "").toUpperCase();
-        if (normCourse !== normCard && !normCard.startsWith(normCourse)) return false;
+        if (normCourse !== normCard) return false;
       }
       if (statusFilter !== "ALL" && card.status !== statusFilter) {
         return false;
@@ -167,9 +172,7 @@ export default function FlashcardDeckViewer({
           const imported = parseAnkiCsv(text);
           if (imported.length > 0) {
             setCards((prev) => {
-              const ids = new Set(prev.map((c) => c.id));
-              const fresh = imported.filter((c) => !ids.has(c.id));
-              return [...prev, ...fresh];
+              return mergeUniqueCards(prev, imported);
             });
           }
         }
@@ -202,12 +205,17 @@ export default function FlashcardDeckViewer({
         <div className="ssr-item">
           <span className="sub">Deck Progress:</span> <b>{progressPct}% Verified</b>
         </div>
-        <div className="ssr-item file-drop-cta" onClick={() => fileInputRef.current?.click()}>
+        <button
+          type="button"
+          className="ssr-item file-drop-cta mono"
+          onClick={() => fileInputRef.current?.click()}
+        >
           <span className="sub">📥 Drop CSV here or Click to Import</span>
           <input
             ref={fileInputRef}
             type="file"
             accept=".csv"
+            aria-label="Import flashcards from CSV"
             style={{ display: "none" }}
             onChange={(e) => {
               const file = e.target.files?.[0];
@@ -217,14 +225,14 @@ export default function FlashcardDeckViewer({
                   const txt = ev.target?.result as string;
                   if (txt) {
                     const imported = parseAnkiCsv(txt);
-                    setCards((p) => [...p, ...imported]);
+                    setCards((previous) => mergeUniqueCards(previous, imported));
                   }
                 };
                 reader.readAsText(file);
               }
             }}
           />
-        </div>
+        </button>
       </div>
 
       {/* Header controls & Filters */}
@@ -233,6 +241,7 @@ export default function FlashcardDeckViewer({
           <button
             type="button"
             className={`deck-pill mono ${activeCourse === "ALL" ? "on" : ""}`}
+            aria-pressed={activeCourse === "ALL"}
             onClick={() => {
               setActiveCourse("ALL");
               setCurrentIndex(0);
@@ -246,6 +255,7 @@ export default function FlashcardDeckViewer({
               key={c.code}
               type="button"
               className={`deck-pill mono ${activeCourse === c.code ? "on" : ""}`}
+              aria-pressed={activeCourse === c.code}
               onClick={() => {
                 setActiveCourse(c.code);
                 setCurrentIndex(0);
@@ -262,6 +272,7 @@ export default function FlashcardDeckViewer({
           <button
             type="button"
             className={`mono sm-btn ${viewMode === "study" ? "on" : ""}`}
+            aria-pressed={viewMode === "study"}
             onClick={() => setViewMode("study")}
           >
             Study Flip Mode
@@ -269,6 +280,7 @@ export default function FlashcardDeckViewer({
           <button
             type="button"
             className={`mono sm-btn ${viewMode === "browse" ? "on" : ""}`}
+            aria-pressed={viewMode === "browse"}
             onClick={() => setViewMode("browse")}
           >
             Browse Table
@@ -282,6 +294,7 @@ export default function FlashcardDeckViewer({
           <input
             type="text"
             className="deck-search-input mono"
+            aria-label="Search flashcards"
             placeholder="Search concepts, questions, or tags..."
             value={searchQuery}
             onChange={(e) => {
@@ -293,6 +306,7 @@ export default function FlashcardDeckViewer({
             <button
               type="button"
               className="deck-search-clear mono"
+              aria-label="Clear flashcard search"
               onClick={() => setSearchQuery("")}
             >
               ✕
@@ -307,6 +321,7 @@ export default function FlashcardDeckViewer({
               key={st}
               type="button"
               className={`mono deck-filter-pill ${statusFilter === st ? "on" : ""}`}
+              aria-pressed={statusFilter === st}
               onClick={() => {
                 setStatusFilter(st);
                 setCurrentIndex(0);
@@ -355,6 +370,9 @@ export default function FlashcardDeckViewer({
               <div
                 className={`flashcard-scene ${isFlipped ? "flipped" : ""}`}
                 onClick={handleFlip}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") handleFlip();
+                }}
                 role="button"
                 tabIndex={0}
                 aria-label={`Flashcard ${currentIndex + 1} of ${total}. Click or press space to flip.`}

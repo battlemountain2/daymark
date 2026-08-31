@@ -1,7 +1,29 @@
 id,front,back,source,tags,status
-geog1160-001,"What are Earth's four interconnected environmental spheres?","Lithosphere (solid Earth/crust), Atmosphere (gaseous envelope), Hydrosphere (liquid and frozen water/cryosphere), and Biosphere (all living organisms).","GEOG 1160 Ch 1 Slides, Slide 8","GEOG1160::W02::CH01::earth-spheres",Verified
-geog1160-002,"What is the difference between an open and closed thermodynamic system in physical geography?","An open system exchanges both energy and matter across its boundaries (like a river drainage basin), whereas a closed system exchanges energy but self-contains matter (Earth as a whole approximates a closed material system).","GEOG 1160 Ch 1 Slides, Slide 14","GEOG1160::W02::CH01::systems",Verified
-geog1160-003,"How is positive vs negative feedback defined in climate equilibrium?","Positive feedback amplifies initial change (e.g. ice-albedo feedback), pushing the system away from balance; negative feedback dampens or resists change (e.g. cloud cover increasing albedo to limit warming), restoring stability.","GEOG 1160 Ch 1 Slides, Slide 19","GEOG1160::W02::CH01::feedback-loops",Needs review
-geog1160-004,"What determines the solar constant and Earth's planetary energy budget?","Solar constant (~1361 W/m²) is the insolation received perpendicular to Earth's top of atmosphere; the energy balance is governed by insolation minus planetary albedo (~30%) balanced by outgoing longwave radiation.","GEOG 1160 Ch 1 Slides, Slide 27","GEOG1160::W02::CH01::energy-budget",Verified
-geog1160-005,"Why does seasonality occur on Earth?","Axial tilt (obliquity of ~23.5°), parallelism of the axis, sphericity, rotation, and revolution around the Sun, which together alter solar altitude and daylength across latitudes.","GEOG 1160 Ch 1 Slides, Slide 33","GEOG1160::W02::CH01::seasonality",Verified
-geog1160-006,"What is the subsolar point on the equinoxes vs solstices?","Equinoxes (March/Sept): Equator (0°). June Solstice: Tropic of Cancer (23.5° N). December Solstice: Tropic of Capricorn (23.5° S).","GEOG 1160 Ch 1 Slides, Slide 36","GEOG1160::W02::CH01::seasonality",Draft
+GEOG1160-W02-CH01-001,What four questions commonly organize geographic inquiry?,"Where is it, why is it there, how is it connected, and how does it change across space and time?",Slide 2,GEOG1160::W02::CH01::inquiry,Verified
+GEOG1160-W02-CH01-002,What is the difference between human and physical geography?,Human geography studies people and societies; physical geography studies Earth’s natural systems and processes.,Slide 3,GEOG1160::W02::CH01::fields,Verified
+GEOG1160-W02-CH01-003,What are Earth’s four interconnected realms?,"Atmosphere, lithosphere, hydrosphere, and biosphere.",Slide 4,GEOG1160::W02::CH01::realms,Verified
+GEOG1160-W02-CH01-004,What is the biosphere?,"The zone of life where organisms interact with the atmosphere, lithosphere, and hydrosphere.",Slide 5,GEOG1160::W02::CH01::realms,Verified
+GEOG1160-W02-CH01-005,What comes after observing a phenomenon in the scientific method?,Ask a question and form a testable hypothesis.,Slide 6,GEOG1160::W02::CH01::scientific_method,Verified
+GEOG1160-W02-CH01-006,Why are scientific conclusions revised?,"New or analyzed evidence may weaken, refine, or strengthen an explanation.",Slide 6,GEOG1160::W02::CH01::scientific_method,Verified
+GEOG1160-W02-CH01-007,What measurement system is commonly used in science?,SI units.,Slide 7,GEOG1160::W02::CH01::measurement,Verified
+GEOG1160-W02-CH01-008,What is geographic scale?,The spatial level at which a phenomenon is observed or analyzed.,Slide 8,GEOG1160::W02::CH01::scale,Verified
+GEOG1160-W02-CH01-009,What is a spatial pattern?,The distribution or arrangement of a phenomenon across space.,Slide 8,GEOG1160::W02::CH01::pattern,Verified
+GEOG1160-W02-CH01-010,What is a geographic process?,"A force or mechanism that creates, maintains, or changes a pattern.",Slide 8,GEOG1160::W02::CH01::process,Verified
+GEOG1160-W02-CH01-011,How does the Las Vegas example demonstrate scale?,It moves from city to district to an individual site.,Slide 9,GEOG1160::W02::CH01::scale,Verified
+GEOG1160-W02-CH01-012,What irrigation pattern is associated with center-pivot systems?,A circular pattern.,Slide 10,GEOG1160::W02::CH01::pattern,Verified
+GEOG1160-W02-CH01-013,What does hydrology study?,"The storage, movement, properties, and environmental interactions of water.",Slide 13,GEOG1160::W02::CH01::hydrology,Verified
+GEOG1160-W02-CH01-014,What does fire ecology study?,"Interactions among fire, organisms, ecosystems, and the physical environment.",Slide 14,GEOG1160::W02::CH01::fire_ecology,Verified
+GEOG1160-W02-CH01-015,What does geomorphology study?,Landforms and the processes that shape Earth’s surface.,Slide 17,GEOG1160::W02::CH01::geomorphology,Verified
+GEOG1160-W02-CH01-016,What does biogeography study?,"The distribution of species, communities, and ecosystems through space and time.",Slide 20,GEOG1160::W02::CH01::biogeography,Verified
+GEOG1160-W02-CH01-017,What factors often shape biogeographic patterns?,"Latitude, elevation, habitat area, and isolation.",Slide 20,GEOG1160::W02::CH01::biogeography,Verified
+GEOG1160-W02-CH01-018,What is GIScience?,"The science of collecting, representing, analyzing, visualizing, and using geographic information.",Slide 23,GEOG1160::W02::CH01::giscience,Verified
+GEOG1160-W02-CH01-019,How do GISystems differ from GIScience?,GISystems are tools; GIScience investigates scientific questions about geographic information and methods.,Slide 24,GEOG1160::W02::CH01::giscience,Verified
+GEOG1160-W02-CH01-020,What is remote sensing?,"Observing Earth from a distance, commonly with aircraft or satellites.",Slide 23,GEOG1160::W02::CH01::remote_sensing,Verified
+GEOG1160-W02-CH01-021,Why do geographers combine multiple sensors?,Different sensors answer different spatial and environmental questions.,Slide 32,GEOG1160::W02::CH01::remote_sensing,Verified
+GEOG1160-W02-CH01-022,Which sensor in the wildfire example mapped burn scars?,Landsat 8 OLI.,Slide 32,GEOG1160::W02::CH01::remote_sensing,Verified
+GEOG1160-W02-CH01-023,Which sensor detected nitrogen dioxide and formaldehyde plumes?,TEMPO.,Slide 32,GEOG1160::W02::CH01::remote_sensing,Verified
+GEOG1160-W02-CH01-024,What three processes produced the wildfire-smoke pattern?,"Combustion, wind, and vertical mixing.",Slide 33,GEOG1160::W02::CH01::processes,Verified
+GEOG1160-W02-CH01-025,What is Arctic amplification?,Faster Arctic warming reinforced by declining snow and ice reflectivity.,Slide 31,GEOG1160::W02::CH01::climate,Verified
+GEOG1160-W02-CH01-026,What human action drove much of the Aral Sea’s shrinkage?,Diverting its feeder rivers for irrigation.,Slide 28,GEOG1160::W02::CH01::human_environment,Verified
+GEOG1160-W02-CH01-027,Why must a map pattern be interpreted cautiously?,Pattern alone does not prove the process or cause.,Slide 26,GEOG1160::W02::CH01::analysis,Verified
+GEOG1160-W02-CH01-028,When should assigned readings be completed?,Before the related Mastering Geography assignments.,Slide 36,GEOG1160::W02::CH01::coursework,Verified
