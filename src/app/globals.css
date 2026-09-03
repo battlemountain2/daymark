@@ -4384,3 +4384,622 @@ details.tl[open] summary::after{content:"\2212";}
   box-shadow: 0 0 0 100vmax rgba(5, 9, 7, 0.88);
   border-radius: 12px;
 }
+
+/* ==========================================================================
+   Cinematic Pomodoro Study Station & Subdued Companion Design System
+   ========================================================================== */
+
+/* Theme Variables & Dynamic Backdrops */
+.pomo-cinematic-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+  transition: background 0.4s ease;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pomo-cinematic-scrim.theme-midnight {
+  background: radial-gradient(circle at 50% 20%, rgba(13, 21, 39, 0.94) 0%, rgba(4, 7, 14, 0.98) 100%);
+  --pomo-glow-start: #4A72FF;
+  --pomo-glow-end: #A29BFE;
+  --pomo-track: rgba(255, 255, 255, 0.07);
+  --pomo-card-bg: rgba(13, 20, 36, 0.75);
+  --pomo-card-border: rgba(74, 114, 255, 0.22);
+}
+
+.pomo-cinematic-scrim.theme-rain {
+  background: radial-gradient(circle at 50% 20%, rgba(10, 28, 36, 0.94) 0%, rgba(3, 10, 15, 0.98) 100%);
+  --pomo-glow-start: #4ECDC4;
+  --pomo-glow-end: #45B7D1;
+  --pomo-track: rgba(255, 255, 255, 0.07);
+  --pomo-card-bg: rgba(9, 24, 31, 0.75);
+  --pomo-card-border: rgba(78, 205, 196, 0.22);
+}
+
+.pomo-cinematic-scrim.theme-ember {
+  background: radial-gradient(circle at 50% 20%, rgba(32, 19, 13, 0.94) 0%, rgba(11, 7, 5, 0.98) 100%);
+  --pomo-glow-start: #FF6B35;
+  --pomo-glow-end: #FDCB6E;
+  --pomo-track: rgba(255, 255, 255, 0.07);
+  --pomo-card-bg: rgba(26, 15, 11, 0.75);
+  --pomo-card-border: rgba(255, 107, 53, 0.22);
+}
+
+.pomo-cinematic-scrim.theme-oled {
+  background: #000000;
+  --pomo-glow-start: #FFFFFF;
+  --pomo-glow-end: #52B788;
+  --pomo-track: rgba(255, 255, 255, 0.05);
+  --pomo-card-bg: rgba(10, 10, 10, 0.92);
+  --pomo-card-border: rgba(255, 255, 255, 0.14);
+}
+
+/* Layout Wrap */
+.pomo-station-wrap {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+  max-width: 1040px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Console Card */
+.pomo-console-card {
+  width: min(540px, 100%);
+  background: var(--pomo-card-bg);
+  border: 1px solid var(--pomo-card-border);
+  border-radius: 18px;
+  box-shadow: 0 35px 100px -20px rgba(0, 0, 0, 0.8), 0 0 40px rgba(0, 0, 0, 0.4);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Top Control Bar */
+.pomo-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pomo-theme-pills {
+  display: flex;
+  gap: 5px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 7px;
+  padding: 3px;
+}
+
+.theme-pill {
+  background: none;
+  border: none;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+  padding: 3px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.theme-pill:hover {
+  color: #FFFFFF;
+}
+
+.theme-pill.active {
+  background: rgba(255, 255, 255, 0.16);
+  color: #FFFFFF;
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.pomo-top-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.pomo-fs-btn,
+.pomo-exit-btn {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 7px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.65);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pomo-fs-btn:hover,
+.pomo-exit-btn:hover {
+  color: #FFFFFF;
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Course Tagging Bar */
+.pomo-courses-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 4px 0;
+}
+
+.pcb-label {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.pcb-pills {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.course-pill {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.course-pill:hover {
+  color: #FFFFFF;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.course-pill.on {
+  background: var(--pomo-glow-start);
+  border-color: var(--pomo-glow-start);
+  color: #FFFFFF;
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(74, 114, 255, 0.35);
+}
+
+/* Modes Switcher */
+.pomo-modes-row {
+  display: flex;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9px;
+  padding: 4px;
+}
+
+.pomo-m-pill {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 7px 4px;
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.55);
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+}
+
+.pomo-m-pill:hover {
+  color: #FFFFFF;
+}
+
+.pomo-m-pill.on {
+  background: rgba(255, 255, 255, 0.16);
+  color: #FFFFFF;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+/* Radial Hero Countdown */
+.pomo-radial-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 0;
+}
+
+.pomo-radial-svg {
+  transform: rotate(-90deg);
+  display: block;
+}
+
+.pomo-track-circle {
+  stroke: var(--pomo-track);
+}
+
+.pomo-fill-circle {
+  transition: stroke-dashoffset 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pomo-ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.pomo-cycle-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.pci-tag {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(0, 0, 0, 0.4);
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pci-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.pci-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.pci-dot.filled {
+  background: #52B788;
+}
+
+.pci-dot.current {
+  background: var(--pomo-glow-start);
+  box-shadow: 0 0 6px var(--pomo-glow-start);
+}
+
+.pomo-big-digits {
+  font-size: clamp(52px, 12vw, 68px);
+  font-weight: 700;
+  color: #FFFFFF;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.4);
+}
+
+.pomo-course-badge {
+  margin-top: 4px;
+  font-size: 10.5px;
+  color: var(--pomo-glow-start);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--pomo-card-border);
+}
+
+/* Task Container */
+.pomo-task-container {
+  width: 100%;
+}
+
+.pomo-task-field {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #FFFFFF;
+  text-align: center;
+  outline: none;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+}
+
+.pomo-task-field::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.pomo-task-field:focus {
+  border-color: var(--pomo-glow-start);
+  background: rgba(0, 0, 0, 0.55);
+}
+
+/* Action Button Grid */
+.pomo-btn-grid {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pomo-primary-btn {
+  flex: 2;
+  min-width: 150px;
+  background: var(--pomo-glow-start);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
+  transition: all 0.15s ease;
+}
+
+.pomo-primary-btn.running {
+  background: #E07A5F;
+  color: #000000;
+}
+
+.pomo-primary-btn:hover {
+  filter: brightness(1.1);
+}
+
+.pomo-ghost-btn {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pomo-ghost-btn:hover {
+  color: #FFFFFF;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.pomo-companion-toggle {
+  flex: 1.5;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--pomo-card-border);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 12px;
+  color: #FFFFFF;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pomo-companion-toggle.active {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Ambient Sound Bar */
+.pomo-ambient-bar {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pab-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.pab-vol-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pab-vol-wrap input[type="range"] {
+  width: 80px;
+}
+
+.pab-pct {
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, 0.8);
+  min-width: 28px;
+}
+
+.pab-pills {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.pab-pill {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.65);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pab-pill:hover {
+  color: #FFFFFF;
+}
+
+.pab-pill.on {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #FFFFFF;
+  font-weight: 700;
+}
+
+/* Footer Stats */
+.pomo-stat-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+  padding-top: 4px;
+}
+
+.pomo-stat-footer strong {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* Subdued Study Companion / Crib Drawer */
+.pomo-subdued-companion {
+  width: min(440px, 100%);
+  max-height: 85vh;
+  overflow-y: auto;
+  background: var(--pomo-card-bg);
+  border: 1px solid var(--pomo-card-border);
+  border-radius: 18px;
+  box-shadow: 0 35px 100px -20px rgba(0, 0, 0, 0.8);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.psc-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 12px;
+}
+
+.psc-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.psc-code {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--pomo-glow-start);
+  background: rgba(0, 0, 0, 0.4);
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid var(--pomo-card-border);
+}
+
+.psc-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.psc-close-btn {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.5);
+  padding: 2px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.psc-close-btn:hover {
+  color: #FFFFFF;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.psc-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.psc-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.psc-sec-label {
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.45);
+  text-transform: uppercase;
+}
+
+.psc-list,
+.psc-prompts {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.psc-defs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.psc-def-item {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 7px;
+  padding: 8px 10px;
+}
+
+.psc-def-item strong {
+  color: rgba(255, 255, 255, 0.92);
+  margin-right: 4px;
+}
+
+.psc-prompts li {
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+/* Responsive Stacking for with-notes */
+@media (max-width: 900px) {
+  .pomo-station-wrap.with-notes {
+    flex-direction: column;
+    align-items: center;
+  }
+  .pomo-subdued-companion {
+    width: min(540px, 100%);
+    max-height: 60vh;
+  }
+}
