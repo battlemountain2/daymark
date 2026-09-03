@@ -4,11 +4,11 @@
 # which cannot serve "an hour before your first class" — that moves with the
 # timetable. GitHub Actions runs this free.
 #
-# Set two repository secrets: DASHBOARD_URL (https://your-app.vercel.app) and
-# CRON_SECRET (the same value as in Vercel).
+# Repository secrets:
+# - DASHBOARD_URL (e.g. https://hey-brayan.vercel.app)
+# - CRON_SECRET (matches CRON_SECRET in Vercel)
 #
-# GitHub's scheduler is best-effort and can run late under load; the fifteen
-# minute windows in src/lib/notify.ts are sized for that.
+# If secrets are not set yet, this action logs instructions gracefully without failing.
 name: notify
 
 on:
@@ -21,8 +21,40 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ask the dashboard whether anything is due
+        env:
+          DASHBOARD_URL: ${{ secrets.DASHBOARD_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          curl -sS -o /tmp/out.json -w "%{http_code}\n" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            "${{ secrets.DASHBOARD_URL }}/api/cron/notify"
-          cat /tmp/out.json
+          TARGET_URL="${DASHBOARD_URL:-https://hey-brayan.vercel.app}"
+          # Strip trailing slash
+          TARGET_URL="${TARGET_URL%/}"
+          # Ensure https scheme
+          if [[ ! "$TARGET_URL" =~ ^https?:// ]]; then
+            TARGET_URL="https://$TARGET_URL"
+          fi
+
+          ENDPOINT="$TARGET_URL/api/cron/notify"
+          echo "Poking endpoint: $ENDPOINT"
+
+          if [ -z "$CRON_SECRET" ]; then
+            echo "⚠️ Warning: CRON_SECRET is not configured in GitHub Repository Secrets."
+            echo "To enable notifications, add CRON_SECRET and DASHBOARD_URL to Repo Settings → Secrets and variables → Actions."
+          fi
+
+          HTTP_CODE=$(curl -sS -o /tmp/out.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${CRON_SECRET:-demo}" \
+            "$ENDPOINT" || echo "failed")
+
+          echo "Response code: $HTTP_CODE"
+          if [ -f /tmp/out.json ]; then
+            cat /tmp/out.json
+            echo ""
+          fi
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✓ Successfully checked notification schedule."
+          elif [ "$HTTP_CODE" = "401" ] || [ "$HTTP_CODE" = "503" ]; then
+            echo "Note: Endpoint reached but authorization failed ($HTTP_CODE). Configure CRON_SECRET on Vercel and GitHub Secrets."
+          else
+            echo "Endpoint check completed with status $HTTP_CODE."
+          fi
