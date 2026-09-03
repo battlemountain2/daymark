@@ -21,6 +21,7 @@ import StudyGlance, { StudyGlanceSkeleton } from "@/components/StudyGlance";
 import FitnessGlance from "@/components/FitnessGlance";
 import CampusHopMap from "@/components/CampusHopMap";
 import PreClassBriefModal from "@/components/PreClassBriefModal";
+import PomodoroModal from "@/components/PomodoroModal";
 import { getPreClassBrief, type PreClassBrief, PRE_CLASS_BRIEFS } from "@/lib/pre-class-briefs";
 import {
   classesOn, gaps, hhmm, localParts, leaveAdvice, building, type ClassBlock,
@@ -148,6 +149,10 @@ export default function Dashboard({
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState(0);
   const [activeBrief, setActiveBrief] = useState<PreClassBrief | null>(null);
+  const [pomodoroState, setPomodoroState] = useState<{ open: boolean; gapMinutes: number | null }>({
+    open: false,
+    gapMinutes: null,
+  });
 
   useEffect(() => {
     let alive = true;
@@ -271,6 +276,9 @@ export default function Dashboard({
 
   const commands: Command[] = useMemo(() => {
     const out: Command[] = [
+      { id: "action-pomodoro", group: "Actions", label: "Start Pomodoro Focus Timer", hint: "zen mode",
+        keywords: "pomodoro timer focus zen clock soundscape break 25m study gap",
+        run: () => setPomodoroState({ open: true, gapMinutes: null }) },
       { id: "go-study", group: "Go", label: "Academic Study Hub", hint: "/study",
         keywords: "study flashcards anki quiz reading review decks syllabus evidence focus",
         run: () => router.push("/study") },
@@ -407,9 +415,13 @@ export default function Dashboard({
                           </div>
                           <div className="gtxt">
                             open block — {fmtTime(hhmm(g.from))} to {fmtTime(hhmm(g.to))}
-                            <Link href="/study" className="mono gap-study-link">
-                              ✦ Start Focus
-                            </Link>
+                            <button
+                              type="button"
+                              className="mono gap-study-btn"
+                              onClick={() => setPomodoroState({ open: true, gapMinutes: g.minutes })}
+                            >
+                              ✦ Start Focus ({g.minutes}m)
+                            </button>
                           </div>
                         </div>
                       );
@@ -496,6 +508,13 @@ export default function Dashboard({
       {/* Bottom Utility Actions Toolbar */}
       <div className="bottom-toolbar">
         <div className="bt-links mono">
+          <button
+            type="button"
+            className="bt-link bt-pomo-btn"
+            onClick={() => setPomodoroState({ open: true, gapMinutes: null })}
+          >
+            ⏱️ pomodoro
+          </button>
           <Link href="/study" className="bt-link">
             ✦ study hub
           </Link>
@@ -519,6 +538,14 @@ export default function Dashboard({
 
       {/* Pre-Class Brief Modal */}
       <PreClassBriefModal brief={activeBrief} onClose={() => setActiveBrief(null)} />
+
+      {/* Dimmed Pomodoro Focus Station */}
+      {pomodoroState.open && (
+        <PomodoroModal
+          gapMinutes={pomodoroState.gapMinutes}
+          onClose={() => setPomodoroState({ open: false, gapMinutes: null })}
+        />
+      )}
 
       <footer>
         Assignments come from your Canvas calendar feed, and your ticks live in a database — so
