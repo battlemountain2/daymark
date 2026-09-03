@@ -1749,7 +1749,7 @@ details.tl[open] summary::after{content:"\2212";}
 
 /* Study Glance Card */
 .study-glance-card {
-  border-left: 4px solid var(--accent);
+  /* Clean standard card */
 }
 
 .glance-top-stat {
@@ -1772,7 +1772,6 @@ details.tl[open] summary::after{content:"\2212";}
 .glance-alert-box {
   background: var(--surface-2);
   border: 1px solid var(--line);
-  border-left: 3px solid var(--heat);
   border-radius: 6px;
   padding: 10px 12px;
   margin-bottom: 14px;
@@ -3794,7 +3793,6 @@ details.tl[open] summary::after{content:"\2212";}
 .fg-hero-box {
   background: var(--surface-2);
   border: 1px solid var(--line);
-  border-left: 4px solid;
   border-radius: 6px;
   padding: 12px 14px;
   margin: 10px 0;
@@ -3823,4 +3821,37 @@ details.tl[open] summary::after{content:"\2212";}
   .qc-choices-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.glance-due-banner {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin: 12px 0 14px;
+}
+.gdb-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.gdb-lightning {
+  color: var(--accent);
+  font-size: 14px;
+}
+.gdb-count {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.gdb-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: .08em;
+}
+.gdb-sub {
+  font-size: 11.5px;
+  color: var(--ink-3);
 }

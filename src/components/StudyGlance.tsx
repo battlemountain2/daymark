@@ -49,29 +49,25 @@ export default function StudyGlance({ promise }: Props) {
         {/* Term & Deck Progress Banner */}
         <div className="glance-top-stat mono">
           <span>Week {data.currentWeekNumber} · {courses.length} courses</span>
-          <span className="pill mono live" style={{ color: "var(--good)" }}>
-            ● {verifiedPct}% mastered
+          <span className="pill mono live">
+            {verifiedPct}% mastered
           </span>
         </div>
 
-        {/* Minimalist Single-Tint Progress Line */}
-        <div className="minimal-prog-track" title={`${verifiedPct}% verified`}>
-          <div className="minimal-prog-fill" style={{ width: `${verifiedPct}%` }} />
-        </div>
-
         {/* Actionable Due Queue Banner */}
-        <div className="glance-queue-box">
-          {dueCards.length > 0 ? (
-            <div className="gqb-active mono">
-              <span className="gqb-badge">⚡ {dueCards.length} DUE TODAY</span>
-              <span className="gqb-sub sub">Spaced repetition review ready</span>
+        <div className="glance-due-banner">
+          <div className="gdb-left">
+            <div className="gdb-title mono">
+              <span className="gdb-lightning">⚡</span>
+              <span className="gdb-count">{dueCards.length}</span>
+              <span className="gdb-tag">DUE TODAY</span>
             </div>
-          ) : (
-            <div className="gqb-caught-up mono">
-              <span className="gqb-check">✓ ALL CAUGHT UP</span>
-              <span className="gqb-sub sub">{total} cards mastered or scheduled</span>
+            <div className="gdb-sub sub mono">
+              {dueCards.length > 0
+                ? "Spaced repetition review ready"
+                : "All flashcard decks up to date"}
             </div>
-          )}
+          </div>
         </div>
 
         {/* Highlighted Weak Area Alert */}
@@ -79,14 +75,14 @@ export default function StudyGlance({ promise }: Props) {
           <div className="glance-alert-box">
             <div className="gab-top mono">
               <span className="gab-k">⚠️ Focus: {topWeak.course}</span>
-              <span className="gab-pill">needs review</span>
+              <span className="gab-pill mono">needs review</span>
             </div>
             <div className="gab-topic">{topWeak.topic}</div>
             <div className="gab-reason">{topWeak.reason}</div>
           </div>
         )}
 
-        {/* Action Buttons */}
+        {/* Action Button */}
         <div className="glance-action-row">
           {dueCards.length > 0 ? (
             <button
@@ -130,8 +126,7 @@ export function StudyGlanceSkeleton() {
       </div>
       <div className="card-body">
         <span className="bar" style={{ width: "60%", height: 16 }} />
-        <div className="minimal-prog-track" style={{ marginTop: 10, marginBottom: 12 }} />
-        <span className="bar" style={{ width: "90%", height: 24 }} />
+        <span className="bar" style={{ width: "90%", height: 42, marginTop: 12 }} />
       </div>
     </section>
   );

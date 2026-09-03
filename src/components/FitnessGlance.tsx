@@ -34,12 +34,12 @@ export default function FitnessGlance() {
           <span style={{ color: todayWorkout.color, fontWeight: 700 }}>
             {todayWorkout.day.toUpperCase()}
           </span>
-          <span className="pill mono" style={{ borderColor: todayWorkout.color }}>
+          <span className="pill mono" style={{ borderColor: todayWorkout.color, color: todayWorkout.color }}>
             {todayWorkout.label}
           </span>
         </div>
 
-        <div className="fg-hero-box" style={{ borderLeftColor: todayWorkout.color }}>
+        <div className="fg-hero-box">
           <div className="fg-title">{todayWorkout.label}</div>
           <div className="fg-sub sub">
             {todayWorkout.isRest
