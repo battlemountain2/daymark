@@ -2871,3 +2871,956 @@ details.tl[open] summary::after{content:"\2212";}
     min-height: 40px;
   }
 }
+
+/* ==========================================================================
+   Daymark 3.1: Visual Polish & De-Cluttering (Weird Bars Fix)
+   ========================================================================== */
+
+/* Hide native scrollbars on all horizontal carousels */
+.deck-nav-pills,
+.deck-table-wrap,
+.study-stats-ribbon,
+.sound-options,
+.fit-day-pills,
+.eb-course-pills {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.deck-nav-pills::-webkit-scrollbar,
+.deck-table-wrap::-webkit-scrollbar,
+.study-stats-ribbon::-webkit-scrollbar,
+.sound-options::-webkit-scrollbar,
+.fit-day-pills::-webkit-scrollbar,
+.eb-course-pills::-webkit-scrollbar {
+  display: none;
+}
+
+/* Minimalist Single-Tint Progress Line (Replaces harsh segmented dual bars) */
+.minimal-prog-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0 14px;
+}
+
+.minimal-prog-track {
+  width: 100%;
+  height: 5px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 6px 0;
+}
+
+.minimal-prog-fill {
+  height: 100%;
+  background: var(--good);
+  border-radius: 999px;
+  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Cleaned up SM-2 Grading Buttons (No harsh colored underline borders) */
+.srs-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-bottom: none !important;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 11.5px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  transition: transform .12s cubic-bezier(0.16, 1, 0.3, 1), background .12s ease, border-color .12s ease;
+}
+
+.srs-btn:hover {
+  transform: translateY(-2px);
+  border-color: var(--line-strong);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+}
+
+.srs-btn.srs-again:hover {
+  background: color-mix(in srgb, #E05D52 14%, var(--surface-2));
+  color: #E05D52;
+}
+
+.srs-btn.srs-hard:hover {
+  background: color-mix(in srgb, var(--heat) 14%, var(--surface-2));
+  color: var(--heat);
+}
+
+.srs-btn.srs-good:hover {
+  background: color-mix(in srgb, var(--good) 14%, var(--surface-2));
+  color: var(--good);
+}
+
+.srs-btn.srs-easy:hover {
+  background: color-mix(in srgb, var(--storm) 14%, var(--surface-2));
+  color: var(--storm);
+}
+
+/* Softened card top borders */
+.flashcard-front {
+  border-top: 2px solid var(--accent);
+}
+
+.flashcard-back {
+  border-top: 2px solid var(--good);
+}
+
+/* Quick Study Modal on Dashboard */
+.quick-study-box {
+  width: min(560px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  box-shadow: 0 24px 60px -15px rgba(0,0,0,.35);
+  overflow: hidden;
+  animation: modalPop .2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.qs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.qs-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.qs-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.qs-card-display {
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  padding: 24px 20px;
+  min-height: 180px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: background .12s ease;
+}
+
+.qs-card-display:hover {
+  background: var(--surface);
+}
+
+.qs-card-topline {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.qs-course-chip {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.qs-text {
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink);
+  margin: 14px 0;
+  font-weight: 600;
+}
+
+.qs-card-botline {
+  font-size: 11px;
+  color: var(--ink-3);
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+
+.qs-rating-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.qs-grade-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 4px;
+  font-size: 11.5px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.qs-shortcuts-hint {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: var(--ink-3);
+}
+
+.qs-complete-state {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.qsc-icon { font-size: 42px; margin-bottom: 8px; }
+
+.qs-finish-btn {
+  background: var(--accent);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 18px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 14px;
+}
+
+/* Kahoot-Style Quiz Sprint */
+.quiz-sprint-container {
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.quiz-card-box {
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.qc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+
+.qc-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.qc-clock {
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--surface-2);
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+}
+
+.qc-clock.urgent {
+  color: #E05D52;
+  border-color: #E05D52;
+  animation: pulseWalker 1s infinite;
+}
+
+.qc-question-box {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 18px 20px;
+}
+
+.qc-question-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.qc-choices-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.qc-choice-btn {
+  min-height: 78px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  transition: transform .1s ease, filter .15s ease;
+}
+
+.qc-choice-btn:hover:not(:disabled) {
+  transform: scale(1.02);
+  filter: brightness(1.08);
+}
+
+.qcb-icon {
+  font-size: 16px;
+  font-weight: 700;
+  opacity: 0.8;
+}
+
+.qcb-text {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  flex: 1;
+}
+
+/* Tactile Kahoot Colors */
+.qc-choice-btn.choice-0 { background: #E05D52; color: #FFFFFF; }
+.qc-choice-btn.choice-1 { background: #4ECDC4; color: #000000; }
+.qc-choice-btn.choice-2 { background: #FDCB6E; color: #000000; }
+.qc-choice-btn.choice-3 { background: #6C5CE7; color: #FFFFFF; }
+
+.qc-choice-btn.correct {
+  background: #2ED573 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 0 20px rgba(46, 213, 115, 0.5);
+}
+
+.qc-choice-btn.wrong {
+  opacity: 0.35;
+  filter: grayscale(0.8);
+}
+
+.qc-choice-btn.dimmed {
+  opacity: 0.25;
+}
+
+.qc-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: var(--ink-3);
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+/* Exam Countdown Radar in Milestones */
+.exam-countdown-radar {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.ecr-head {
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 8px;
+}
+
+.ecr-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ecr-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 10px;
+  gap: 8px;
+}
+
+.ecr-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.ecr-code {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--ground);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.ecr-title {
+  font-size: 11.5px;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ecr-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--heat);
+  white-space: nowrap;
+}
+
+/* Friday Review Wizard */
+.friday-wizard-box {
+  width: min(680px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  box-shadow: 0 24px 60px -15px rgba(0,0,0,.35);
+  overflow: hidden;
+  animation: modalPop .2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fw-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.fw-title-block {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fw-week-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.fw-stepper {
+  display: flex;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.fws-btn {
+  flex: 1;
+  padding: 10px 6px;
+  font-size: 11px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  text-align: center;
+}
+
+.fws-btn.on {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+  background: var(--surface-2);
+}
+
+.fw-body {
+  padding: 24px;
+}
+
+.fw-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px 0 24px;
+}
+
+.fw-check-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.fw-check-item.done {
+  opacity: 0.6;
+  text-decoration: line-through;
+}
+
+.fw-takeaway-card {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  padding: 20px;
+  margin: 14px 0 24px;
+}
+
+.fwt-course { font-size: 11px; font-weight: 700; color: var(--ink-3); margin-bottom: 4px; }
+.fwt-title { font-size: 16px; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
+.fwt-detail { font-size: 13.5px; line-height: 1.55; color: var(--ink-2); }
+
+.fw-weak-quiz-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0 24px;
+}
+
+.fw-weak-quiz-item {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--heat);
+  border-radius: 6px;
+  padding: 12px 14px;
+}
+
+.fwq-top { display: flex; gap: 8px; font-size: 11.5px; font-weight: 700; margin-bottom: 4px; }
+.fwq-course { color: var(--ink); }
+.fwq-topic { color: var(--heat); }
+.fwq-check-row { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 11px; }
+.fwq-btns { display: flex; gap: 6px; }
+.fwq-btn { padding: 4px 10px; font-size: 10.5px; border-radius: 4px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; }
+.fwq-btn.yes { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.fwq-btn.no { background: var(--heat-soft); border-color: var(--heat); color: var(--heat); }
+
+.fw-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.friday-wizard-cta-banner {
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.friday-launch-btn {
+  background: var(--accent);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Fitness Station & Glance Styling */
+.fitness-page-wrap {
+  padding-bottom: 60px;
+}
+
+.fitness-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 20px;
+}
+
+.fitness-hero-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fitness-main-title {
+  font-size: clamp(24px, 4vw, 36px);
+  margin: 0 0 4px;
+}
+
+.fitness-view-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.fv-tab {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  color: var(--ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.fv-tab.on {
+  background: var(--ink);
+  color: var(--ground);
+  border-color: var(--ink);
+  font-weight: 600;
+}
+
+.fit-day-pills {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  margin-bottom: 20px;
+}
+
+.fit-day-btn {
+  flex: 1 1 70px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 4px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: all .12s ease;
+}
+
+.fit-day-btn.on {
+  background: var(--surface);
+  border-width: 2px;
+  font-weight: 700;
+}
+
+.fit-day-name { font-size: 11px; }
+.fit-day-sub { font-size: 9px; opacity: 0.7; }
+
+.fit-current-banner {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-left: 4px solid;
+  border-radius: 8px;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.fcb-day { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; }
+.fcb-label { font-size: 18px; font-weight: 700; color: var(--ink); }
+
+.fcb-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fit-reset-btn {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 10px;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+
+.fit-rest-timer-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 14px;
+  margin-bottom: 18px;
+  font-size: 11.5px;
+  flex-wrap: wrap;
+}
+
+.frt-buttons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.frt-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.frt-active {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
+}
+
+.frt-clock {
+  font-weight: 700;
+  color: var(--heat);
+  font-size: 13px;
+}
+
+.frt-stop {
+  background: none;
+  border: 1px solid #E05D52;
+  color: #E05D52;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.fit-mode-toggle {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+
+.fmt-btn {
+  flex: 1;
+  padding: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--surface);
+  color: var(--ink-3);
+  border: none;
+  cursor: pointer;
+  transition: all .12s ease;
+}
+
+.fit-exercises-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fit-exercise-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 4px solid;
+  border-radius: 8px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fec-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fec-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fec-num {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-3);
+}
+
+.fec-name {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.fec-sets {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+
+.fec-sets-checkboxes {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.fec-set-lbl { color: var(--ink-3); margin-right: 4px; }
+
+.fec-set-pill {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 10.5px;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: all .1s ease;
+}
+
+.fec-set-pill.done {
+  background: var(--good);
+  color: #000000;
+  border-color: var(--good);
+  font-weight: 700;
+}
+
+.fec-tip {
+  font-size: 11.5px;
+  color: var(--ink-2);
+  background: var(--surface-2);
+  border-radius: 4px;
+  padding: 6px 10px;
+}
+
+.fec-tip-icon { color: var(--ink-3); }
+
+/* Nutrition & Tips Cards */
+.fit-nutrition-grid, .fit-tips-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.fit-nutrition-card, .fit-tip-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 3px solid;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.fnc-head, .ftc-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.fnc-icon, .ftc-icon { font-size: 20px; }
+.fnc-title, .ftc-title { font-size: 14px; font-weight: 700; }
+
+.fnc-list, .ftc-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.fnc-list li, .ftc-list li {
+  padding: 5px 0;
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 8px;
+}
+
+.fit-meals-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.fmc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.fmc-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  border-radius: 6px;
+  border: 1px solid var(--line);
+}
+
+.fmc-k { font-size: 10px; font-weight: 700; color: var(--accent); }
+.fmc-v { font-size: 12px; color: var(--ink-2); }
+
+.fit-supp-note {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 14px 18px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.fsn-badge { color: var(--heat); font-weight: 700; display: block; margin-bottom: 4px; }
+
+/* Fitness Glance on Dashboard */
+.fitness-glance-card .fg-top-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+
+.fg-hero-box {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-left: 4px solid;
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin: 10px 0;
+}
+
+.fg-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.fg-tip-pill {
+  font-size: 10.5px;
+  color: var(--ink-3);
+  margin-top: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
+}
+
+.fg-action-row {
+  margin-top: 10px;
+}
+
+@media (max-width: 640px) {
+  .qc-choices-grid {
+    grid-template-columns: 1fr;
+  }
+}

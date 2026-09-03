@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useMemo, useState } from "react";
+import { use, useEffect, useState } from "react";
 import type { Term } from "@/lib/term";
 import type { CanvasResult } from "@/app/page";
 import type { State } from "@/lib/db";
@@ -8,19 +8,6 @@ import { buildItems } from "@/components/TodoPanel";
 import { daysBetween, longDate } from "@/lib/localtime";
 import { localParts } from "@/lib/schedule";
 
-/**
- * The countdowns a semester actually runs on.
- *
- * No network, no data source — just the term dates and today. Rendered
- * client-side so the "today" it counts from is his today, not the server's.
- */
-
-/**
- * Milestones derived from the term rather than hard-coded dates.
- *
- * Consecutive break days collapse into one entry — "Oct 8–9" is one thing that
- * happens, not two — and the last day always appears.
- */
 function milestonesFor(term: Term) {
   const out: Array<{ iso: string; label: string; note?: string }> = [];
 
@@ -44,18 +31,6 @@ function milestonesFor(term: Term) {
   return out.sort((x, y) => (x.iso < y.iso ? -1 : 1));
 }
 
-/**
- * Where the work actually piles up.
- *
- * The dashboard is very good at today and blind to November. Forty-three
- * assignments are not spread evenly across a term — they cluster around
- * midterms and the last three weeks — and the useful thing is seeing the week
- * with five deadlines *before* walking into it.
- *
- * Quizzes and exams count double. Not arbitrary: a week with three readings is
- * a busy week, a week with three exams is a different kind of week, and the
- * point of this is to tell them apart.
- */
 export function weekLoad(term: Term, items: Array<{ due: string; done: boolean; kind: 0 | 1 | 2 }>) {
   const total = Math.max(1, daysBetween(term.start, term.end));
   const weeks = Math.ceil(total / 7);
@@ -64,7 +39,7 @@ export function weekLoad(term: Term, items: Array<{ due: string; done: boolean; 
   for (const it of items) {
     if (it.done) continue;
     const off = daysBetween(term.start, it.due);
-    if (off < 0 || off > total) continue;          // outside the term entirely
+    if (off < 0 || off > total) continue;
     const w = Math.min(weeks - 1, Math.floor(off / 7));
     buckets[w].count++;
     buckets[w].weight += it.kind === 0 ? 1 : 2;
@@ -105,8 +80,6 @@ export default function Milestones({
   const load = weekLoad(term, items);
   const thisWeek = Math.max(0, Math.floor(daysBetween(term.start, iso) / 7));
   const peak = load.reduce((max, b, i) => (b.weight > load[max].weight ? i : max), 0);
-  // Only worth flagging if it is ahead of him and genuinely heavier than usual.
-  // Named distinctly from the milestone list below, which is also "ahead".
   const weeksAhead = load
     .map((b, i) => ({ ...b, i }))
     .filter((b) => b.i >= thisWeek && b.count > 0);
@@ -122,6 +95,14 @@ export default function Milestones({
 
   const ahead = MILESTONES.map((m) => ({ ...m, days: daysBetween(iso, m.iso) }))
     .filter((m) => m.days >= 0);
+
+  // Filter upcoming exams & major deliverables (quizzes, midterms, dossiers)
+  const upcomingExams = items
+    .filter((it) => !it.done && (it.kind !== 0 || /exam|midterm|quiz|dossier|brief|paper/i.test(it.title)))
+    .map((it) => ({ ...it, days: daysBetween(iso, it.due) }))
+    .filter((it) => it.days >= 0)
+    .sort((a, b) => a.days - b.days)
+    .slice(0, 3);
 
   return (
     <section className="card span5">
@@ -174,6 +155,28 @@ export default function Milestones({
               ) : (
                 <>Nothing left on the calendar.</>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Upcoming Major Exams / Deliverables Radar */}
+        {upcomingExams.length > 0 && (
+          <div className="exam-countdown-radar mono">
+            <div className="ecr-head">⏳ Upcoming Major Assessments</div>
+            <div className="ecr-list">
+              {upcomingExams.map((ex) => (
+                <div key={ex.id} className="ecr-item">
+                  <div className="ecr-info">
+                    <span className="ecr-code">{ex.code}</span>
+                    <span className="ecr-title">{ex.title}</span>
+                  </div>
+                  <div className="ecr-countdown">
+                    <span className="ecr-badge">
+                      {ex.days === 0 ? "Due Today" : ex.days === 1 ? "Tomorrow" : `${ex.days}d left`}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}

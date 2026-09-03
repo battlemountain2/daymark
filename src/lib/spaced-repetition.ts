@@ -107,3 +107,20 @@ export function saveSRSCard(state: SRSCardState): SRSStore {
   } catch {}
   return store;
 }
+
+import type { Flashcard } from "@/lib/study-hub-types";
+
+/**
+ * Returns all cards due for spaced review today based on SM-2 state.
+ */
+export function getDueCards(
+  cards: Flashcard[],
+  todayIso: string,
+  store: SRSStore
+): Flashcard[] {
+  return cards.filter((card) => {
+    const srs = store[card.id];
+    if (!srs) return true; // Brand new card, due for initial review
+    return !srs.dueDate || srs.dueDate <= todayIso;
+  });
+}

@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { use } from "react";
-import type { StudyHubData } from "@/lib/study-hub";
+import { use, useEffect, useState } from "react";
+import type { StudyHubData } from "@/lib/study-hub-types";
+import { getDueCards, loadSRSStore, type SRSStore } from "@/lib/spaced-repetition";
+import QuickStudyModal from "@/components/QuickStudyModal";
 
 type Props = {
   promise: Promise<StudyHubData>;
@@ -12,6 +14,24 @@ export default function StudyGlance({ promise }: Props) {
   const data = use(promise);
   const { courses, weeklyReview, allCards, overallDeckStats } = data;
 
+  const [srsStore, setSrsStore] = useState<SRSStore>({});
+  const [isQuickReviewOpen, setIsQuickReviewOpen] = useState<boolean>(false);
+  const [todayIso, setTodayIso] = useState<string>(() => new Date().toISOString().slice(0, 10));
+
+  useEffect(() => {
+    setSrsStore(loadSRSStore());
+    try {
+      const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/Denver",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(new Date());
+      setTodayIso(parts);
+    } catch {}
+  }, []);
+
+  const dueCards = getDueCards(allCards, todayIso, srsStore);
   const total = allCards.length;
   const verifiedPct = total > 0 ? Math.round((overallDeckStats.verified / total) * 100) : 0;
   const topWeak = weeklyReview.weakAreas?.[0];
@@ -26,35 +46,39 @@ export default function StudyGlance({ promise }: Props) {
       </div>
 
       <div className="card-body">
-        {/* Term & Deck Progress */}
+        {/* Term & Deck Progress Banner */}
         <div className="glance-top-stat mono">
           <span>Week {data.currentWeekNumber} · {courses.length} courses</span>
-          <span className="pill mono">{verifiedPct}% verified</span>
+          <span className="pill mono live" style={{ color: "var(--good)" }}>
+            ● {verifiedPct}% mastered
+          </span>
         </div>
 
-        <div className="deck-progress-track" style={{ marginTop: 8, marginBottom: 12 }}>
-          <div
-            className="deck-progress-fill verified"
-            style={{ width: `${verifiedPct}%` }}
-          />
-          <div
-            className="deck-progress-fill review"
-            style={{ width: `${total > 0 ? (overallDeckStats.needsReview / total) * 100 : 0}%` }}
-          />
+        {/* Minimalist Single-Tint Progress Line */}
+        <div className="minimal-prog-track" title={`${verifiedPct}% verified`}>
+          <div className="minimal-prog-fill" style={{ width: `${verifiedPct}%` }} />
         </div>
 
-        {/* Quick Breakdown Badges */}
-        <div className="glance-stats mono">
-          <span className="stat-v"><b>{overallDeckStats.verified}</b> verified</span>
-          <span className="stat-r"><b>{overallDeckStats.needsReview}</b> need review</span>
-          <span className="stat-d"><b>{total}</b> total</span>
+        {/* Actionable Due Queue Banner */}
+        <div className="glance-queue-box">
+          {dueCards.length > 0 ? (
+            <div className="gqb-active mono">
+              <span className="gqb-badge">⚡ {dueCards.length} DUE TODAY</span>
+              <span className="gqb-sub sub">Spaced repetition review ready</span>
+            </div>
+          ) : (
+            <div className="gqb-caught-up mono">
+              <span className="gqb-check">✓ ALL CAUGHT UP</span>
+              <span className="gqb-sub sub">{total} cards mastered or scheduled</span>
+            </div>
+          )}
         </div>
 
         {/* Highlighted Weak Area Alert */}
         {topWeak && (
           <div className="glance-alert-box">
             <div className="gab-top mono">
-              <span className="gab-k">⚠️ Focus Area: {topWeak.course}</span>
+              <span className="gab-k">⚠️ Focus: {topWeak.course}</span>
               <span className="gab-pill">needs review</span>
             </div>
             <div className="gab-topic">{topWeak.topic}</div>
@@ -62,13 +86,37 @@ export default function StudyGlance({ promise }: Props) {
           </div>
         )}
 
-        {/* Action Link */}
+        {/* Action Buttons */}
         <div className="glance-action-row">
-          <Link href="/study" className="glance-btn mono">
-            Practice Active Recall ({allCards.length} cards) →
-          </Link>
+          {dueCards.length > 0 ? (
+            <button
+              type="button"
+              className="glance-btn primary mono"
+              onClick={() => setIsQuickReviewOpen(true)}
+            >
+              ⚡ Start 5-Min Review ({dueCards.length} cards) →
+            </button>
+          ) : (
+            <Link href="/study" className="glance-btn mono">
+              Practice Active Recall ({allCards.length} cards) →
+            </Link>
+          )}
         </div>
       </div>
+
+      {/* Quick Study Modal */}
+      {isQuickReviewOpen && (
+        <QuickStudyModal
+          dueCards={dueCards}
+          onClose={() => {
+            setIsQuickReviewOpen(false);
+            setSrsStore(loadSRSStore());
+          }}
+          onFinish={() => {
+            setSrsStore(loadSRSStore());
+          }}
+        />
+      )}
     </section>
   );
 }
@@ -82,7 +130,7 @@ export function StudyGlanceSkeleton() {
       </div>
       <div className="card-body">
         <span className="bar" style={{ width: "60%", height: 16 }} />
-        <div className="deck-progress-track" style={{ marginTop: 10, marginBottom: 12 }} />
+        <div className="minimal-prog-track" style={{ marginTop: 10, marginBottom: 12 }} />
         <span className="bar" style={{ width: "90%", height: 24 }} />
       </div>
     </section>

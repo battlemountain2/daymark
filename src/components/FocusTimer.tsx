@@ -60,7 +60,7 @@ export default function FocusTimer({
 
   const toggleRun = () => {
     if (!isRunning && activeSound === "off") {
-      handleSoundChange("rain"); // Auto start rain when timer starts
+      handleSoundChange("rain");
     }
     setIsRunning(!isRunning);
   };
@@ -82,7 +82,7 @@ export default function FocusTimer({
         <div>
           <h3>Study Focus &amp; Pomodoro Station</h3>
           <p className="sub mono">
-            Distraction-free timer with browser-native Web Audio soundscapes.
+            Distraction-free timer with browser-native Web Audio soundscapes &amp; 40Hz focus tones.
           </p>
         </div>
       </div>
@@ -149,9 +149,9 @@ export default function FocusTimer({
 
         {/* Ambient Soundscape Controller */}
         <div className="ft-sound-card">
-          <div className="ft-card-title mono">🎧 Ambient Soundscape Generator</div>
+          <div className="ft-card-title mono">🎧 Native Audio &amp; Focus Frequencies</div>
           <p className="sub" style={{ fontSize: 12.5, margin: "6px 0 14px" }}>
-            Generated natively using Web Audio API nodes. No streaming bandwidth, 100% offline.
+            Synthesized natively via Web Audio API. Zero bandwidth, 100% offline, tuned for headphones.
           </p>
 
           <div className="sound-options mono">
@@ -175,6 +175,20 @@ export default function FocusTimer({
               onClick={() => handleSoundChange(activeSound === "drone" ? "off" : "drone")}
             >
               🌌 Lo-Fi Drone
+            </button>
+            <button
+              type="button"
+              className={`sound-pill ${activeSound === "binaural" ? "on" : ""}`}
+              onClick={() => handleSoundChange(activeSound === "binaural" ? "off" : "binaural")}
+            >
+              🧠 40Hz Gamma Focus
+            </button>
+            <button
+              type="button"
+              className={`sound-pill ${activeSound === "lofi" ? "on" : ""}`}
+              onClick={() => handleSoundChange(activeSound === "lofi" ? "off" : "lofi")}
+            >
+              📻 Vinyl &amp; Tape
             </button>
             <button
               type="button"

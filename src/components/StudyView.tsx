@@ -7,6 +7,7 @@ import FlashcardDeckViewer from "@/components/FlashcardDeckViewer";
 import EvidenceBank from "@/components/EvidenceBank";
 import FocusTimer from "@/components/FocusTimer";
 import PreClassBriefModal from "@/components/PreClassBriefModal";
+import FridayReviewWizard from "@/components/FridayReviewWizard";
 import { getPreClassBrief, type PreClassBrief } from "@/lib/pre-class-briefs";
 import { longDate } from "@/lib/localtime";
 
@@ -14,6 +15,7 @@ export default function StudyView({ data }: { data: StudyHubData }) {
   const [activeTab, setActiveTab] = useState<"cards" | "courses" | "review" | "evidence" | "focus">("cards");
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
   const [activeBrief, setActiveBrief] = useState<PreClassBrief | null>(null);
+  const [isWizardOpen, setIsWizardOpen] = useState<boolean>(false);
 
   const { courses, weeklyReview, allCards, overallDeckStats } = data;
   const verifiedPct = allCards.length > 0 ? Math.round((overallDeckStats.verified / allCards.length) * 100) : 0;
@@ -68,13 +70,11 @@ export default function StudyView({ data }: { data: StudyHubData }) {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="study-view-tabs mono" role="tablist" aria-label="Study Hub sections">
+        <div className="study-view-tabs mono">
           <button
             type="button"
             className={`sv-tab ${activeTab === "cards" ? "on" : ""}`}
             onClick={() => setActiveTab("cards")}
-            role="tab"
-            aria-selected={activeTab === "cards"}
           >
             ✦ Active Recall ({allCards.length})
           </button>
@@ -82,8 +82,6 @@ export default function StudyView({ data }: { data: StudyHubData }) {
             type="button"
             className={`sv-tab ${activeTab === "courses" ? "on" : ""}`}
             onClick={() => setActiveTab("courses")}
-            role="tab"
-            aria-selected={activeTab === "courses"}
           >
             Course Matrix &amp; Syllabi
           </button>
@@ -91,8 +89,6 @@ export default function StudyView({ data }: { data: StudyHubData }) {
             type="button"
             className={`sv-tab ${activeTab === "review" ? "on" : ""}`}
             onClick={() => setActiveTab("review")}
-            role="tab"
-            aria-selected={activeTab === "review"}
           >
             Weekly Review &amp; Takeaways
           </button>
@@ -100,8 +96,6 @@ export default function StudyView({ data }: { data: StudyHubData }) {
             type="button"
             className={`sv-tab ${activeTab === "evidence" ? "on" : ""}`}
             onClick={() => setActiveTab("evidence")}
-            role="tab"
-            aria-selected={activeTab === "evidence"}
           >
             📖 Evidence Bank
           </button>
@@ -109,8 +103,6 @@ export default function StudyView({ data }: { data: StudyHubData }) {
             type="button"
             className={`sv-tab ${activeTab === "focus" ? "on" : ""}`}
             onClick={() => setActiveTab("focus")}
-            role="tab"
-            aria-selected={activeTab === "focus"}
           >
             ⏱️ Focus &amp; Sounds
           </button>
@@ -186,8 +178,9 @@ export default function StudyView({ data }: { data: StudyHubData }) {
                           <span>{totalC} Flashcards</span>
                           <span>{vPct}% Verified</span>
                         </div>
-                        <div className="mini-prog-track">
-                          <div className="mini-prog-fill" style={{ width: `${vPct}%` }} />
+                        {/* Minimalist Single-Tint Progress Line */}
+                        <div className="minimal-prog-track">
+                          <div className="minimal-prog-fill" style={{ width: `${vPct}%` }} />
                         </div>
                       </div>
 
@@ -225,7 +218,24 @@ export default function StudyView({ data }: { data: StudyHubData }) {
               <span className="pill mono">{weeklyReview.scheduledReviewDate}</span>
             </div>
             <div className="card-body">
-              <div className="weekly-review-container">
+              {/* Launch Friday Synthesis Banner */}
+              <div className="friday-wizard-cta-banner">
+                <div className="fwc-text">
+                  <h3>Friday 8:00 PM Synthesis Ritual</h3>
+                  <p className="sub mono">
+                    Guided 5-minute review: check off readings, absorb the 5 core takeaways, and quiz your weak areas.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="friday-launch-btn mono"
+                  onClick={() => setIsWizardOpen(true)}
+                >
+                  ⚡ Launch Friday Wizard →
+                </button>
+              </div>
+
+              <div className="weekly-review-container" style={{ marginTop: 24 }}>
                 <div className="wr-section">
                   <div className="wr-section-head mono">
                     <span>✦ The 5 Core Takeaways This Week</span>
@@ -297,6 +307,14 @@ export default function StudyView({ data }: { data: StudyHubData }) {
 
       {/* Pre-Class Brief Modal */}
       <PreClassBriefModal brief={activeBrief} onClose={() => setActiveBrief(null)} />
+
+      {/* Friday Synthesis Wizard */}
+      {isWizardOpen && (
+        <FridayReviewWizard
+          data={weeklyReview}
+          onClose={() => setIsWizardOpen(false)}
+        />
+      )}
     </div>
   );
 }

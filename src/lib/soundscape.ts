@@ -1,11 +1,15 @@
 /**
  * Browser-native Web Audio Soundscape Generator.
  *
- * Generates continuous focus audio (Rain, Pink Noise, Warm Lo-Fi Ambient Drone)
- * purely in-browser with zero network requests or audio assets.
+ * Generates continuous focus audio:
+ * - Rain (Brown noise with rooftop filter)
+ * - Pink Noise (Full spectrum concentration)
+ * - Warm Ambient Drone (Triple-sine harmonic chord)
+ * - 40Hz Binaural Beats (Gamma frequency focus for reading)
+ * - Lo-Fi Warm Vinyl & Tape Flutter (Analog warmth)
  */
 
-export type SoundscapeType = "rain" | "pink" | "drone" | "off";
+export type SoundscapeType = "rain" | "pink" | "drone" | "binaural" | "lofi" | "off";
 
 class SoundscapeEngine {
   private ctx: AudioContext | null = null;
@@ -48,6 +52,10 @@ class SoundscapeEngine {
       this.startPinkNoise();
     } else if (type === "drone") {
       this.startDrone();
+    } else if (type === "binaural") {
+      this.startBinaural40Hz();
+    } else if (type === "lofi") {
+      this.startLoFiVinyl();
     }
   }
 
@@ -76,20 +84,18 @@ class SoundscapeEngine {
     const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
     const output = noiseBuffer.getChannelData(0);
 
-    // Brown noise with sporadic droplet spikes
     let lastOut = 0.0;
     for (let i = 0; i < bufferSize; i++) {
       const white = Math.random() * 2 - 1;
       output[i] = (lastOut + 0.02 * white) / 1.02;
       lastOut = output[i];
-      output[i] *= 2.5; // boost
+      output[i] *= 2.5;
     }
 
     const whiteNoise = this.ctx.createBufferSource();
     whiteNoise.buffer = noiseBuffer;
     whiteNoise.loop = true;
 
-    // Filter to sound like soft rainfall on a roof
     const filter = this.ctx.createBiquadFilter();
     filter.type = "lowpass";
     filter.frequency.setValueAtTime(850, this.ctx.currentTime);
@@ -132,8 +138,6 @@ class SoundscapeEngine {
 
   private startDrone() {
     if (!this.ctx || !this.gainNode) return;
-
-    // Harmonic warm ambient frequencies: Root + 5th + 9th (e.g. D2 73.4Hz, A2 110Hz, E3 164.8Hz)
     const freqs = [73.42, 110.0, 164.81];
 
     for (const f of freqs) {
@@ -141,7 +145,6 @@ class SoundscapeEngine {
       osc.type = "sine";
       osc.frequency.setValueAtTime(f, this.ctx.currentTime);
 
-      // Low frequency tremolo modulation
       const lfo = this.ctx.createOscillator();
       lfo.frequency.setValueAtTime(0.08 + Math.random() * 0.05, this.ctx.currentTime);
       const lfoGain = this.ctx.createGain();
@@ -160,6 +163,88 @@ class SoundscapeEngine {
 
       this.activeNodes.push(osc, lfo, lfoGain, oscGain);
     }
+  }
+
+  /**
+   * 40Hz Gamma Focus Frequency:
+   * Left ear: 200 Hz
+   * Right ear: 240 Hz
+   * Difference: 40 Hz binaural beat for deep cognitive processing
+   */
+  private startBinaural40Hz() {
+    if (!this.ctx || !this.gainNode) return;
+
+    const merger = this.ctx.createChannelMerger(2);
+
+    // Left Ear
+    const oscLeft = this.ctx.createOscillator();
+    oscLeft.type = "sine";
+    oscLeft.frequency.setValueAtTime(200, this.ctx.currentTime);
+    const gainLeft = this.ctx.createGain();
+    gainLeft.gain.setValueAtTime(0.18, this.ctx.currentTime);
+    oscLeft.connect(gainLeft);
+    gainLeft.connect(merger, 0, 0);
+
+    // Right Ear
+    const oscRight = this.ctx.createOscillator();
+    oscRight.type = "sine";
+    oscRight.frequency.setValueAtTime(240, this.ctx.currentTime);
+    const gainRight = this.ctx.createGain();
+    gainRight.gain.setValueAtTime(0.18, this.ctx.currentTime);
+    oscRight.connect(gainRight);
+    gainRight.connect(merger, 0, 1);
+
+    merger.connect(this.gainNode);
+
+    oscLeft.start(0);
+    oscRight.start(0);
+
+    this.activeNodes.push(oscLeft, oscRight, gainLeft, gainRight, merger);
+  }
+
+  /**
+   * Lo-Fi Warm Vinyl & Tape Flutter:
+   * Ambient vinyl dust clicks + warm sub bass foundation
+   */
+  private startLoFiVinyl() {
+    if (!this.ctx || !this.gainNode) return;
+
+    // Vinyl crackle simulation
+    const bufferSize = 2 * this.ctx.sampleRate;
+    const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+
+    for (let i = 0; i < bufferSize; i++) {
+      if (Math.random() < 0.0006) {
+        output[i] = (Math.random() * 2 - 1) * 0.7; // Vinyl pop
+      } else {
+        output[i] = (Math.random() * 2 - 1) * 0.015; // Surface noise
+      }
+    }
+
+    const vinylNoise = this.ctx.createBufferSource();
+    vinylNoise.buffer = noiseBuffer;
+    vinylNoise.loop = true;
+
+    // Warm tape flutter oscillator
+    const warmSub = this.ctx.createOscillator();
+    warmSub.type = "triangle";
+    warmSub.frequency.setValueAtTime(55, this.ctx.currentTime); // A1 note warm hum
+
+    const subGain = this.ctx.createGain();
+    subGain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+    warmSub.connect(subGain);
+    subGain.connect(this.gainNode);
+
+    const vinylGain = this.ctx.createGain();
+    vinylGain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+    vinylNoise.connect(vinylGain);
+    vinylGain.connect(this.gainNode);
+
+    vinylNoise.start(0);
+    warmSub.start(0);
+
+    this.activeNodes.push(vinylNoise, warmSub, subGain, vinylGain);
   }
 }
 

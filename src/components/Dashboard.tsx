@@ -18,6 +18,7 @@ import type { Story } from "@/lib/feeds";
 import type { Music } from "@/lib/music";
 import MusicPanel, { MusicSkeleton } from "@/components/MusicPanel";
 import StudyGlance, { StudyGlanceSkeleton } from "@/components/StudyGlance";
+import FitnessGlance from "@/components/FitnessGlance";
 import CampusHopMap from "@/components/CampusHopMap";
 import PreClassBriefModal from "@/components/PreClassBriefModal";
 import { getPreClassBrief, type PreClassBrief, PRE_CLASS_BRIEFS } from "@/lib/pre-class-briefs";
@@ -273,6 +274,9 @@ export default function Dashboard({
       { id: "go-study", group: "Go", label: "Academic Study Hub", hint: "/study",
         keywords: "study flashcards anki quiz reading review decks syllabus evidence focus",
         run: () => router.push("/study") },
+      { id: "go-fitness", group: "Go", label: "Training & Fitness Split", hint: "/fitness",
+        keywords: "gym workout split chest back shoulders legs arms nutrition fitness phed",
+        run: () => router.push("/fitness") },
       { id: "go-sky", group: "Go", label: "Sky, sun and weather", hint: "/sky",
         keywords: "moon stars planets forecast orrery tonight",
         run: () => router.push("/sky") },
@@ -295,6 +299,7 @@ export default function Dashboard({
 
     for (const h of [
       "Study Hub",
+      "Today's Workout",
       "Weather",
       "Day at a glance",
       "Due",
@@ -347,7 +352,7 @@ export default function Dashboard({
     <div className="wrap">
       <Offline renderedAt={renderedAt} pending={pending} />
 
-      {/* Clean, uncluttered header */}
+      {/* Clean header */}
       <header>
         <Suspense
           fallback={
@@ -467,6 +472,9 @@ export default function Dashboard({
           <StudyGlance promise={studyPromise} />
         </Suspense>
 
+        {/* Today's Workout Glance Widget */}
+        <FitnessGlance />
+
         <Suspense fallback={<TodoSkeleton />}>
           <TodoPanel promise={canvasPromise} st={st} busy={busy}
             nowIso={now.iso} mutate={mutate} />
@@ -491,6 +499,9 @@ export default function Dashboard({
           <Link href="/study" className="bt-link">
             ✦ study hub
           </Link>
+          <Link href="/fitness" className="bt-link">
+            🏋️ workout
+          </Link>
           <Link href="/sky" className="bt-link">
             ☼ sky &amp; weather
           </Link>
@@ -514,7 +525,7 @@ export default function Dashboard({
         checking something off on your phone shows up on your laptop, and an edit made with no
         signal is queued and synced when you reconnect. Weather is api.weather.gov: free, keyless,
         current. Study Hub cards are parsed from standardized Anki CSVs with SM-2 spaced repetition and weekly synthesis.
-        Times in Mountain Time.
+        Fitness training split covers a 6-day lean bulk protocol. Times in Mountain Time.
       </footer>
     </div>
   );
