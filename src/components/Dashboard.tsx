@@ -22,6 +22,8 @@ import FitnessGlance from "@/components/FitnessGlance";
 import CampusHopMap from "@/components/CampusHopMap";
 import PreClassBriefModal from "@/components/PreClassBriefModal";
 import PomodoroModal from "@/components/PomodoroModal";
+import ScratchpadDrawer from "@/components/ScratchpadDrawer";
+import WeeklyTimetable from "@/components/WeeklyTimetable";
 import { getPreClassBrief, type PreClassBrief, PRE_CLASS_BRIEFS } from "@/lib/pre-class-briefs";
 import {
   classesOn, gaps, hhmm, localParts, leaveAdvice, building, type ClassBlock,
@@ -153,6 +155,8 @@ export default function Dashboard({
     open: false,
     gapMinutes: null,
   });
+  const [viewMode, setViewMode] = useState<"today" | "week">("today");
+  const [scratchpadOpen, setScratchpadOpen] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -182,8 +186,19 @@ export default function Dashboard({
   }, []);
 
   useEffect(() => {
+    const handleShortcut = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === "j" || e.key === "J")) {
+        e.preventDefault();
+        setScratchpadOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, []);
+
+  useEffect(() => {
     const p = localStorage.getItem("palette") || localStorage.getItem("hb:pal");
-    if (p && ["forest", "dusk", "ash"].includes(p)) {
+    if (p && ["forest", "dusk", "ash", "sandia", "paper"].includes(p)) {
       if (p === "forest") document.documentElement.removeAttribute("data-palette");
       else document.documentElement.setAttribute("data-palette", p);
       setPalette(p);
@@ -338,7 +353,24 @@ export default function Dashboard({
       });
     }
 
-    for (const p of ["forest", "dusk", "ash"]) {
+    out.push({
+      id: "scratchpad",
+      group: "Actions",
+      label: "Open Scratchpad / Brain Dump",
+      hint: "⌘J",
+      keywords: "scratchpad notes memo brain dump lecture write",
+      run: () => setScratchpadOpen(true),
+    });
+    out.push({
+      id: "toggle-view-mode",
+      group: "Views",
+      label: viewMode === "today" ? "Switch to Weekly Timetable view" : "Switch to Today at a glance view",
+      hint: viewMode === "today" ? "Week" : "Today",
+      keywords: "calendar timetable week schedule classes",
+      run: () => setViewMode((m) => (m === "today" ? "week" : "today")),
+    });
+
+    for (const p of ["forest", "dusk", "ash", "sandia", "paper"]) {
       out.push({
         id: `pal-${p}`, group: "Theme", label: `Switch to ${p}`,
         hint: palette === p ? "current" : undefined,
@@ -375,7 +407,7 @@ export default function Dashboard({
           <span>{clock?.date ?? "\u00a0"}</span>
           <span>{clock?.time ?? "\u00a0"}</span>
           <span className="themes">
-            {["forest", "dusk", "ash"].map((p) => (
+            {["forest", "dusk", "ash", "sandia", "paper"].map((p) => (
               <button key={p} type="button" className="mono"
                 aria-pressed={palette === p} onClick={() => applyPalette(p)}>{p}</button>
             ))}
@@ -392,9 +424,37 @@ export default function Dashboard({
         </Suspense>
 
         <section className="card span7 day-glance-card">
-          <div className="card-head"><h2>Day at a glance</h2></div>
+          <div className="card-head">
+            <h2>{viewMode === "today" ? "Day at a glance" : "Weekly Timetable"}</h2>
+            <div className="view-toggle mono">
+              <button
+                type="button"
+                className={`view-toggle-btn ${viewMode === "today" ? "active" : ""}`}
+                onClick={() => setViewMode("today")}
+              >
+                Today
+              </button>
+              <span className="view-toggle-sep">/</span>
+              <button
+                type="button"
+                className={`view-toggle-btn ${viewMode === "week" ? "active" : ""}`}
+                onClick={() => setViewMode("week")}
+              >
+                Week
+              </button>
+            </div>
+          </div>
           <div className="card-body">
-            <div>
+            {viewMode === "week" ? (
+              <WeeklyTimetable
+                term={term}
+                now={now}
+                onSelectBrief={(brief) => setActiveBrief(brief)}
+                onStartFocus={(gapMinutes) => setPomodoroState({ open: true, gapMinutes })}
+              />
+            ) : (
+              <>
+                <div>
               {!todayClasses.length && (
                 <div className="sub" style={{ padding: "18px 0" }}>{emptyWhy}</div>
               )}
@@ -476,6 +536,8 @@ export default function Dashboard({
                 )}
               </div>
             )}
+              </>
+            )}
           </div>
         </section>
 
@@ -515,6 +577,14 @@ export default function Dashboard({
           >
             ⏱️ pomodoro
           </button>
+          <button
+            type="button"
+            className="bt-link bt-scratch-btn"
+            onClick={() => setScratchpadOpen(true)}
+            title="Open Brain Dump Scratchpad (⌘J)"
+          >
+            📝 scratchpad
+          </button>
           <Link href="/study" className="bt-link">
             ✦ study hub
           </Link>
@@ -538,6 +608,12 @@ export default function Dashboard({
 
       {/* Pre-Class Brief Modal */}
       <PreClassBriefModal brief={activeBrief} onClose={() => setActiveBrief(null)} />
+
+      {/* Quick Brain Dump Scratchpad Drawer */}
+      <ScratchpadDrawer
+        isOpen={scratchpadOpen}
+        onClose={() => setScratchpadOpen(false)}
+      />
 
       {/* Dimmed Pomodoro Focus Station */}
       {pomodoroState.open && (
