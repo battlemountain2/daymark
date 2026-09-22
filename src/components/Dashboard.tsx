@@ -104,6 +104,34 @@ function WeatherSlot({
   return <Weather weather={use(promise)} sun={sun} />;
 }
 
+function LiveClock() {
+  const [clock, setClock] = useState<{ date: string; time: string } | null>(null);
+
+  useEffect(() => {
+    const tick = () => {
+      const d = new Date();
+      setClock({
+        date: d.toLocaleDateString("en-US", {
+          timeZone: "America/Denver", weekday: "short", month: "short", day: "numeric",
+        }),
+        time: d.toLocaleTimeString("en-US", {
+          timeZone: "America/Denver", hour: "numeric", minute: "2-digit", hour12: true,
+        }).toLowerCase(),
+      });
+    };
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <>
+      <span>{clock?.date ?? " "}</span>
+      <span>{clock?.time ?? " "}</span>
+    </>
+  );
+}
+
 function WeatherSkeleton() {
   return (
     <section className="card span5 wxcard">
@@ -146,7 +174,6 @@ export default function Dashboard({
   const [st, setSt] = useState<State>(state);
   const [work, setWork] = useState<ReturnType<typeof buildItems> | null>(null);
   const [now, setNow] = useState(() => localParts());
-  const [clock, setClock] = useState<{ date: string; time: string } | null>(null);
   const [palette, setPalette] = useState("forest");
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState(0);
@@ -168,20 +195,16 @@ export default function Dashboard({
   }, [canvasPromise, st]);
 
   useEffect(() => {
-    const tick = () => {
-      setNow(localParts());
-      const d = new Date();
-      setClock({
-        date: d.toLocaleDateString("en-US", {
-          timeZone: "America/Denver", weekday: "short", month: "short", day: "numeric",
-        }),
-        time: d.toLocaleTimeString("en-US", {
-          timeZone: "America/Denver", hour: "numeric", minute: "2-digit", hour12: true,
-        }).toLowerCase(),
-      });
+    const checkMinutes = () => {
+      const next = localParts();
+      setNow((prev) => (
+        prev.minutes === next.minutes && prev.iso === next.iso && prev.dow === next.dow
+          ? prev
+          : next
+      ));
     };
-    tick();
-    const t = setInterval(tick, 1000);
+    checkMinutes();
+    const t = setInterval(checkMinutes, 5000);
     return () => clearInterval(t);
   }, []);
 
@@ -404,8 +427,7 @@ export default function Dashboard({
         </Suspense>
 
         <div className="stamp mono">
-          <span>{clock?.date ?? "\u00a0"}</span>
-          <span>{clock?.time ?? "\u00a0"}</span>
+          <LiveClock />
           <span className="themes">
             {["forest", "dusk", "ash", "sandia", "paper", "yharnam"].map((p) => (
               <button key={p} type="button" className="mono"

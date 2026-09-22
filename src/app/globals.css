@@ -6104,10 +6104,12 @@ details.tl[open] summary::after{content:"\2212";}
 }
 .eq-bar {
   width: 4px;
-  height: 3px;
+  height: 16px;
   background: var(--accent);
   border-radius: 1px;
-  transition: height 0.15s ease;
+  transform-origin: bottom;
+  transform: scaleY(0.2);
+  transition: transform 0.15s ease;
 }
 .lofi-eq-visualizer.active .eq-bar.bar-1 { animation: eqBounce 0.42s ease infinite alternate; }
 .lofi-eq-visualizer.active .eq-bar.bar-2 { animation: eqBounce 0.65s ease infinite alternate 0.15s; }
@@ -6115,8 +6117,8 @@ details.tl[open] summary::after{content:"\2212";}
 .lofi-eq-visualizer.active .eq-bar.bar-4 { animation: eqBounce 0.58s ease infinite alternate 0.22s; }
 .lofi-eq-visualizer.active .eq-bar.bar-5 { animation: eqBounce 0.49s ease infinite alternate 0.1s; }
 @keyframes eqBounce {
-  0% { height: 3px; }
-  100% { height: 16px; }
+  0% { transform: scaleY(0.2); }
+  100% { transform: scaleY(1); }
 }
 
 .lofi-timer-readout {

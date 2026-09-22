@@ -73,7 +73,7 @@ export default function TodoPanel({ promise, st, busy, nowIso, mutate }: Props) 
                   <small>{it.done ? "done" : d === 0 ? "today" : d === 1 ? "day" : "days"}</small>
                 </div>
                 <div>
-                  <input type="checkbox" checked={it.done} disabled={busy}
+                  <input type="checkbox" checked={it.done}
                     aria-label={`Mark ${it.title} done`}
                     onChange={(e) =>
                       mutate(it.mine

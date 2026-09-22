@@ -85,6 +85,9 @@ export default function LofiDeck() {
       } catch {}
     }
     activeNodesRef.current = [];
+    if (audioCtxRef.current && audioCtxRef.current.state === "running") {
+      audioCtxRef.current.suspend().catch(() => {});
+    }
   };
 
   // Build audio synthesizer according to preset
