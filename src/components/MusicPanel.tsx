@@ -3,6 +3,7 @@
 import { use, useState } from "react";
 import type { Music, Track } from "@/lib/music";
 import AlbumAccent from "@/components/AlbumAccent";
+import LofiDeck from "@/components/LofiDeck";
 
 /**
  * Recently played, this month's artists, and something new to try.
@@ -36,22 +37,48 @@ function Sleeve({ track }: { track: Track }) {
 
 export default function MusicPanel({ promise }: { promise: Promise<Music> }) {
   const m = use(promise);
+  const [deckMode, setDeckMode] = useState<"stream" | "lofi">("stream");
   const lead = m.recent[0] ?? null;
   const rest = m.recent.slice(1, 6);
 
   return (
     <section className="card span12 musiccard">
-      <div className="card-head">
+      <div className="card-head" id="listening">
         <h2>Listening</h2>
-        <span className={`pill mono ${lead?.nowPlaying ? "live" : ""}`}>
-          {m.error ? "unavailable"
-            : lead?.nowPlaying ? "playing now"
-            : m.totalScrobbles ? `${m.totalScrobbles.toLocaleString()} scrobbles`
-            : m.source ?? ""}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {deckMode === "stream" && (
+            <span className={`pill mono ${lead?.nowPlaying ? "live" : ""}`}>
+              {m.error ? "unavailable"
+                : lead?.nowPlaying ? "playing now"
+                : m.totalScrobbles ? `${m.totalScrobbles.toLocaleString()} scrobbles`
+                : m.source ?? ""}
+            </span>
+          )}
+          <div className="view-toggle mono">
+            <button
+              type="button"
+              className={`view-toggle-btn ${deckMode === "stream" ? "active" : ""}`}
+              onClick={() => setDeckMode("stream")}
+            >
+              Stream
+            </button>
+            <span className="view-toggle-sep">/</span>
+            <button
+              type="button"
+              className={`view-toggle-btn ${deckMode === "lofi" ? "active" : ""}`}
+              onClick={() => setDeckMode("lofi")}
+            >
+              🎧 Lo-Fi Deck
+            </button>
+          </div>
+        </div>
       </div>
       <div className="card-body">
-        {m.error && <div className="sub">{m.error}</div>}
+        {deckMode === "lofi" ? (
+          <LofiDeck />
+        ) : (
+          <>
+            {m.error && <div className="sub">{m.error}</div>}
         {/* A working fallback still says which source it fell back from. */}
         {m.note && !m.error && <div className="sub musicnote">{m.note}</div>}
 
@@ -111,6 +138,8 @@ export default function MusicPanel({ promise }: { promise: Promise<Music> }) {
               </div>
             )}
           </div>
+        )}
+          </>
         )}
       </div>
     </section>

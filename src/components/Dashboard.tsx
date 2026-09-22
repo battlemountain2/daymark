@@ -198,7 +198,7 @@ export default function Dashboard({
 
   useEffect(() => {
     const p = localStorage.getItem("palette") || localStorage.getItem("hb:pal");
-    if (p && ["forest", "dusk", "ash", "sandia", "paper"].includes(p)) {
+    if (p && ["forest", "dusk", "ash", "sandia", "paper", "yharnam"].includes(p)) {
       if (p === "forest") document.documentElement.removeAttribute("data-palette");
       else document.documentElement.setAttribute("data-palette", p);
       setPalette(p);
@@ -370,7 +370,7 @@ export default function Dashboard({
       run: () => setViewMode((m) => (m === "today" ? "week" : "today")),
     });
 
-    for (const p of ["forest", "dusk", "ash", "sandia", "paper"]) {
+    for (const p of ["forest", "dusk", "ash", "sandia", "paper", "yharnam"]) {
       out.push({
         id: `pal-${p}`, group: "Theme", label: `Switch to ${p}`,
         hint: palette === p ? "current" : undefined,
@@ -407,7 +407,7 @@ export default function Dashboard({
           <span>{clock?.date ?? "\u00a0"}</span>
           <span>{clock?.time ?? "\u00a0"}</span>
           <span className="themes">
-            {["forest", "dusk", "ash", "sandia", "paper"].map((p) => (
+            {["forest", "dusk", "ash", "sandia", "paper", "yharnam"].map((p) => (
               <button key={p} type="button" className="mono"
                 aria-pressed={palette === p} onClick={() => applyPalette(p)}>{p}</button>
             ))}
@@ -585,6 +585,9 @@ export default function Dashboard({
           >
             📝 scratchpad
           </button>
+          <a href="#listening" className="bt-link bt-lofi-btn">
+            🎧 lo-fi deck
+          </a>
           <Link href="/study" className="bt-link">
             ✦ study hub
           </Link>

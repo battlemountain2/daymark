@@ -42,6 +42,15 @@
   --storm:#3E5596;--storm-soft:#E2E7F4;
   --geo:#5F8535;--pol:#9E5E22;--his:#3E5B8E;--fit:#843E5E;--adm:#505F6A;
 }
+:root[data-palette="yharnam"]{
+  --ground:#0C0A0E;--surface:#151219;--surface-2:#1D1923;
+  --ink:#E5E0EC;--ink-2:#AFA5B9;--ink-3:#837790;
+  --line:#2C2534;--line-strong:#443851;
+  --accent:#C22D3E;--accent-soft:#2C1318;
+  --heat:#E07A5F;--heat-soft:#331C16;--good:#6EAC86;
+  --storm:#7E6B9E;--storm-soft:#21192C;
+  --geo:#6A9E75;--pol:#C22D3E;--his:#6B7FB5;--fit:#C22D3E;--adm:#8C8296;
+}
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --ground:#0C1410;--surface:#141F18;--surface-2:#1A2720;
@@ -82,6 +91,15 @@
     --storm:#8B9BDD;--storm-soft:#1D2440;
     --geo:#9CBE6B;--pol:#D49E63;--his:#8B9BDD;--fit:#D089A8;--adm:#93A5B0;
   }
+  :root:not([data-theme="light"])[data-palette="yharnam"]{
+    --ground:#0C0A0E;--surface:#151219;--surface-2:#1D1923;
+    --ink:#E5E0EC;--ink-2:#AFA5B9;--ink-3:#837790;
+    --line:#2C2534;--line-strong:#443851;
+    --accent:#C22D3E;--accent-soft:#2C1318;
+    --heat:#E07A5F;--heat-soft:#331C16;--good:#6EAC86;
+    --storm:#7E6B9E;--storm-soft:#21192C;
+    --geo:#6A9E75;--pol:#C22D3E;--his:#6B7FB5;--fit:#C22D3E;--adm:#8C8296;
+  }
 }
 :root[data-theme="dark"]{
   --ground:#0C1410;--surface:#141F18;--surface-2:#1A2720;
@@ -121,6 +139,15 @@
   --heat:#DDA15E;--heat-soft:#2E2218;--good:#6EAC86;
   --storm:#8B9BDD;--storm-soft:#1D2440;
   --geo:#9CBE6B;--pol:#D49E63;--his:#8B9BDD;--fit:#D089A8;--adm:#93A5B0;
+}
+:root[data-theme="dark"][data-palette="yharnam"]{
+  --ground:#0C0A0E;--surface:#151219;--surface-2:#1D1923;
+  --ink:#E5E0EC;--ink-2:#AFA5B9;--ink-3:#837790;
+  --line:#2C2534;--line-strong:#443851;
+  --accent:#C22D3E;--accent-soft:#2C1318;
+  --heat:#E07A5F;--heat-soft:#331C16;--good:#6EAC86;
+  --storm:#7E6B9E;--storm-soft:#21192C;
+  --geo:#6A9E75;--pol:#C22D3E;--his:#6B7FB5;--fit:#C22D3E;--adm:#8C8296;
 }
 
 *{box-sizing:border-box;}
@@ -5863,4 +5890,337 @@ details.tl[open] summary::after{content:"\2212";}
 .weekly-open-morning small {
   font-size: 9px;
   opacity: 0.8;
+}
+
+
+/* ==========================================================================
+   Tactile Vinyl & Lo-Fi Audio Deck
+   ========================================================================== */
+.lofi-deck-container {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.lofi-deck-main {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+@media (max-width: 680px) {
+  .lofi-deck-main {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+}
+
+/* Turntable Platter & Vinyl */
+.lofi-turntable-zone {
+  flex-shrink: 0;
+}
+.lofi-platter {
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(circle, #222 0%, #111 70%, #0a0a0a 100%);
+  border-radius: 50%;
+  border: 4px solid var(--line-strong);
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.6), 0 4px 12px rgba(0,0,0,0.25);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.lofi-vinyl {
+  width: 136px;
+  height: 136px;
+  border-radius: 50%;
+  background: repeating-radial-gradient(
+    circle at center,
+    #181818,
+    #181818 2px,
+    #0f0f0f 3px,
+    #0f0f0f 5px
+  );
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 10px rgba(0,0,0,0.8);
+  transition: transform 0.3s ease;
+}
+.lofi-vinyl.spinning {
+  animation: spinVinyl 3.6s linear infinite;
+}
+@keyframes spinVinyl {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.vinyl-groove-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.05);
+  pointer-events: none;
+}
+.vinyl-groove-ring.ring-1 { width: 110px; height: 110px; }
+.vinyl-groove-ring.ring-2 { width: 85px; height: 85px; }
+.vinyl-groove-ring.ring-3 { width: 60px; height: 60px; }
+
+.vinyl-label {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--surface);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 2px #0a0a0a;
+  z-index: 2;
+}
+.vinyl-rpm {
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  opacity: 0.9;
+}
+.vinyl-badge {
+  font-size: 6.5px;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+}
+
+/* Tonearm */
+.lofi-tonearm {
+  position: absolute;
+  top: 10px;
+  right: 6px;
+  width: 14px;
+  height: 90px;
+  pointer-events: none;
+  transform-origin: 7px 10px;
+  transform: rotate(-15deg);
+  transition: transform 0.6s cubic-bezier(0.2, 0.9, 0.3, 1);
+  z-index: 5;
+}
+.lofi-tonearm.playing {
+  transform: rotate(20deg);
+}
+.tonearm-base {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--line-strong);
+  border: 2px solid var(--ink);
+}
+.tonearm-arm {
+  width: 3px;
+  height: 70px;
+  background: linear-gradient(to right, #cfcfcf, #888);
+  margin-left: 5px;
+  border-radius: 1px;
+}
+.tonearm-cartridge {
+  width: 8px;
+  height: 14px;
+  background: var(--accent);
+  margin-left: 2.5px;
+  border-radius: 2px;
+}
+
+/* Controls Zone */
+.lofi-controls-zone {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.lofi-tag-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10.5px;
+}
+.lofi-genre-pill {
+  color: var(--accent);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.lofi-status-pill {
+  color: var(--ink-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--good);
+  box-shadow: 0 0 6px var(--good);
+  animation: livePulse 1.4s ease-in-out infinite alternate;
+}
+@keyframes livePulse {
+  from { opacity: 0.4; }
+  to { opacity: 1; }
+}
+
+.lofi-track-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.lofi-track-desc {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-2);
+  line-height: 1.35;
+}
+
+/* Meter & Visualizer */
+.lofi-meter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 11px;
+}
+.lofi-eq-visualizer {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 16px;
+  width: 40px;
+}
+.eq-bar {
+  width: 4px;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 1px;
+  transition: height 0.15s ease;
+}
+.lofi-eq-visualizer.active .eq-bar.bar-1 { animation: eqBounce 0.42s ease infinite alternate; }
+.lofi-eq-visualizer.active .eq-bar.bar-2 { animation: eqBounce 0.65s ease infinite alternate 0.15s; }
+.lofi-eq-visualizer.active .eq-bar.bar-3 { animation: eqBounce 0.35s ease infinite alternate 0.05s; }
+.lofi-eq-visualizer.active .eq-bar.bar-4 { animation: eqBounce 0.58s ease infinite alternate 0.22s; }
+.lofi-eq-visualizer.active .eq-bar.bar-5 { animation: eqBounce 0.49s ease infinite alternate 0.1s; }
+@keyframes eqBounce {
+  0% { height: 3px; }
+  100% { height: 16px; }
+}
+
+.lofi-timer-readout {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-2);
+}
+.timer-digits {
+  font-weight: 700;
+  color: var(--ink);
+}
+.timer-fmt {
+  font-size: 9.5px;
+  color: var(--ink-3);
+  letter-spacing: 0.06em;
+}
+
+/* Transport Row */
+.lofi-transport-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.lofi-play-btn {
+  background: var(--ink);
+  color: var(--surface);
+  border: 1px solid var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 7px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.lofi-play-btn:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.lofi-play-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.lofi-vol-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.lofi-mute-btn {
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px;
+}
+.lofi-vol-slider {
+  width: 75px;
+  height: 4px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* Presets Bar */
+.lofi-presets-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
+}
+.lofi-presets-lbl {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+}
+.lofi-presets-list {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+}
+.lofi-preset-btn {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+  font-size: 10.5px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.lofi-preset-btn:hover {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+.lofi-preset-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  font-weight: 600;
 }
