@@ -16,6 +16,7 @@ type Props = {
   initialCards: Flashcard[];
   courses: CourseStudyInfo[];
   selectedCourseFilter?: string | null;
+  initialViewMode?: "study" | "quiz" | "browse";
 };
 
 type QuizChoice = {
@@ -23,19 +24,23 @@ type QuizChoice = {
   isCorrect: boolean;
 };
 
+type SortMode = "default" | "shuffle" | "needsReview" | "unverified";
+
 export default function FlashcardDeckViewer({
   initialCards,
   courses,
   selectedCourseFilter = null,
+  initialViewMode = "study",
 }: Props) {
   const [cards, setCards] = useState<Flashcard[]>(initialCards);
   const [activeCourse, setActiveCourse] = useState<string>(selectedCourseFilter || "ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [sortMode, setSortMode] = useState<SortMode>("default");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [showSearch, setShowSearch] = useState<boolean>(false);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isFlipped, setIsFlipped] = useState<boolean>(false);
-  const [viewMode, setViewMode] = useState<"study" | "quiz" | "browse">("study");
+  const [viewMode, setViewMode] = useState<"study" | "quiz" | "browse">(initialViewMode);
 
   // SM-2 Spaced Repetition & Session Tracking
   const [srsStore, setSrsStore] = useState<SRSStore>({});
@@ -53,6 +58,12 @@ export default function FlashcardDeckViewer({
   const [selectedChoiceIdx, setSelectedChoiceIdx] = useState<number | null>(null);
   const [quizScore, setQuizScore] = useState<number>(0);
   const [quizTimer, setQuizTimer] = useState<number>(20);
+  const [quizStreak, setQuizStreak] = useState<number>(0);
+  const [quizAnsweredCount, setQuizAnsweredCount] = useState<number>(0);
+  const [quizCorrectCount, setQuizCorrectCount] = useState<number>(0);
+  const [missedCardIds, setMissedCardIds] = useState<string[]>([]);
+  const [quizComplete, setQuizComplete] = useState<boolean>(false);
+  const [randomSeed, setRandomSeed] = useState<number>(0);
 
   useEffect(() => {
     setSrsStore(loadSRSStore());
@@ -70,8 +81,19 @@ export default function FlashcardDeckViewer({
     }
   }, [selectedCourseFilter]);
 
+  // Card count per course for the quick filter chips
+  const courseCardCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const c of cards) {
+      const code = c.courseCode.toUpperCase();
+      counts[code] = (counts[code] || 0) + 1;
+    }
+    return counts;
+  }, [cards]);
+
+  // Filtered & Sorted Card List
   const filteredCards = useMemo(() => {
-    return cards.filter((card) => {
+    const base = cards.filter((card) => {
       if (activeCourse !== "ALL") {
         const normCourse = activeCourse.replace(/\s+/g, "").toUpperCase();
         const normCard = card.courseCode.replace(/\s+/g, "").toUpperCase();
@@ -90,24 +112,57 @@ export default function FlashcardDeckViewer({
       }
       return true;
     });
-  }, [cards, activeCourse, statusFilter, searchQuery]);
+
+    // Apply Sorting
+    const sorted = [...base];
+    if (sortMode === "shuffle" || viewMode === "quiz") {
+      // Deterministic shuffle with randomSeed
+      sorted.sort(() => Math.sin(randomSeed + 1) - 0.5);
+    } else if (sortMode === "needsReview") {
+      sorted.sort((a, b) => {
+        if (a.status === "Needs review" && b.status !== "Needs review") return -1;
+        if (b.status === "Needs review" && a.status !== "Needs review") return 1;
+        return 0;
+      });
+    } else if (sortMode === "unverified") {
+      sorted.sort((a, b) => {
+        if (a.status !== "Verified" && b.status === "Verified") return -1;
+        if (b.status !== "Verified" && a.status === "Verified") return 1;
+        return 0;
+      });
+    }
+    return sorted;
+  }, [cards, activeCourse, statusFilter, searchQuery, sortMode, viewMode, randomSeed]);
 
   const currentCard: Flashcard | undefined = filteredCards[currentIndex];
   const currentSRS = currentCard ? (srsStore[currentCard.id] || INITIAL_SRS_STATE(currentCard.id)) : null;
 
-  // Build 4 Kahoot-style quiz choices when current card changes
+  // Intelligent In-Subject Distractor Engine for Kahoot Quiz
   useEffect(() => {
     if (viewMode !== "quiz" || !currentCard) return;
 
     setSelectedChoiceIdx(null);
     setQuizTimer(20);
 
-    const otherAnswers = cards
-      .filter((c) => c.id !== currentCard.id && c.back.trim() !== currentCard.back.trim())
+    // 1. Gather other answers from the SAME course first for high conceptual rigor
+    const sameCourseOtherAnswers = cards
+      .filter((c) => c.id !== currentCard.id && c.courseCode === currentCard.courseCode && c.back.trim() !== currentCard.back.trim())
       .map((c) => c.back);
 
-    const shuffledOthers = [...otherAnswers].sort(() => Math.random() - 0.5);
-    const distractors = shuffledOthers.slice(0, 3);
+    let distractors: string[] = [];
+    if (sameCourseOtherAnswers.length >= 3) {
+      // Pick 3 from the same course
+      const shuffled = [...sameCourseOtherAnswers].sort(() => Math.random() - 0.5);
+      distractors = shuffled.slice(0, 3);
+    } else {
+      // Pad with cross-course answers if deck is small
+      const crossCourseAnswers = cards
+        .filter((c) => c.id !== currentCard.id && c.courseCode !== currentCard.courseCode && c.back.trim() !== currentCard.back.trim())
+        .map((c) => c.back);
+      const needed = 3 - sameCourseOtherAnswers.length;
+      const shuffledCross = [...crossCourseAnswers].sort(() => Math.random() - 0.5).slice(0, needed);
+      distractors = [...sameCourseOtherAnswers, ...shuffledCross].sort(() => Math.random() - 0.5);
+    }
 
     const choices: QuizChoice[] = [
       { text: currentCard.back, isCorrect: true },
@@ -119,24 +174,37 @@ export default function FlashcardDeckViewer({
 
   // Quiz timer countdown
   useEffect(() => {
-    if (viewMode !== "quiz" || selectedChoiceIdx !== null) return;
+    if (viewMode !== "quiz" || selectedChoiceIdx !== null || quizComplete) return;
     const interval = setInterval(() => {
       setQuizTimer((t) => {
         if (t <= 1) {
-          handleQuizSelect(-1);
+          handleQuizSelect(-1); // Time out
           return 0;
         }
         return t - 1;
       });
     }, 1000);
     return () => clearInterval(interval);
-  }, [viewMode, selectedChoiceIdx, currentIndex]);
+  }, [viewMode, selectedChoiceIdx, currentIndex, quizComplete]);
+
+  const handleShuffleDeck = () => {
+    setRandomSeed(Date.now());
+    setSortMode("shuffle");
+    setCurrentIndex(0);
+    setIsFlipped(false);
+  };
 
   const handleNext = () => {
     if (filteredCards.length === 0) return;
     setIsFlipped(false);
     setSelectedChoiceIdx(null);
     setSwipeOffset(0);
+
+    if (viewMode === "quiz" && currentIndex + 1 >= Math.min(10, filteredCards.length)) {
+      setQuizComplete(true);
+      return;
+    }
+
     setCurrentIndex((prev) => (prev + 1) % filteredCards.length);
   };
 
@@ -176,19 +244,25 @@ export default function FlashcardDeckViewer({
   const handleQuizSelect = (choiceIdx: number) => {
     if (selectedChoiceIdx !== null) return;
     setSelectedChoiceIdx(choiceIdx);
+    setQuizAnsweredCount((c) => c + 1);
 
     const isCorrect = choiceIdx >= 0 && quizChoices[choiceIdx]?.isCorrect;
     if (isCorrect) {
-      setQuizScore((s) => s + 100 + quizTimer * 5);
-      setSessionStreak((st) => st + 1);
+      const streakBonus = quizStreak * 25;
+      const speedBonus = quizTimer * 5;
+      setQuizScore((s) => s + 100 + speedBonus + streakBonus);
+      setQuizStreak((st) => st + 1);
+      setQuizCorrectCount((cc) => cc + 1);
+
       if (currentCard) {
         const prevSRS = srsStore[currentCard.id] || INITIAL_SRS_STATE(currentCard.id);
         const updated = calculateNextSRS(prevSRS, 3);
         setSrsStore(saveSRSCard(updated));
       }
     } else {
-      setSessionStreak(0);
+      setQuizStreak(0);
       if (currentCard) {
+        setMissedCardIds((prev) => [...prev, currentCard.id]);
         const prevSRS = srsStore[currentCard.id] || INITIAL_SRS_STATE(currentCard.id);
         const updated = calculateNextSRS(prevSRS, 1);
         setSrsStore(saveSRSCard(updated));
@@ -197,7 +271,28 @@ export default function FlashcardDeckViewer({
 
     setTimeout(() => {
       handleNext();
-    }, 1200);
+    }, 1400);
+  };
+
+  const handleRestartQuiz = () => {
+    setRandomSeed(Date.now());
+    setCurrentIndex(0);
+    setQuizScore(0);
+    setQuizStreak(0);
+    setQuizAnsweredCount(0);
+    setQuizCorrectCount(0);
+    setMissedCardIds([]);
+    setQuizComplete(false);
+    setSelectedChoiceIdx(null);
+  };
+
+  const handleReviewMissedCards = () => {
+    if (missedCardIds.length === 0) return;
+    setCards((prev) => prev.filter((c) => missedCardIds.includes(c.id)));
+    setViewMode("study");
+    setCurrentIndex(0);
+    setIsFlipped(false);
+    setQuizComplete(false);
   };
 
   // Touch Swipe Handlers
@@ -244,7 +339,7 @@ export default function FlashcardDeckViewer({
           else if (e.key === "3" && currentCard) handleSRSGrade(3);
           else if (e.key === "4" && currentCard) handleSRSGrade(4);
         }
-      } else if (viewMode === "quiz") {
+      } else if (viewMode === "quiz" && !quizComplete) {
         if (["1", "2", "3", "4"].includes(e.key)) {
           const cIdx = parseInt(e.key, 10) - 1;
           if (cIdx < quizChoices.length) handleQuizSelect(cIdx);
@@ -254,14 +349,24 @@ export default function FlashcardDeckViewer({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [currentCard, filteredCards.length, isFlipped, viewMode, quizChoices]);
+  }, [currentCard, filteredCards.length, isFlipped, viewMode, quizChoices, quizComplete]);
 
   const total = filteredCards.length;
   const verifiedCount = filteredCards.filter((c) => c.status === "Verified").length;
   const progressPct = total > 0 ? Math.round((verifiedCount / total) * 100) : 0;
 
+  // Distinct course keys helper for chip dots
+  const getCourseColorKey = (code: string) => {
+    const uc = code.toUpperCase();
+    if (uc.includes("GEOG")) return "geo";
+    if (uc.includes("POLS")) return "pol";
+    if (uc.includes("HIST")) return "his";
+    if (uc.includes("PHED") || uc.includes("FIT")) return "fit";
+    return "adm";
+  };
+
   return (
-    <div className="deck-viewer zen-mode">
+    <div className="deck-viewer zen-mode built-in">
       {/* Hidden File Input for CSV Import */}
       <input
         ref={fileInputRef}
@@ -284,72 +389,147 @@ export default function FlashcardDeckViewer({
         }}
       />
 
-      {/* 1. SINGLE SLEEK ZEN CONTROL BAR (Replaces the 5 cluttered rows) */}
-      <div className="zen-toolbar">
-        {/* Left: Course Deck Selector */}
-        <div className="zen-left">
-          <select
-            className="zen-select mono"
-            value={activeCourse}
-            onChange={(e) => {
-              setActiveCourse(e.target.value);
+      {/* 1. NATIVE DAYMARK CLASS FILTER STRIP */}
+      <div className="class-filter-bar">
+        <div className="cf-scroll-row mono">
+          <button
+            type="button"
+            className={`cf-pill ${activeCourse === "ALL" ? "active" : ""}`}
+            onClick={() => {
+              setActiveCourse("ALL");
               setCurrentIndex(0);
               setIsFlipped(false);
             }}
           >
-            <option value="ALL">All Decks ({cards.length})</option>
-            {courses.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.code} ({c.cards.length})
-              </option>
-            ))}
-          </select>
+            All Classes
+            <span className="cf-count">{cards.length}</span>
+          </button>
 
-          {/* Quick Search Toggle */}
+          {courses.map((c) => {
+            const count = courseCardCounts[c.code.toUpperCase()] || c.cards.length;
+            const ck = c.ck || getCourseColorKey(c.code);
+
+            return (
+              <button
+                key={c.code}
+                type="button"
+                className={`cf-pill ${activeCourse === c.code ? "active" : ""}`}
+                onClick={() => {
+                  setActiveCourse(c.code);
+                  setCurrentIndex(0);
+                  setIsFlipped(false);
+                }}
+              >
+                <span className={`tagdot ${ck}`} />
+                {c.code}
+                <span className="cf-count">{count}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Sort & Quick Actions Menu */}
+        <div className="cf-actions-row mono">
+          <div className="cf-sort-group">
+            <span className="cf-sort-lbl">Sort:</span>
+            <select
+              className="cf-sort-select"
+              value={sortMode}
+              onChange={(e) => {
+                setSortMode(e.target.value as SortMode);
+                setCurrentIndex(0);
+              }}
+            >
+              <option value="default">Default (By Week)</option>
+              <option value="shuffle">🔀 Shuffled / Random</option>
+              <option value="needsReview">⚠️ Needs Review First</option>
+              <option value="unverified">🎯 Unverified First</option>
+            </select>
+          </div>
+
+          <button
+            type="button"
+            className="cf-shuffle-btn"
+            onClick={handleShuffleDeck}
+            title="Randomize card order"
+          >
+            🔀 Shuffle
+          </button>
+        </div>
+      </div>
+
+      {/* 2. SLENDER NATIVE TOOLBAR (Mode Toggle + Search + Mastery Stats) */}
+      <div className="zen-toolbar">
+        {/* Left: Mode Switcher */}
+        <div className="zen-left">
+          <div className="zen-mode-toggle mono">
+            <button
+              type="button"
+              className={`zen-mode-btn ${viewMode === "study" ? "on" : ""}`}
+              onClick={() => {
+                setViewMode("study");
+                setQuizComplete(false);
+              }}
+            >
+              3D Flip
+            </button>
+            <button
+              type="button"
+              className={`zen-mode-btn ${viewMode === "quiz" ? "on" : ""}`}
+              onClick={() => {
+                setViewMode("quiz");
+                handleRestartQuiz();
+              }}
+            >
+              ⚡ Kahoot Quiz
+            </button>
+            <button
+              type="button"
+              className={`zen-mode-btn ${viewMode === "browse" ? "on" : ""}`}
+              onClick={() => {
+                setViewMode("browse");
+                setQuizComplete(false);
+              }}
+            >
+              Browse
+            </button>
+          </div>
+        </div>
+
+        {/* Center: Search & Status Filter */}
+        <div className="zen-center">
           <button
             type="button"
             className={`zen-icon-btn mono ${showSearch ? "on" : ""}`}
             onClick={() => setShowSearch(!showSearch)}
             title="Search cards"
           >
-            🔍
+            🔍 Search
           </button>
+          <select
+            className="zen-status-select mono"
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setCurrentIndex(0);
+            }}
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="Verified">Verified Only</option>
+            <option value="Needs review">Needs Review</option>
+            <option value="Draft">Draft Only</option>
+          </select>
         </div>
 
-        {/* Center: Mode Tabs */}
-        <div className="zen-mode-toggle mono">
-          <button
-            type="button"
-            className={`zen-mode-btn ${viewMode === "study" ? "on" : ""}`}
-            onClick={() => setViewMode("study")}
-          >
-            3D Flip
-          </button>
-          <button
-            type="button"
-            className={`zen-mode-btn ${viewMode === "quiz" ? "on" : ""}`}
-            onClick={() => setViewMode("quiz")}
-          >
-            ⚡ Quiz
-          </button>
-          <button
-            type="button"
-            className={`zen-mode-btn ${viewMode === "browse" ? "on" : ""}`}
-            onClick={() => setViewMode("browse")}
-          >
-            Browse
-          </button>
-        </div>
-
-        {/* Right: Streak, Mastery Pill & CSV Import */}
+        {/* Right: Streak & Mastery Pill */}
         <div className="zen-right mono">
           {sessionStreak > 0 && (
-            <span className="zen-streak-pill" title="Current session streak">
+            <span className="zen-streak-pill" title="Current study session streak">
               🔥 {sessionStreak}
             </span>
           )}
           <span className="zen-mastery-pill" title={`${verifiedCount} of ${total} verified`}>
-            {progressPct}% Verified
+            {progressPct}% Mastered
           </span>
           <button
             type="button"
@@ -362,13 +542,13 @@ export default function FlashcardDeckViewer({
         </div>
       </div>
 
-      {/* Collapsible Search Input (Only shown when 🔍 is clicked) */}
+      {/* Collapsible Search Input */}
       {showSearch && (
         <div className="zen-search-dropdown">
           <input
             type="text"
             className="zen-search-input mono"
-            placeholder="Search questions, answers, or tags..."
+            placeholder="Search question, answer, topic tag, or author..."
             value={searchQuery}
             autoFocus
             onChange={(e) => {
@@ -388,11 +568,11 @@ export default function FlashcardDeckViewer({
         </div>
       )}
 
-      {/* MODE 1: 3D FLIP WITH DYNAMIC ANSWER-FIRST CONTROLS */}
+      {/* MODE 1: 3D FLIP WITH DYNAMIC ANSWER CONTROLS */}
       {viewMode === "study" && (
         <div className="deck-study-area zen-study-area">
           {filteredCards.length === 0 ? (
-            <div className="deck-empty mono">No flashcards match the current deck filter.</div>
+            <div className="deck-empty mono">No flashcards match the selected class or filters.</div>
           ) : currentCard ? (
             <>
               <div
@@ -413,7 +593,10 @@ export default function FlashcardDeckViewer({
                   {/* Front Side (Question) */}
                   <div className="flashcard-face flashcard-front">
                     <div className="card-topline">
-                      <span className="course-chip mono">{currentCard.courseCode}</span>
+                      <span className="course-chip mono">
+                        <span className={`tagdot ${getCourseColorKey(currentCard.courseCode)}`} />
+                        {currentCard.courseCode}
+                      </span>
                       <span className={`status-chip mono ${currentCard.status.toLowerCase().replace(/\s+/g, "-")}`}>
                         {currentCard.status}
                       </span>
@@ -428,7 +611,7 @@ export default function FlashcardDeckViewer({
 
                     <div className="card-bottomline">
                       <span className="source-cite mono">
-                        {currentCard.source ? `Source: ${currentCard.source}` : "Active Deck"}
+                        {currentCard.source ? `Source: ${currentCard.source}` : "Active Reading"}
                       </span>
                       <span className="flip-hint mono">
                         [Space] Reveal Answer ↷
@@ -439,7 +622,10 @@ export default function FlashcardDeckViewer({
                   {/* Back Side (Answer) */}
                   <div className="flashcard-face flashcard-back">
                     <div className="card-topline">
-                      <span className="course-chip mono">{currentCard.courseCode} · Answer</span>
+                      <span className="course-chip mono">
+                        <span className={`tagdot ${getCourseColorKey(currentCard.courseCode)}`} />
+                        {currentCard.courseCode} · Answer
+                      </span>
                       <span className={`status-chip mono ${currentCard.status.toLowerCase().replace(/\s+/g, "-")}`}>
                         {currentCard.status}
                       </span>
@@ -458,7 +644,7 @@ export default function FlashcardDeckViewer({
                       </span>
                       {currentSRS && currentSRS.reps > 0 && (
                         <span className="srs-meta mono">
-                          Rep #{currentSRS.reps} · Interval: {currentSRS.intervalDays}d
+                          Rep #{currentSRS.reps} · {currentSRS.intervalDays}d interval
                         </span>
                       )}
                     </div>
@@ -466,10 +652,9 @@ export default function FlashcardDeckViewer({
                 </div>
               </div>
 
-              {/* DYNAMIC ACTION BAR: Changes seamlessly between Question and Answer */}
+              {/* DYNAMIC ACTION BAR */}
               <div className="zen-action-bar">
                 {!isFlipped ? (
-                  /* Question State: Reveal Answer + Previous / Next Navigation */
                   <div className="zen-question-actions mono">
                     <button type="button" className="zen-nav-btn" onClick={handlePrev}>
                       ← Prev
@@ -482,7 +667,6 @@ export default function FlashcardDeckViewer({
                     </button>
                   </div>
                 ) : (
-                  /* Answer State: 4 Clean Rating Buttons + Quick Flip Back */
                   <div className="zen-answer-actions mono">
                     <button
                       type="button"
@@ -535,28 +719,81 @@ export default function FlashcardDeckViewer({
         </div>
       )}
 
-      {/* MODE 2: KAHOOT-STYLE QUIZ SPRINT */}
+      {/* MODE 2: ENHANCED KAHOOT-STYLE QUIZ SPRINT */}
       {viewMode === "quiz" && (
         <div className="quiz-sprint-container">
-          {currentCard ? (
+          {quizComplete ? (
+            /* End-of-Sprint Scorecard */
+            <div className="quiz-card-box quiz-scorecard">
+              <div className="qsc-header mono">
+                <span className="pill mono live">🏆 Sprint Finished</span>
+                <span className="qsc-score-badge">{quizScore} PTS</span>
+              </div>
+              <div className="qsc-body">
+                <div className="qsc-trophy">⚡</div>
+                <h2>Sprint Completed!</h2>
+                <p className="sub mono">
+                  Accuracy: <b>{quizCorrectCount}</b> of <b>{quizAnsweredCount}</b> correct ({quizAnsweredCount > 0 ? Math.round((quizCorrectCount / quizAnsweredCount) * 100) : 0}%)
+                </p>
+
+                {missedCardIds.length > 0 && (
+                  <div className="qsc-missed-alert mono">
+                    <span>⚠️ {missedCardIds.length} cards flagged for spaced repetition review</span>
+                  </div>
+                )}
+
+                <div className="qsc-actions mono">
+                  {missedCardIds.length > 0 && (
+                    <button
+                      type="button"
+                      className="qsc-btn review-missed"
+                      onClick={handleReviewMissedCards}
+                    >
+                      ✦ Review Missed Cards ({missedCardIds.length}) →
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="qsc-btn restart"
+                    onClick={handleRestartQuiz}
+                  >
+                    🔀 Start New Shuffled Sprint
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : currentCard ? (
             <div className="quiz-card-box">
+              {/* Header with Course Tag, Timer, and Live Streak Multiplier */}
               <div className="qc-header mono">
                 <div className="qc-left">
-                  <span className="course-chip">{currentCard.courseCode}</span>
-                  <span className="sub">{currentIndex + 1} / {total}</span>
-                </div>
-                <div className="qc-timer">
-                  <span className={`qc-clock ${quizTimer <= 5 ? "urgent" : ""}`}>
-                    ⏳ {quizTimer}s
+                  <span className="course-chip">
+                    <span className={`tagdot ${getCourseColorKey(currentCard.courseCode)}`} />
+                    {currentCard.courseCode}
                   </span>
+                  <span className="sub">Q {currentIndex + 1} of {Math.min(10, total)}</span>
+                  {quizStreak > 1 && (
+                    <span className="qc-streak-badge">
+                      🔥 {quizStreak}x STREAK (+{quizStreak * 25}pts)
+                    </span>
+                  )}
+                </div>
+                <div className="qc-right">
+                  <span className="qc-score mono">{quizScore} pts</span>
+                  <div className="qc-timer">
+                    <span className={`qc-clock ${quizTimer <= 5 ? "urgent" : ""}`}>
+                      ⏳ {quizTimer}s
+                    </span>
+                  </div>
                 </div>
               </div>
 
+              {/* Question Text */}
               <div className="qc-question-box">
                 <p className="qc-question-text">{currentCard.front}</p>
               </div>
 
-              {/* 4 Kahoot-Style Choice Blocks */}
+              {/* 4 High-Contrast Geometric Kahoot Choice Blocks */}
               <div className="qc-choices-grid">
                 {quizChoices.map((choice, idx) => {
                   const isSelected = selectedChoiceIdx === idx;
@@ -570,6 +807,7 @@ export default function FlashcardDeckViewer({
                   }
 
                   const icons = ["▲", "◆", "●", "■"];
+                  const shapeNames = ["Red Triangle", "Blue Diamond", "Gold Circle", "Green Square"];
 
                   return (
                     <button
@@ -578,6 +816,7 @@ export default function FlashcardDeckViewer({
                       className={`qc-choice-btn choice-${idx} ${stateClass}`}
                       onClick={() => handleQuizSelect(idx)}
                       disabled={isAnswered}
+                      aria-label={`${shapeNames[idx]}: ${choice.text}`}
                     >
                       <span className="qcb-icon mono">{icons[idx]}</span>
                       <span className="qcb-text">{choice.text}</span>
@@ -586,10 +825,20 @@ export default function FlashcardDeckViewer({
                 })}
               </div>
 
+              {/* Context / Explanation Reveal after Answer */}
+              {selectedChoiceIdx !== null && (
+                <div className="qc-explanation-reveal mono">
+                  <span className="qc-exp-source">
+                    📖 Source: {currentCard.source || currentCard.courseCode}
+                  </span>
+                  <span className="qc-exp-next">Advancing in 1.4s...</span>
+                </div>
+              )}
+
               <div className="qc-footer mono">
-                <span>[Keys 1–4] Instant select</span>
+                <span>[Keys 1–4] Instant pick</span>
                 <button type="button" className="deck-btn sm-btn" onClick={handleNext}>
-                  Skip →
+                  Skip Question →
                 </button>
               </div>
             </div>
@@ -615,7 +864,10 @@ export default function FlashcardDeckViewer({
             <tbody>
               {filteredCards.map((c) => (
                 <tr key={c.id}>
-                  <td className="mono">{c.courseCode}</td>
+                  <td className="mono">
+                    <span className={`tagdot ${getCourseColorKey(c.courseCode)}`} style={{ marginRight: 6 }} />
+                    {c.courseCode}
+                  </td>
                   <td>
                     <span className={`status-chip mono ${c.status.toLowerCase().replace(/\s+/g, "-")}`}>
                       {c.status}

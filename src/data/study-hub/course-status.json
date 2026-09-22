@@ -1,7 +1,7 @@
 {
   "activeTerm": "Fall 2026",
   "currentWeekNumber": 3,
-  "lastSynced": "2026-08-30T22:00:00-06:00",
+  "lastSynced": "2026-09-04T10:58:00-06:00",
   "weeklyReview": {
     "weekTitle": "Week 3 Preparation & Review",
     "scheduledReviewDate": "Friday, 8:00 PM (Weekly)",
@@ -31,10 +31,10 @@
         "ck": "geo"
       },
       {
-        "course": "GEOG 1115L and PHED 2996",
+        "course": "GEOG 1115L",
         "title": "Good Measurement Requires Consistent Reference Conditions",
-        "detail": "Coordinate systems and body assessments both become interpretable only when the reference system, units, procedures, and measurement conditions are recorded consistently.",
-        "ck": "fit"
+        "detail": "Coordinate systems and map projections become interpretable only when the reference ellipsoid, datum, units, and distortion tradeoffs are documented consistently.",
+        "ck": "geo"
       }
     ],
     "weakAreas": [
@@ -48,12 +48,6 @@
         "course": "GEOG 1160",
         "topic": "Week 3 and Week 4 lecture slides",
         "reason": "Canvas has the week headings but not the official slide sets yet; use the prep packages provisionally.",
-        "ck": "geo"
-      },
-      {
-        "course": "GEOG 1115L",
-        "topic": "Official lab instructions",
-        "reason": "Canvas still stops at the Week 2 lab. Do not treat the prep package as a substitute for the eventual handout.",
         "ck": "geo"
       },
       {
@@ -78,7 +72,7 @@
         "Huntington - The Clash of Civilizations?"
       ],
       "resourceStatus": "Ready",
-      "resourceNote": "Week 3 and Week 4 readings and packages are in Drive; Anki decks are available for both weeks.",
+      "resourceNote": "Week 3 through Week 6 packages and Anki decks are ready in Drive.",
       "driveUrl": "https://drive.google.com/drive/folders/10BROOMMuQhxfIyjgHheMDbk-j5T-AYgq"
     },
     {
@@ -109,7 +103,7 @@
         "Harrower - Water Histories and Spatial Archaeology"
       ],
       "resourceStatus": "Ready",
-      "resourceNote": "Week 3 and Week 4 readings and packages are complete; both new Anki decks are in Drive.",
+      "resourceNote": "Week 3 through Week 6 packages and Anki decks are complete in Drive.",
       "driveUrl": "https://drive.google.com/drive/folders/14y6fHWx4g0rRkyoqb162CXk4D5Ffv-9c"
     },
     {
@@ -121,10 +115,11 @@
       "currentTopic": "Environmental Policy and Law",
       "readings": [
         "Unit 1b",
-        "Week 4 preview: Unit 2 and Chapters 6-7"
+        "Week 4: Unit 2 and Chapters 6-7",
+        "Week 5: Chapter 22 Urbanization"
       ],
       "resourceStatus": "Ready",
-      "resourceNote": "Unit 1b is correctly filed in Week 3; the Week 4 population package and Anki deck are ready.",
+      "resourceNote": "Week 3 through Week 5 packages and Anki decks are ready.",
       "driveUrl": "https://drive.google.com/drive/folders/16Nj2gPVpDJKy-O9Ic1Zs9rIkAd0AVV_1"
     },
     {
@@ -135,11 +130,11 @@
       "currentWeek": "Week 3",
       "currentTopic": "Coordinates and Map Projections",
       "readings": [
-        "Week 3 prep: coordinate systems and projections",
+        "Week 3 Lab 2: Coordinates, Coordinate Systems, and Projection Distortion",
         "Week 4 preview: georeferencing a historical map"
       ],
-      "resourceStatus": "Waiting on Canvas",
-      "resourceNote": "Prep packages are ready, but Canvas still exposes only the Week 2 lab handout.",
+      "resourceStatus": "Ready",
+      "resourceNote": "Week 3 Lab 2 is complete with step-by-step QGIS walkthrough and Anki deck in Drive.",
       "driveUrl": "https://drive.google.com/drive/folders/1JMS38uAzzQk9q9nxvbsnvXRyVybOdU-j"
     },
     {
@@ -156,21 +151,6 @@
       "resourceStatus": "Waiting on Canvas",
       "resourceNote": "Both prep packages are ready; Canvas Files still contains only the course syllabus.",
       "driveUrl": "https://drive.google.com/drive/folders/1ptdCppnVY7WjViL2qU2rLQH4b6hrJKuD"
-    },
-    {
-      "code": "PHED 2996",
-      "name": "Intro to Fitness",
-      "where": "Online",
-      "ck": "fit",
-      "currentWeek": "Week 3",
-      "currentTopic": "Body Assessments and Exercise Submission",
-      "readings": [
-        "Canvas videos: Body Composition and Girth Measurement",
-        "Week 4 preview: Static vs Dynamic Stretching and Cooling Down"
-      ],
-      "resourceStatus": "Ready",
-      "resourceNote": "Current and next-week prep packages include the official Canvas video links.",
-      "driveUrl": "https://drive.google.com/drive/folders/1-eaFf_lM9bKkZsOwTBRBovkqA6KYjrKA"
     }
   ]
 }

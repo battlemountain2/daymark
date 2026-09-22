@@ -5,8 +5,13 @@ import StudyView from "@/components/StudyView";
 
 export const dynamic = "force-dynamic";
 
-export default async function StudyPage() {
+export default async function StudyPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ mode?: string }>;
+}) {
   if (!(await isSignedIn())) redirect("/login");
   const data = await getStudyHubData();
-  return <StudyView data={data} />;
+  const params = searchParams ? await searchParams : undefined;
+  return <StudyView data={data} initialMode={params?.mode} />;
 }

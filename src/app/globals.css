@@ -5542,3 +5542,272 @@ details.tl[open] summary::after{content:"\2212";}
   border-color: #d32f2f;
   color: #d32f2f;
 }
+
+/* ==========================================================================
+   DAYMARK STUDY HUB UPGRADES (Native Built-in, Class Filtering, Kahoot Sprints)
+   ========================================================================== */
+
+/* Native Header Backlink */
+.backlink-inline {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.backlink-inline:hover {
+  text-decoration: underline;
+}
+
+/* Built-in Deck Viewer Scaffolding */
+.deck-viewer.built-in {
+  background: transparent;
+  border: none;
+  padding: 0;
+  box-shadow: none;
+}
+
+/* Horizontal Class Filter Strip */
+.class-filter-bar {
+  margin: 0 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.cf-scroll-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 0 4px;
+  scrollbar-width: thin;
+}
+.cf-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-family: var(--font-mono, "JetBrains Mono", monospace);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.cf-pill:hover {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+.cf-pill.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+.cf-count {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--ink-3);
+}
+.cf-pill.active .cf-count {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+/* Sort & Actions Subrow */
+.cf-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+}
+.cf-sort-group {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink-3);
+}
+.cf-sort-lbl {
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+.cf-sort-select {
+  font-family: inherit;
+  font-size: 11px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.cf-sort-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.cf-shuffle-btn {
+  font-family: inherit;
+  font-size: 11px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+  border-radius: 4px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.cf-shuffle-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Kahoot Multiple Choice Sprint Engine */
+.qc-streak-badge {
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: var(--heat-soft);
+  color: var(--heat);
+  font-weight: 700;
+  border: 1px solid var(--heat);
+  margin-left: 8px;
+  animation: kpulse 1.8s ease-in-out infinite;
+}
+.qc-score {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--good);
+  margin-right: 12px;
+}
+.qc-choices-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  margin-top: 18px;
+}
+@media (max-width: 640px) {
+  .qc-choices-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Jewel-Tone High-Contrast Geometric Choices */
+.qc-choice-btn.choice-0 {
+  border-left: 5px solid #D9534F;
+}
+.qc-choice-btn.choice-0:hover:not(:disabled) {
+  border-color: #D9534F;
+  background: rgba(217, 83, 79, 0.08);
+}
+.qc-choice-btn.choice-1 {
+  border-left: 5px solid #428BCA;
+}
+.qc-choice-btn.choice-1:hover:not(:disabled) {
+  border-color: #428BCA;
+  background: rgba(66, 139, 202, 0.08);
+}
+.qc-choice-btn.choice-2 {
+  border-left: 5px solid #F0AD4E;
+}
+.qc-choice-btn.choice-2:hover:not(:disabled) {
+  border-color: #F0AD4E;
+  background: rgba(240, 173, 78, 0.08);
+}
+.qc-choice-btn.choice-3 {
+  border-left: 5px solid #5CB85C;
+}
+.qc-choice-btn.choice-3:hover:not(:disabled) {
+  border-color: #5CB85C;
+  background: rgba(92, 184, 92, 0.08);
+}
+
+.qc-explanation-reveal {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  font-size: 11.5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--ink-2);
+}
+.qc-exp-source {
+  color: var(--accent);
+  font-weight: 500;
+}
+.qc-exp-next {
+  color: var(--ink-3);
+  font-style: italic;
+}
+
+/* Kahoot Sprint End Scorecard */
+.quiz-scorecard {
+  text-align: center;
+  padding: 36px 20px;
+}
+.qsc-score-badge {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--good);
+  letter-spacing: 0.04em;
+}
+.qsc-trophy {
+  font-size: 52px;
+  margin-bottom: 12px;
+}
+.qsc-missed-alert {
+  margin-top: 14px;
+  padding: 8px 14px;
+  border-radius: 5px;
+  background: var(--heat-soft);
+  color: var(--heat);
+  display: inline-block;
+  font-size: 11.5px;
+}
+.qsc-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+.qsc-btn {
+  font-family: inherit;
+  font-size: 12px;
+  padding: 9px 18px;
+  border-radius: 5px;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  transition: all 0.15s ease;
+}
+.qsc-btn.review-missed {
+  background: var(--heat-soft);
+  border-color: var(--heat);
+  color: var(--heat);
+  font-weight: 600;
+}
+.qsc-btn.review-missed:hover {
+  background: var(--heat);
+  color: #ffffff;
+}
+.qsc-btn.restart {
+  background: var(--accent);
+  color: #ffffff;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.qsc-btn.restart:hover {
+  opacity: 0.9;
+}

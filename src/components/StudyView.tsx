@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { StudyHubData } from "@/lib/study-hub-types";
 import FlashcardDeckViewer from "@/components/FlashcardDeckViewer";
 import EvidenceBank from "@/components/EvidenceBank";
@@ -11,14 +11,58 @@ import FridayReviewWizard from "@/components/FridayReviewWizard";
 import { getPreClassBrief, type PreClassBrief } from "@/lib/pre-class-briefs";
 import { longDate } from "@/lib/localtime";
 
-export default function StudyView({ data }: { data: StudyHubData }) {
+export default function StudyView({ data, initialMode }: { data: StudyHubData; initialMode?: string }) {
   const [activeTab, setActiveTab] = useState<"cards" | "courses" | "review" | "evidence" | "focus">("cards");
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
   const [activeBrief, setActiveBrief] = useState<PreClassBrief | null>(null);
   const [isWizardOpen, setIsWizardOpen] = useState<boolean>(false);
+  const [palette, setPalette] = useState("forest");
+  const [clock, setClock] = useState<{ date: string; time: string } | null>(null);
 
   const { courses, weeklyReview, allCards, overallDeckStats } = data;
   const verifiedPct = allCards.length > 0 ? Math.round((overallDeckStats.verified / allCards.length) * 100) : 0;
+
+  useEffect(() => {
+    const tick = () => {
+      const d = new Date();
+      setClock({
+        date: d.toLocaleDateString("en-US", {
+          timeZone: "America/Denver",
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        }),
+        time: d.toLocaleTimeString("en-US", {
+          timeZone: "America/Denver",
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        }).toLowerCase(),
+      });
+    };
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    const p = localStorage.getItem("palette") || localStorage.getItem("hb:pal");
+    if (p && ["forest", "dusk", "ash", "sandia", "paper"].includes(p)) {
+      if (p === "forest") document.documentElement.removeAttribute("data-palette");
+      else document.documentElement.setAttribute("data-palette", p);
+      setPalette(p);
+    }
+  }, []);
+
+  function applyPalette(p: string) {
+    setPalette(p);
+    if (p === "forest") document.documentElement.removeAttribute("data-palette");
+    else document.documentElement.setAttribute("data-palette", p);
+    try {
+      localStorage.setItem("palette", p);
+      localStorage.setItem("hb:pal", p);
+    } catch {}
+  }
 
   const handleOpenDeck = (courseCode: string) => {
     setSelectedCourse(courseCode);
@@ -27,89 +71,113 @@ export default function StudyView({ data }: { data: StudyHubData }) {
 
   return (
     <div className="wrap study-page-wrap">
-      {/* Header & Backlink */}
-      <div className="study-hero">
-        <div className="study-hero-top">
-          <Link href="/" className="backlink mono">
-            ← dashboard
-          </Link>
-          <span className="pill mono live">
-            {data.activeTerm} · Week {data.currentWeekNumber}
-          </span>
-        </div>
-
-        <div className="study-hero-content">
-          <h1 className="study-main-title">Academic Study Hub</h1>
-          <p className="sub mono">
-            Active recall flashcards, SM-2 spaced repetition, citation bank &amp; focus station
+      {/* 1. NATIVE DAYMARK HEADER (Lede + Timestamp + Theme Switcher) */}
+      <header>
+        <div className="ledeblock">
+          <div className="kicker mono">
+            <span className="kdot" aria-hidden="true" style={{ background: "var(--accent)" }} />
+            Academic Study Hub
+            <span className="kgreet">{data.activeTerm} · Week {data.currentWeekNumber}</span>
+          </div>
+          <h1 className="lede">Course Mastery &amp; Active Recall</h1>
+          <p className="ledesub">
+            {courses.length} active courses · {allCards.length} flashcards · {verifiedPct}% verified
           </p>
         </div>
 
-        {/* Global Stats Ribbon */}
-        <div className="study-stats-ribbon mono">
-          <div className="ssr-stat">
-            <span className="ssr-k">Active Courses</span>
-            <span className="ssr-v">{courses.length}</span>
-          </div>
-          <div className="ssr-stat">
-            <span className="ssr-k">Total Flashcards</span>
-            <span className="ssr-v">{allCards.length}</span>
-          </div>
-          <div className="ssr-stat">
-            <span className="ssr-k">Verified Rate</span>
-            <span className="ssr-v" style={{ color: "var(--good)" }}>{verifiedPct}%</span>
-          </div>
-          <div className="ssr-stat">
-            <span className="ssr-k">Needs Review</span>
-            <span className="ssr-v" style={{ color: "var(--heat)" }}>{overallDeckStats.needsReview}</span>
-          </div>
-          <div className="ssr-stat">
-            <span className="ssr-k">Weekly Review</span>
-            <span className="ssr-v">{weeklyReview.scheduledReviewDate}</span>
-          </div>
+        <div className="stamp mono">
+          <Link href="/" className="backlink-inline mono" style={{ textDecoration: "none", color: "var(--accent)", fontWeight: 600 }}>
+            ← dashboard
+          </Link>
+          <span>{clock?.date ?? "\u00a0"}</span>
+          <span>{clock?.time ?? "\u00a0"}</span>
+          <span className="themes">
+            {["forest", "dusk", "ash", "sandia", "paper"].map((p) => (
+              <button
+                key={p}
+                type="button"
+                className="mono"
+                aria-pressed={palette === p}
+                onClick={() => applyPalette(p)}
+              >
+                {p}
+              </button>
+            ))}
+          </span>
         </div>
+      </header>
 
-        {/* Navigation Tabs */}
-        <div className="study-view-tabs mono">
+      <div className="rule" />
+
+      {/* 2. NATIVE DAYMARK FACTS SUMMARY STRIP */}
+      <div className="facts" style={{ margin: "18px 0 28px" }}>
+        <div className="fact">
+          <div className="k">Courses</div>
+          <div className="v">{courses.length}</div>
+        </div>
+        <div className="fact">
+          <div className="k">Total Cards</div>
+          <div className="v">{allCards.length}</div>
+        </div>
+        <div className="fact">
+          <div className="k">Mastered</div>
+          <div className="v" style={{ color: "var(--good)" }}>{verifiedPct}%</div>
+        </div>
+        <div className="fact">
+          <div className="k">Needs Review</div>
+          <div className="v" style={{ color: "var(--heat)" }}>{overallDeckStats.needsReview}</div>
+        </div>
+        <div className="fact">
+          <div className="k">Weekly Synthesis</div>
+          <div className="v" style={{ fontSize: 13, marginTop: 5 }}>{weeklyReview.scheduledReviewDate}</div>
+        </div>
+      </div>
+
+      {/* 3. NATIVE NAVIGATION TABS */}
+      <div className="card-head" style={{ marginBottom: 20 }}>
+        <h2>Study Station</h2>
+        <div className="view-toggle mono">
           <button
             type="button"
-            className={`sv-tab ${activeTab === "cards" ? "on" : ""}`}
+            className={`view-toggle-btn ${activeTab === "cards" ? "active" : ""}`}
             onClick={() => setActiveTab("cards")}
           >
             ✦ Active Recall ({allCards.length})
           </button>
+          <span className="view-toggle-sep">/</span>
           <button
             type="button"
-            className={`sv-tab ${activeTab === "courses" ? "on" : ""}`}
+            className={`view-toggle-btn ${activeTab === "courses" ? "active" : ""}`}
             onClick={() => setActiveTab("courses")}
           >
-            Course Matrix &amp; Syllabi
+            Course Matrix
           </button>
+          <span className="view-toggle-sep">/</span>
           <button
             type="button"
-            className={`sv-tab ${activeTab === "review" ? "on" : ""}`}
+            className={`view-toggle-btn ${activeTab === "review" ? "active" : ""}`}
             onClick={() => setActiveTab("review")}
           >
-            Weekly Review &amp; Takeaways
+            Weekly Review
           </button>
+          <span className="view-toggle-sep">/</span>
           <button
             type="button"
-            className={`sv-tab ${activeTab === "evidence" ? "on" : ""}`}
+            className={`view-toggle-btn ${activeTab === "evidence" ? "active" : ""}`}
             onClick={() => setActiveTab("evidence")}
           >
-            📖 Evidence Bank
+            Evidence Bank
           </button>
+          <span className="view-toggle-sep">/</span>
           <button
             type="button"
-            className={`sv-tab ${activeTab === "focus" ? "on" : ""}`}
+            className={`view-toggle-btn ${activeTab === "focus" ? "active" : ""}`}
             onClick={() => setActiveTab("focus")}
           >
-            ⏱️ Focus &amp; Sounds
+            ⏱️ Focus
           </button>
         </div>
       </div>
-
-      <div className="rule" />
 
       {/* Main Tab Content */}
       <div className="study-page-body">
@@ -121,6 +189,7 @@ export default function StudyView({ data }: { data: StudyHubData }) {
                 initialCards={allCards}
                 courses={courses}
                 selectedCourseFilter={selectedCourse}
+                initialViewMode={initialMode === "quiz" ? ("quiz" as const) : ("study" as const)}
               />
             </div>
           </section>
@@ -131,7 +200,7 @@ export default function StudyView({ data }: { data: StudyHubData }) {
           <section className="card span12 study-card">
             <div className="card-head">
               <h2>Active Courses &amp; Syllabi</h2>
-              <span className="pill mono">{courses.length} courses enrolled</span>
+              <span className="pill mono">{courses.length} courses active</span>
             </div>
             <div className="card-body">
               <div className="course-cards-grid">
@@ -178,7 +247,6 @@ export default function StudyView({ data }: { data: StudyHubData }) {
                           <span>{totalC} Flashcards</span>
                           <span>{vPct}% Verified</span>
                         </div>
-                        {/* Minimalist Single-Tint Progress Line */}
                         <div className="minimal-prog-track">
                           <div className="minimal-prog-fill" style={{ width: `${vPct}%` }} />
                         </div>
@@ -315,6 +383,11 @@ export default function StudyView({ data }: { data: StudyHubData }) {
           onClose={() => setIsWizardOpen(false)}
         />
       )}
+
+      <footer>
+        Study Hub cards are parsed from standardized Anki CSVs with SM-2 spaced repetition, in-subject multiple choice sprints, and weekly synthesis.
+        All times in Mountain Time.
+      </footer>
     </div>
   );
 }
