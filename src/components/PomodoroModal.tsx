@@ -15,7 +15,7 @@ interface FocusStats {
 }
 
 const COURSES = [
-  { code: "POLS 2120", label: "POLS 2120" },
+  { code: "GEOG 1115L", label: "GEOG 1115L" },
   { code: "HIST 300", label: "HIST 300" },
   { code: "GEOG 1160", label: "GEOG 1160" },
   { code: "GEOG 1150", label: "GEOG 1150" },

@@ -10,7 +10,7 @@ interface ScratchpadDrawerProps {
 
 const DEFAULT_TAGS = [
   { id: "General", label: "General", ck: "adm" },
-  { id: "POLS 2120", label: "POLS 2120", ck: "pol" },
+  { id: "GEOG 1115L", label: "GEOG 1115L", ck: "geo" },
   { id: "HIST 300", label: "HIST 300", ck: "his" },
   { id: "GEOG 1160", label: "GEOG 1160", ck: "geo" },
   { id: "GEOG 1150", label: "GEOG 1150", ck: "geo" },

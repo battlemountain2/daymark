@@ -39,12 +39,6 @@
     ],
     "weakAreas": [
       {
-        "course": "POLS 2120",
-        "topic": "Separate mechanism from description",
-        "reason": "Practice naming the causal mechanism and a falsifying observation for each Week 3 theory.",
-        "ck": "pol"
-      },
-      {
         "course": "GEOG 1160",
         "topic": "Week 3 and Week 4 lecture slides",
         "reason": "Canvas has the week headings but not the official slide sets yet; use the prep packages provisionally.",
@@ -59,22 +53,6 @@
     ]
   },
   "courses": [
-    {
-      "code": "POLS 2120",
-      "name": "International Relations",
-      "where": "Mitchell Hall 101",
-      "ck": "pol",
-      "currentWeek": "Week 3",
-      "currentTopic": "War, Democratization, and Competing International Explanations",
-      "readings": [
-        "Fearon - Rationalist Explanations for War",
-        "Bunce - Democratization and Institutional Change",
-        "Huntington - The Clash of Civilizations?"
-      ],
-      "resourceStatus": "Ready",
-      "resourceNote": "Week 3 through Week 6 packages and Anki decks are ready in Drive.",
-      "driveUrl": "https://drive.google.com/drive/folders/10BROOMMuQhxfIyjgHheMDbk-j5T-AYgq"
-    },
     {
       "code": "GEOG 1160",
       "name": "Home Planet: Land, Water, Life",

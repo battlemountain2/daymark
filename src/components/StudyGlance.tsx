@@ -83,7 +83,7 @@ export default function StudyGlance({ promise }: Props) {
         )}
 
         {/* Action Buttons */}
-        <div className="glance-action-row" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div className="glance-action-row">
           {dueCards.length > 0 ? (
             <button
               type="button"
@@ -93,24 +93,14 @@ export default function StudyGlance({ promise }: Props) {
               ⚡ Start 5-Min Review ({dueCards.length} cards) →
             </button>
           ) : (
-            <Link href="/study" className="glance-btn mono" style={{ textAlign: "center", textDecoration: "none" }}>
+            <Link href="/study" className="glance-btn primary mono">
               Practice Active Recall ({allCards.length} cards) →
             </Link>
           )}
 
           <Link
             href="/study?mode=quiz"
-            className="glance-btn quiet mono"
-            style={{
-              textAlign: "center",
-              textDecoration: "none",
-              fontSize: 11,
-              padding: "6px 12px",
-              background: "var(--surface-2)",
-              border: "1px solid var(--line)",
-              borderRadius: 4,
-              color: "var(--ink-2)",
-            }}
+            className="glance-btn secondary mono"
           >
             ⚡ Launch 10-Question Random Quiz →
           </Link>

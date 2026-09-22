@@ -257,7 +257,7 @@ h1.lede{
 .gap{display:grid;grid-template-columns:8px 78px 1fr;gap:12px;padding:9px 0;
   border-bottom:1px dashed var(--line);align-items:center;}
 .gap .gline{border-left:2px dashed var(--line-strong);height:100%;min-height:20px;margin-left:1px;}
-.gap .gtxt{font-size:13px;color:var(--ink-3);font-style:italic;}
+.gap .gtxt{font-size:13px;color:var(--ink-3);font-style:italic;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
 
 .callout{margin-top:14px;padding:13px 15px;border-radius:5px;border-left:3px solid var(--heat);
   background:var(--heat-soft);}
@@ -1868,7 +1868,9 @@ details.tl[open] summary::after{content:"\2212";}
 
 .glance-action-row {
   display: flex;
-  margin-top: 4px;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .glance-btn {
@@ -1883,12 +1885,40 @@ details.tl[open] summary::after{content:"\2212";}
   color: var(--ink);
   text-decoration: none;
   transition: all .12s ease;
+  cursor: pointer;
 }
 
 .glance-btn:hover {
   background: var(--accent-soft);
   border-color: var(--accent);
   color: var(--accent);
+}
+
+.glance-btn.primary {
+  background: var(--ink);
+  color: var(--surface);
+  border-color: var(--ink);
+  font-weight: 600;
+}
+
+.glance-btn.primary:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+
+.glance-btn.secondary {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+  font-size: 11px;
+  padding: 6px 12px;
+}
+
+.glance-btn.secondary:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
 }
 
 /* ==========================================================================
@@ -5810,4 +5840,27 @@ details.tl[open] summary::after{content:"\2212";}
 }
 .qsc-btn.restart:hover {
   opacity: 0.9;
+}
+
+
+.weekly-open-morning {
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  padding: 8px 6px;
+  text-align: center;
+  font-size: 10.5px;
+  color: var(--ink-3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+.weekly-open-morning span {
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.weekly-open-morning small {
+  font-size: 9px;
+  opacity: 0.8;
 }

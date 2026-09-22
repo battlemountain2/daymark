@@ -37,7 +37,6 @@ export const DEFAULT_TERM: Term = {
     0: [],
     1: [
       { start: "09:00", end: "10:45", code: "GEOG 1160L", title: "Home Planet Laboratory", where: "Bandelier Hall East 106", ck: "geo" },
-      { start: "11:00", end: "11:50", code: "POLS 2120", title: "International Relations", where: "Mitchell Hall 101", ck: "pol" },
       { start: "14:00", end: "14:50", code: "GEOG 1150", title: "Intro to Environmental Studies", where: "Mitchell Hall 120", ck: "geo" },
     ],
     2: [
@@ -46,7 +45,6 @@ export const DEFAULT_TERM: Term = {
     ],
     3: [
       { start: "09:00", end: "10:45", code: "GEOG 1115L", title: "Maps and GIScience Laboratory", where: "Bandelier Hall East 106", ck: "geo" },
-      { start: "11:00", end: "11:50", code: "POLS 2120", title: "International Relations", where: "Mitchell Hall 101", ck: "pol" },
       { start: "14:00", end: "14:50", code: "GEOG 1150", title: "Intro to Environmental Studies", where: "Mitchell Hall 120", ck: "geo" },
     ],
     4: [
@@ -54,7 +52,6 @@ export const DEFAULT_TERM: Term = {
       { start: "15:30", end: "16:45", code: "GEOG 1160", title: "Home Planet: Land, Water, Life", where: "Bandelier Hall East 105", ck: "geo" },
     ],
     5: [
-      { start: "11:00", end: "11:50", code: "POLS 2120", title: "International Relations", where: "Mitchell Hall 101", ck: "pol" },
       { start: "14:00", end: "14:50", code: "GEOG 1150", title: "Intro to Environmental Studies", where: "Mitchell Hall 120", ck: "geo" },
     ],
     6: [

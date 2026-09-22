@@ -474,13 +474,13 @@ export default function Dashboard({
                             {h ? `${h}h ` : ""}{m ? `${m}m` : ""}
                           </div>
                           <div className="gtxt">
-                            open block — {fmtTime(hhmm(g.from))} to {fmtTime(hhmm(g.to))}
+                            <span className="gtxt-desc">open block — {fmtTime(hhmm(g.from))} to {fmtTime(hhmm(g.to))}</span>
                             <button
                               type="button"
                               className="mono gap-study-btn"
                               onClick={() => setPomodoroState({ open: true, gapMinutes: g.minutes })}
                             >
-                              ✦ Start Focus ({g.minutes}m)
+                              ✦ Focus ({g.minutes}m)
                             </button>
                           </div>
                         </div>

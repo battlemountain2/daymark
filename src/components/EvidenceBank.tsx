@@ -148,7 +148,7 @@ export default function EvidenceBank() {
             aria-label="Search the evidence bank"
           />
           <div className="eb-course-pills">
-            {["ALL", "POLS 2120", "HIST 300", "GEOG 1150", "GEOG 1115L"].map((c) => (
+            {["ALL", "HIST 300", "GEOG 1160", "GEOG 1150", "GEOG 1115L"].map((c) => (
               <button
                 key={c}
                 type="button"

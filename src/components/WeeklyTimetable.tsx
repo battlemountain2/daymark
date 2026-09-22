@@ -78,6 +78,12 @@ export default function WeeklyTimetable({
 
                 {/* Day Classes & Gaps */}
                 <div className="weekly-col-body">
+                  {day.dow === 5 && dayClasses.length > 0 && hhmm(dayClasses[0].start) >= 720 && (
+                    <div className="weekly-open-morning mono">
+                      <span>☀️ Morning Open</span>
+                      <small>Deep study &amp; recovery</small>
+                    </div>
+                  )}
                   {dayClasses.length === 0 ? (
                     <div className="weekly-empty-day mono">
                       <span>No in-person classes</span>
@@ -116,7 +122,7 @@ export default function WeeklyTimetable({
                                   {Math.floor(gapBefore.minutes / 60) > 0
                                     ? `${Math.floor(gapBefore.minutes / 60)}h `
                                     : ""}
-                                  {gapBefore.minutes % 60}m gap
+                                  {gapBefore.minutes % 60 > 0 ? `${gapBefore.minutes % 60}m ` : ""}gap
                                 </span>
                                 {onStartFocus && (
                                   <button
