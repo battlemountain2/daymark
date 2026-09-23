@@ -73,7 +73,7 @@ export default function TodoPanel({ promise, st, busy, nowIso, mutate }: Props) 
                   <small>{it.done ? "done" : d === 0 ? "today" : d === 1 ? "day" : "days"}</small>
                 </div>
                 <div>
-                  <input type="checkbox" checked={it.done}
+                  <input type="checkbox" id={`chk-${it.id}`} checked={it.done}
                     aria-label={`Mark ${it.title} done`}
                     onChange={(e) =>
                       mutate(it.mine
@@ -82,10 +82,10 @@ export default function TodoPanel({ promise, st, busy, nowIso, mutate }: Props) 
                 </div>
                 <div>
                   <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
-                    <span style={{ flex: 1 }}>
+                    <label htmlFor={`chk-${it.id}`} style={{ flex: 1, cursor: "pointer", userSelect: "none", WebkitUserSelect: "none" }}>
                       <span className={`code mono ${it.mine ? "mine" : it.ck}`}>{it.code}</span>
                       <span className="title">{it.title}</span>
-                    </span>
+                    </label>
                     <button className="btn quiet mono" style={{ padding: "0 4px" }}
                       title={it.mine ? "Delete this" : hidden ? "Bring this back" : "Dismiss this"}
                       onClick={() =>

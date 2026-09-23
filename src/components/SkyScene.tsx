@@ -174,9 +174,16 @@ export default function SkyScene({
 
     let raf = 0;
     let t0 = performance.now();
+    let lastDraw = 0;
+    const targetFPS = variant === "tile" ? 24 : 30;
+    const minInterval = 1000 / targetFPS;
 
     const frame = (now: number) => {
-      const elapsed = reduce ? 0 : (now - t0) / 1000;
+      if (reduce) return;
+      raf = requestAnimationFrame(frame);
+      if (now - lastDraw < minInterval) return;
+      lastDraw = now;
+      const elapsed = (now - t0) / 1000;
       const when = atRef.current ?? new Date();
       const sun = sunPosition(LAT, LON, when);
       const moon = moonPhase(when);
@@ -310,8 +317,6 @@ export default function SkyScene({
       }
 
       if (variant !== "backdrop") drawPrecip(elapsed, e);
-
-      if (!reduce) raf = requestAnimationFrame(frame);
     };
 
     function schedule() {

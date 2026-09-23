@@ -1,5 +1,5 @@
 // Daymark Service Worker - Static Asset Cache Only
-const CACHE_NAME = "daymark-static-v3";
+const CACHE_NAME = "daymark-static-v4";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
