@@ -8,11 +8,14 @@ import EvidenceBank from "@/components/EvidenceBank";
 import FocusTimer from "@/components/FocusTimer";
 import PreClassBriefModal from "@/components/PreClassBriefModal";
 import FridayReviewWizard from "@/components/FridayReviewWizard";
+import CodingStudyLab from "@/components/CodingStudyLab";
 import { getPreClassBrief, type PreClassBrief } from "@/lib/pre-class-briefs";
 import { longDate } from "@/lib/localtime";
 
 export default function StudyView({ data, initialMode }: { data: StudyHubData; initialMode?: string }) {
-  const [activeTab, setActiveTab] = useState<"cards" | "courses" | "review" | "evidence" | "focus">("cards");
+  const [activeTab, setActiveTab] = useState<"cards" | "courses" | "review" | "evidence" | "focus" | "coding">(
+    initialMode === "coding" || initialMode === "python" ? "coding" : "cards"
+  );
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
   const [activeBrief, setActiveBrief] = useState<PreClassBrief | null>(null);
   const [isWizardOpen, setIsWizardOpen] = useState<boolean>(false);
@@ -175,6 +178,14 @@ export default function StudyView({ data, initialMode }: { data: StudyHubData; i
             onClick={() => setActiveTab("focus")}
           >
             ⏱️ Focus
+          </button>
+          <span className="view-toggle-sep">/</span>
+          <button
+            type="button"
+            className={`view-toggle-btn ${activeTab === "coding" ? "active" : ""}`}
+            onClick={() => setActiveTab("coding")}
+          >
+            🐍 Python &amp; GIS
           </button>
         </div>
       </div>
@@ -371,6 +382,9 @@ export default function StudyView({ data, initialMode }: { data: StudyHubData; i
             </div>
           </section>
         )}
+
+        {/* TAB 6: PYTHON & GIS CODING LAB */}
+        {activeTab === "coding" && <CodingStudyLab />}
       </div>
 
       {/* Pre-Class Brief Modal */}
