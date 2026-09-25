@@ -28,7 +28,7 @@ const PRESETS: SoundPreset[] = [
   {
     id: "gamma",
     name: "40Hz Gamma Focus",
-    desc: "Isochronic cognitive frequency over brown study noise",
+    desc: "Isochronic cognitive pulse over deep brown noise",
     genre: "Binaural Study",
     rpm: 45,
   },
@@ -76,42 +76,77 @@ export default function LofiDeck() {
     }
   }, [volume, isMuted]);
 
-  // Stop current audio nodes
-  const stopAudio = () => {
+  // Initialize or retrieve persistent AudioContext + Master Gain
+  const getAudioContext = (): { ctx: AudioContext; master: GainNode } | null => {
+    if (typeof window === "undefined") return null;
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return null;
+
+    if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
+      const ctx = new AudioContextClass();
+      const master = ctx.createGain();
+      master.gain.value = isMuted ? 0 : volume;
+      master.connect(ctx.destination);
+      audioCtxRef.current = ctx;
+      masterGainRef.current = master;
+      return { ctx, master };
+    }
+
+    const ctx = audioCtxRef.current;
+    if (!masterGainRef.current) {
+      const master = ctx.createGain();
+      master.gain.value = isMuted ? 0 : volume;
+      master.connect(ctx.destination);
+      masterGainRef.current = master;
+    }
+
+    return { ctx, master: masterGainRef.current };
+  };
+
+  // Disconnect and stop currently playing sound generators WITHOUT suspending the context
+  const stopActiveNodes = () => {
     for (const node of activeNodesRef.current) {
       try {
-        if (node.stop) node.stop();
+        if (typeof node.stop === "function") {
+          node.stop();
+        }
+      } catch {}
+      try {
         node.disconnect();
       } catch {}
     }
     activeNodesRef.current = [];
+  };
+
+  // Stop audio and suspend context (used when explicitly pausing)
+  const stopAudio = () => {
+    stopActiveNodes();
     if (audioCtxRef.current && audioCtxRef.current.state === "running") {
       audioCtxRef.current.suspend().catch(() => {});
     }
   };
 
   // Build audio synthesizer according to preset
-  const startAudio = (presetId: string) => {
-    stopAudio();
+  const startAudio = async (presetId: string) => {
+    // 1. Immediately disconnect old nodes to prevent overlap/clicking
+    stopActiveNodes();
 
-    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContextClass) return;
+    const audioSetup = getAudioContext();
+    if (!audioSetup) return;
+    const { ctx, master } = audioSetup;
 
-    if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
-      audioCtxRef.current = new AudioContextClass();
-    }
-    const ctx = audioCtxRef.current;
+    // 2. Ensure AudioContext is actively running (handles browser autoplay policies & wake from pause)
     if (ctx.state === "suspended") {
-      ctx.resume();
+      await ctx.resume().catch(() => {});
     }
 
-    const master = ctx.createGain();
-    master.gain.value = isMuted ? 0 : volume;
-    master.connect(ctx.destination);
-    masterGainRef.current = master;
+    // Refresh master gain volume
+    master.gain.setValueAtTime(isMuted ? 0 : volume, ctx.currentTime);
 
     if (presetId === "rain") {
-      // 1. Rain noise generator
+      // --- 1. Rain noise generator (Pink Noise via 3-pole filter) ---
       const bufferSize = ctx.sampleRate * 2;
       const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const output = noiseBuffer.getChannelData(0);
@@ -121,7 +156,7 @@ export default function LofiDeck() {
         b0 = 0.99886 * b0 + white * 0.0555179;
         b1 = 0.99332 * b1 + white * 0.0750759;
         b2 = 0.96900 * b2 + white * 0.1538520;
-        output[i] = (b0 + b1 + b2) * 0.15;
+        output[i] = (b0 + b1 + b2) * 0.22;
       }
 
       const whiteNoise = ctx.createBufferSource();
@@ -130,19 +165,22 @@ export default function LofiDeck() {
 
       const rainFilter = ctx.createBiquadFilter();
       rainFilter.type = "lowpass";
-      rainFilter.frequency.value = 1200;
+      rainFilter.frequency.value = 1300;
+
+      const rainGain = ctx.createGain();
+      rainGain.gain.value = 0.32;
 
       whiteNoise.connect(rainFilter);
-      rainFilter.connect(master);
+      rainFilter.connect(rainGain);
+      rainGain.connect(master);
       whiteNoise.start();
       activeNodesRef.current.push(whiteNoise);
 
-      // 2. Vinyl needle crackle generator
+      // --- 2. Vinyl needle crackle generator ---
       const crackleBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const cOut = crackleBuffer.getChannelData(0);
       for (let i = 0; i < bufferSize; i++) {
-        // Random sparse impulse spikes
-        cOut[i] = Math.random() > 0.9985 ? (Math.random() * 2 - 1) * 0.8 : 0;
+        cOut[i] = Math.random() > 0.9982 ? (Math.random() * 2 - 1) * 0.75 : 0;
       }
       const crackle = ctx.createBufferSource();
       crackle.buffer = crackleBuffer;
@@ -150,10 +188,10 @@ export default function LofiDeck() {
 
       const crackleFilter = ctx.createBiquadFilter();
       crackleFilter.type = "highpass";
-      crackleFilter.frequency.value = 2200;
+      crackleFilter.frequency.value = 2000;
 
       const crackleGain = ctx.createGain();
-      crackleGain.gain.value = 0.35;
+      crackleGain.gain.value = 0.25;
 
       crackle.connect(crackleFilter);
       crackleFilter.connect(crackleGain);
@@ -162,84 +200,170 @@ export default function LofiDeck() {
       activeNodesRef.current.push(crackle);
 
     } else if (presetId === "chords") {
-      // Warm analog chord drone (Fmaj7 - A, C, E, G)
-      const freqs = [174.61, 220.0, 261.63, 329.63, 392.0];
-      const oscGain = ctx.createGain();
-      oscGain.gain.value = 0.18;
+      // --- Analog Tape Rhodes Chords (Fmaj9 / Chillhop harmony) ---
+      // F2 (bass anchor), F3, A3, C4, E4, G4
+      const freqs = [87.31, 174.61, 220.0, 261.63, 329.63, 392.0];
+      const gains = [0.18, 0.20, 0.16, 0.16, 0.14, 0.12];
 
-      const filter = ctx.createBiquadFilter();
-      filter.type = "lowpass";
-      filter.frequency.value = 850;
+      const chordsGain = ctx.createGain();
+      chordsGain.gain.value = 0.32;
 
-      // Subtle LFO for tape flutter
+      const mainFilter = ctx.createBiquadFilter();
+      mainFilter.type = "lowpass";
+      mainFilter.frequency.value = 950;
+      mainFilter.Q.value = 1.2;
+
+      // Analog tape wow & flutter LFO
       const lfo = ctx.createOscillator();
-      lfo.frequency.value = 0.35;
+      lfo.frequency.value = 0.28;
       const lfoGain = ctx.createGain();
-      lfoGain.gain.value = 15;
+      lfoGain.gain.value = 45; // Modulate cutoff by +-45Hz
       lfo.connect(lfoGain);
-      lfoGain.connect(filter.frequency);
+      lfoGain.connect(mainFilter.frequency);
       lfo.start();
       activeNodesRef.current.push(lfo);
 
-      freqs.forEach((freq) => {
-        const osc = ctx.createOscillator();
-        osc.type = "triangle";
-        osc.frequency.value = freq;
-        osc.connect(filter);
-        osc.start();
-        activeNodesRef.current.push(osc);
+      // Pitch vibrato / tape drift for subtle warmth
+      const pitchLfo = ctx.createOscillator();
+      pitchLfo.frequency.value = 0.18;
+      const pitchLfoGain = ctx.createGain();
+      pitchLfoGain.gain.value = 0.9; // subtle +-0.9Hz pitch wobble
+      pitchLfo.start();
+      activeNodesRef.current.push(pitchLfo);
+
+      freqs.forEach((freq, idx) => {
+        // Warm triangle note
+        const oscTri = ctx.createOscillator();
+        oscTri.type = "triangle";
+        oscTri.frequency.value = freq;
+        pitchLfoGain.connect(oscTri.frequency);
+
+        // Sine overtone for body
+        const oscSine = ctx.createOscillator();
+        oscSine.type = "sine";
+        oscSine.frequency.value = freq;
+        pitchLfoGain.connect(oscSine.frequency);
+
+        const noteGain = ctx.createGain();
+        noteGain.gain.value = gains[idx] || 0.15;
+
+        oscTri.connect(noteGain);
+        oscSine.connect(noteGain);
+        noteGain.connect(mainFilter);
+
+        oscTri.start();
+        oscSine.start();
+        activeNodesRef.current.push(oscTri, oscSine);
       });
 
-      filter.connect(oscGain);
-      oscGain.connect(master);
+      // Subtle cassette tape hiss layer
+      const bSize = ctx.sampleRate * 2;
+      const tapeBuffer = ctx.createBuffer(1, bSize, ctx.sampleRate);
+      const tapeData = tapeBuffer.getChannelData(0);
+      for (let i = 0; i < bSize; i++) {
+        tapeData[i] = (Math.random() * 2 - 1) * 0.04;
+      }
+      const tapeHiss = ctx.createBufferSource();
+      tapeHiss.buffer = tapeBuffer;
+      tapeHiss.loop = true;
+
+      const tapeFilter = ctx.createBiquadFilter();
+      tapeFilter.type = "bandpass";
+      tapeFilter.frequency.value = 2400;
+      tapeFilter.Q.value = 1.0;
+
+      const tapeGain = ctx.createGain();
+      tapeGain.gain.value = 0.08;
+
+      tapeHiss.connect(tapeFilter);
+      tapeFilter.connect(tapeGain);
+      tapeGain.connect(master);
+      tapeHiss.start();
+      activeNodesRef.current.push(tapeHiss);
+
+      mainFilter.connect(chordsGain);
+      chordsGain.connect(master);
 
     } else if (presetId === "gamma") {
-      // 40Hz focus binaural resonance
-      const baseFreq = 160;
+      // --- 40Hz Gamma Focus: Isochronic Pulse + Binaural Resonance + Deep Brown Noise ---
+      
+      // 1. Deep Brown Noise backdrop (Real Brownian walk)
+      const bSize = ctx.sampleRate * 2;
+      const bBuffer = ctx.createBuffer(1, bSize, ctx.sampleRate);
+      const bData = bBuffer.getChannelData(0);
+      let lastVal = 0;
+      for (let i = 0; i < bSize; i++) {
+        const white = Math.random() * 2 - 1;
+        lastVal = (lastVal + 0.02 * white) / 1.002;
+        bData[i] = lastVal * 2.8; // Normalized to audible, rich rumble
+      }
+      const brown = ctx.createBufferSource();
+      brown.buffer = bBuffer;
+      brown.loop = true;
+
+      const brownFilter = ctx.createBiquadFilter();
+      brownFilter.type = "lowpass";
+      brownFilter.frequency.value = 520;
+
+      const brownGain = ctx.createGain();
+      brownGain.gain.value = 0.22;
+
+      brown.connect(brownFilter);
+      brownFilter.connect(brownGain);
+      brownGain.connect(master);
+      brown.start();
+      activeNodesRef.current.push(brown);
+
+      // 2. 40Hz Isochronic Tone (Audible on ALL laptop speakers and headphones)
+      // Carrier tone at 216Hz (calm harmonic A3)
+      const carrier = ctx.createOscillator();
+      carrier.type = "sine";
+      carrier.frequency.value = 216;
+
+      // 40Hz Amplitude Modulator (Gamma Rhythm)
+      const pulseLfo = ctx.createOscillator();
+      pulseLfo.type = "sine";
+      pulseLfo.frequency.value = 40; // 40 cycles per second
+
+      const pulseDepth = ctx.createGain();
+      pulseDepth.gain.value = 0.08; // modulation depth
+      pulseLfo.connect(pulseDepth);
+
+      const isochronicGain = ctx.createGain();
+      isochronicGain.gain.value = 0.16; // base volume
+      pulseDepth.connect(isochronicGain.gain);
+
+      carrier.connect(isochronicGain);
+      isochronicGain.connect(master);
+
+      carrier.start();
+      pulseLfo.start();
+      activeNodesRef.current.push(carrier, pulseLfo);
+
+      // 3. Stereo Binaural 40Hz Delta for Headphone Users (200Hz L / 240Hz R)
       const oscL = ctx.createOscillator();
       const oscR = ctx.createOscillator();
       oscL.type = "sine";
       oscR.type = "sine";
-      oscL.frequency.value = baseFreq;
-      oscR.frequency.value = baseFreq + 40; // 40Hz difference
+      oscL.frequency.value = 200;
+      oscR.frequency.value = 240; // 40Hz difference
 
       const merger = ctx.createChannelMerger(2);
       oscL.connect(merger, 0, 0);
       oscR.connect(merger, 0, 1);
 
-      const focusGain = ctx.createGain();
-      focusGain.gain.value = 0.15;
+      const binauralGain = ctx.createGain();
+      binauralGain.gain.value = 0.12;
 
-      merger.connect(focusGain);
-      focusGain.connect(master);
+      merger.connect(binauralGain);
+      binauralGain.connect(master);
 
       oscL.start();
       oscR.start();
       activeNodesRef.current.push(oscL, oscR);
 
-      // Low brown noise backdrop
-      const bSize = ctx.sampleRate * 2;
-      const bBuffer = ctx.createBuffer(1, bSize, ctx.sampleRate);
-      const bData = bBuffer.getChannelData(0);
-      let last = 0;
-      for (let i = 0; i < bSize; i++) {
-        const white = Math.random() * 2 - 1;
-        bData[i] = (last + 0.02 * white) / 1.02;
-        last = bData[i];
-        bData[i] *= 0.8;
-      }
-      const brown = ctx.createBufferSource();
-      brown.buffer = bBuffer;
-      brown.loop = true;
-      const brownGain = ctx.createGain();
-      brownGain.gain.value = 0.08;
-      brown.connect(brownGain);
-      brownGain.connect(master);
-      brown.start();
-      activeNodesRef.current.push(brown);
-
     } else if (presetId === "wind") {
-      // Wind sweep noise
+      // --- Hunter's Night Wind: Sweeping Nocturnal Atmosphere ---
       const bSize = ctx.sampleRate * 3;
       const bBuffer = ctx.createBuffer(1, bSize, ctx.sampleRate);
       const bData = bBuffer.getChannelData(0);
@@ -252,21 +376,21 @@ export default function LofiDeck() {
 
       const windFilter = ctx.createBiquadFilter();
       windFilter.type = "bandpass";
-      windFilter.frequency.value = 400;
-      windFilter.Q.value = 2.5;
+      windFilter.frequency.value = 380;
+      windFilter.Q.value = 2.2;
 
       // LFO for breathing wind gust
       const windLfo = ctx.createOscillator();
-      windLfo.frequency.value = 0.12;
+      windLfo.frequency.value = 0.11;
       const windLfoGain = ctx.createGain();
-      windLfoGain.gain.value = 250;
+      windLfoGain.gain.value = 220;
       windLfo.connect(windLfoGain);
       windLfoGain.connect(windFilter.frequency);
       windLfo.start();
       activeNodesRef.current.push(windLfo);
 
       const windGain = ctx.createGain();
-      windGain.gain.value = 0.22;
+      windGain.gain.value = 0.24;
 
       windSource.connect(windFilter);
       windFilter.connect(windGain);
@@ -276,21 +400,21 @@ export default function LofiDeck() {
     }
   };
 
-  const togglePlay = () => {
+  const togglePlay = async () => {
     if (isPlaying) {
       stopAudio();
       setIsPlaying(false);
     } else {
-      startAudio(activePreset.id);
+      await startAudio(activePreset.id);
       setIsPlaying(true);
     }
   };
 
-  const selectPreset = (p: SoundPreset) => {
+  const selectPreset = async (p: SoundPreset) => {
     setActivePreset(p);
     setElapsedSeconds(0);
     if (isPlaying) {
-      startAudio(p.id);
+      await startAudio(p.id);
     }
   };
 
