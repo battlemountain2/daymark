@@ -8,25 +8,25 @@ export interface CourseCrib {
 }
 
 export const COURSE_CRIBS: Record<string, CourseCrib> = {
-  "POLS 2120": {
-    code: "POLS 2120",
-    name: "International Relations",
-    themeColor: "#5B8DEF",
+  "GEOG 1115L": {
+    code: "GEOG 1115L",
+    name: "Maps & GIScience Lab",
+    themeColor: "#2A9D8F",
     theses: [
-      "International system is defined by structural anarchy (no central sovereign authority), forcing states into self-help security dilemmas.",
-      "Carol Cohn's critique: Techno-strategic language ('clean surgical strikes', 'collateral damage') sanitizes human suffering and detaches defense analysts from nuclear reality.",
-      "Realism prioritizes zero-sum relative gains and balance of power; Liberalism highlights institutional cooperation and non-zero-sum interdependence."
+      "Vector geometries (points, lines, polygons) represent discrete spatial entities, while raster matrices represent continuous geographic surfaces (elevation, temperature).",
+      "Spatial reference systems (SRS/CRS) project the 3D ellipsoidal Earth onto 2D Cartesian planes, necessitating unavoidable trade-offs between conformal (shape), equivalent (area), and equidistant properties.",
+      "Vector topology guarantees spatial integrity (adjacency, connectivity, containment), preventing slivers, gaps, and invalid geometric overlaps in geospatial workflows."
     ],
     keyConcepts: [
-      { term: "Security Dilemma", def: "One state increasing defense inadvertently threatens others, sparking reciprocal arms buildups." },
-      { term: "Techno-Strategic Discourse", def: "Specialized sanitized jargon abstracting weapons of mass destruction into technical abstractions." },
-      { term: "Offense-Defense Balance", def: "Determines whether conquest is perceived as advantageous or defensive postures predominate." },
-      { term: "Democratic Peace Theory", def: "Mature democracies rarely engage in armed interstate warfare against each other." }
+      { term: "Spatial Query & Topological Overlay", def: "Selecting and intersecting features using topological operators (ST_Intersects, ST_Within, ST_Contains) combined with boolean attribute SQL." },
+      { term: "Coordinate Reference System (CRS)", def: "Geographic coordinate system and map projection (e.g. EPSG:4326 WGS84 vs EPSG:32613 UTM Zone 13N) defining coordinate math." },
+      { term: "Attribute Join vs Spatial Join", def: "Attribute joins link tables via foreign keys; spatial joins assign attributes based on relative geometric proximity or intersection." },
+      { term: "Python Geospatial Automation", def: "Using Shapely, GeoPandas, and PyQGIS to script automated buffering, clipping, and coordinate transformation pipelines." }
     ],
     promptQuestions: [
-      "How does structural anarchy compel rational state actors toward offensive realism?",
-      "In what ways does defense jargon create gendered hierarchies in foreign policy?",
-      "Can international institutions overcome absolute gains defection under the prisoner's dilemma?"
+      "Why must map projections make trade-offs between preserving area, shape, distance, and direction (Tissot's Indicatrix)?",
+      "How does a spatial join differ from an attribute join when analyzing environmental vulnerability across census tracts?",
+      "What steps guarantee topological consistency when digitizing adjacent parcel boundaries in QGIS?"
     ]
   },
   "HIST 300": {

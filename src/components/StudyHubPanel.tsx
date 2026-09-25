@@ -159,7 +159,7 @@ export default function StudyHubPanel({ promise }: Props) {
               <div className="mrb-content">
                 <div className="mono mrb-k">🎯 Week {data.currentWeekNumber} Core Focus:</div>
                 <div className="mrb-text">
-                  Carol Cohn's technostrategic nuclear analysis (POLS 2120), Earth's 4 spheres & energy budget (GEOG 1160), and American hydraulic state formation (HIST 300).
+                  Global wind belts &amp; Coriolis deflection (GEOG 1160), Indian Ocean monsoon trade networks (HIST 300), and urban form &amp; transit ecology (GEOG 1150).
                 </div>
               </div>
               <button

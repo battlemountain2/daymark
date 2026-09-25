@@ -75,17 +75,16 @@ export default function FridayReviewWizard({ data, onClose }: Props) {
             <div className="fw-step-content">
               <h3>Step 1: Check Off This Week&apos;s Readings</h3>
               <p className="sub mono">
-                Acknowledge the primary &amp; secondary sources reviewed across your 6 courses.
+                Acknowledge the primary &amp; secondary sources reviewed across your active Fall 2026 courses.
               </p>
 
               <div className="fw-checklist">
                 {[
-                  "POLS 2120: Carol Cohn (Signs 1987) & Norms / Models",
-                  "HIST 300: Paul Sutter (2013) & Ancient Near East Irrigation",
-                  "GEOG 1160: Earth Systems, Insolation & Air Quality",
-                  "GEOG 1150: Environmental Policy, NEPA & Clean Air Act",
-                  "GEOG 1115L: Coordinate Systems, Projections & Vector/Raster",
-                  "PHED 2996: Body Composition & Standardized Girth Testing",
+                  "GEOG 1160: Ch. 5 Global Winds, Pressure Belts & Coriolis Deflection",
+                  "GEOG 1160L: Psychrometric Tables, Dew Point & Adiabatic Lapse Rates",
+                  "HIST 300: Arnold Ch. 4 Indian Ocean Monsoons & Maritime Trade",
+                  "GEOG 1150: Ch. 22 Urbanization, Land Use Zoning & Transit-Oriented Form",
+                  "GEOG 1115L: Vector Spatial Queries, Topological Operators & Python Bounding Boxes",
                 ].map((item, idx) => {
                   const isDone = !!checkedReadings[idx];
                   return (
@@ -211,7 +210,7 @@ export default function FridayReviewWizard({ data, onClose }: Props) {
               <div style={{ fontSize: 48, marginBottom: 12 }}>🏆</div>
               <h2 style={{ margin: "0 0 8px" }}>Weekly Synthesis Complete!</h2>
               <p className="sub mono" style={{ maxWidth: 440, margin: "0 auto 20px" }}>
-                You have completed your Friday 8:00 PM review ritual. All 6 course frameworks, takeaways, and weak spots are reinforced.
+                You have completed your Friday 8:00 PM review ritual. All 5 course frameworks, takeaways, and weak spots are reinforced.
               </p>
               <div className="fw-stamp-badge mono">
                 <span>🔥 SEMESTER SYNTHESIS STREAK ACTIVE</span>

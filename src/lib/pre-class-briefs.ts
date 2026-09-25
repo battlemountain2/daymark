@@ -13,30 +13,6 @@ export type PreClassBrief = {
 };
 
 export const PRE_CLASS_BRIEFS: Record<string, PreClassBrief> = {
-  "POLS 2120": {
-    code: "POLS 2120",
-    title: "International Relations",
-    where: "Mitchell Hall 101",
-    ck: "pol",
-    reading: "Fearon, 'Rationalist Explanations for War'; Bunce on democratization and institutional change; Huntington, 'The Clash of Civilizations?'",
-    thesis: "The readings explain conflict at different levels: Fearon identifies bargaining failures, Bunce traces how institutions shape national projects and regime change, and Huntington emphasizes broad civilizational identities.",
-    authorDebate: "Huntington treats cultural boundaries as increasingly consequential; Bunce shows that nationalism's effects depend on institutions and elite choices; Fearon argues that even intense hostility still needs a mechanism that prevents a peaceful bargain.",
-    questions: [
-      {
-        q: "Why is a desire for war not a sufficient explanation for Fearon, and which bargaining failure completes the causal argument?",
-        cite: "Fearon 1995, pp. 379–390",
-      },
-      {
-        q: "How would Bunce explain variation that Huntington's civilizational categories tend to flatten?",
-        cite: "Huntington 1993, pp. 22–24; Bunce assigned reading",
-      },
-    ],
-    keyTakeaways: [
-      "Identify each author's level of analysis before comparing conclusions.",
-      "Separate actors' preferences from the mechanism that prevents bargaining.",
-      "Ask what evidence would weaken or falsify each explanation.",
-    ],
-  },
   "HIST 300": {
     code: "HIST 300",
     title: "Water in History",
