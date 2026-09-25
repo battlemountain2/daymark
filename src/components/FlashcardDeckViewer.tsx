@@ -389,184 +389,179 @@ export default function FlashcardDeckViewer({
         }}
       />
 
-      {/* 1. NATIVE DAYMARK CLASS FILTER STRIP */}
-      <div className="class-filter-bar">
-        <div className="cf-scroll-row mono">
-          <button
-            type="button"
-            className={`cf-pill ${activeCourse === "ALL" ? "active" : ""}`}
-            onClick={() => {
-              setActiveCourse("ALL");
-              setCurrentIndex(0);
-              setIsFlipped(false);
-            }}
-          >
-            All Classes
-            <span className="cf-count">{cards.length}</span>
-          </button>
+      {/* UNIFIED STREAMLINED DECK TOOLBAR */}
+      <div className="unified-deck-bar">
+        {/* Tier 1: Course Decks & Study Modes */}
+        <div className="udb-top-row">
+          <div className="udb-course-chips mono">
+            <button
+              type="button"
+              className={`cf-pill ${activeCourse === "ALL" ? "active" : ""}`}
+              onClick={() => {
+                setActiveCourse("ALL");
+                setCurrentIndex(0);
+                setIsFlipped(false);
+              }}
+            >
+              All Decks
+              <span className="cf-count">{cards.length}</span>
+            </button>
 
-          {courses.map((c) => {
-            const count = courseCardCounts[c.code.toUpperCase()] || c.cards.length;
-            const ck = c.ck || getCourseColorKey(c.code);
+            {courses.map((c) => {
+              const count = courseCardCounts[c.code.toUpperCase()] || c.cards.length;
+              const ck = c.ck || getCourseColorKey(c.code);
 
-            return (
-              <button
-                key={c.code}
-                type="button"
-                className={`cf-pill ${activeCourse === c.code ? "active" : ""}`}
-                onClick={() => {
-                  setActiveCourse(c.code);
-                  setCurrentIndex(0);
-                  setIsFlipped(false);
-                }}
-              >
-                <span className={`tagdot ${ck}`} />
-                {c.code}
-                <span className="cf-count">{count}</span>
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={c.code}
+                  type="button"
+                  className={`cf-pill ${activeCourse === c.code ? "active" : ""}`}
+                  onClick={() => {
+                    setActiveCourse(c.code);
+                    setCurrentIndex(0);
+                    setIsFlipped(false);
+                  }}
+                >
+                  <span className={`tagdot ${ck}`} />
+                  {c.code}
+                  <span className="cf-count">{count}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="view-toggle mono udb-mode-toggle">
+            <button
+              type="button"
+              className={`view-toggle-btn ${viewMode === "study" ? "active" : ""}`}
+              onClick={() => {
+                setViewMode("study");
+                setQuizComplete(false);
+              }}
+            >
+              ✦ Flashcard Flip
+            </button>
+            <span className="view-toggle-sep">/</span>
+            <button
+              type="button"
+              className={`view-toggle-btn ${viewMode === "quiz" ? "active" : ""}`}
+              onClick={() => {
+                setViewMode("quiz");
+                handleRestartQuiz();
+              }}
+            >
+              ⚡ Rapid Quiz
+            </button>
+            <span className="view-toggle-sep">/</span>
+            <button
+              type="button"
+              className={`view-toggle-btn ${viewMode === "browse" ? "active" : ""}`}
+              onClick={() => {
+                setViewMode("browse");
+                setQuizComplete(false);
+              }}
+            >
+              📋 All ({filteredCards.length})
+            </button>
+          </div>
         </div>
 
-        {/* Sort & Quick Actions Menu */}
-        <div className="cf-actions-row mono">
-          <div className="cf-sort-group">
-            <span className="cf-sort-lbl">Sort:</span>
+        {/* Tier 2: Search, Sort, Filters, Streak & Mastery */}
+        <div className="udb-bottom-row mono">
+          <div className="udb-left-controls">
+            <button
+              type="button"
+              className={`cf-tool-btn ${showSearch ? "active" : ""}`}
+              onClick={() => setShowSearch(!showSearch)}
+            >
+              🔍 {showSearch ? "Close Search" : "Search"}
+            </button>
+
             <select
-              className="cf-sort-select"
+              className="cf-tool-select"
               value={sortMode}
               onChange={(e) => {
                 setSortMode(e.target.value as SortMode);
                 setCurrentIndex(0);
               }}
             >
-              <option value="default">Default (By Week)</option>
-              <option value="shuffle">🔀 Shuffled / Random</option>
-              <option value="needsReview">⚠️ Needs Review First</option>
-              <option value="unverified">🎯 Unverified First</option>
+              <option value="default">Sort: Default (By Week)</option>
+              <option value="shuffle">Sort: 🔀 Shuffled</option>
+              <option value="needsReview">Sort: ⚠️ Needs Review First</option>
+              <option value="unverified">Sort: 🎯 Unverified First</option>
             </select>
-          </div>
 
-          <button
-            type="button"
-            className="cf-shuffle-btn"
-            onClick={handleShuffleDeck}
-            title="Randomize card order"
-          >
-            🔀 Shuffle
-          </button>
-        </div>
-      </div>
+            <select
+              className="cf-tool-select"
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentIndex(0);
+              }}
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="Verified">Verified Only</option>
+              <option value="Needs review">Needs Review</option>
+              <option value="Draft">Draft Only</option>
+            </select>
 
-      {/* 2. SLENDER NATIVE TOOLBAR (Mode Toggle + Search + Mastery Stats) */}
-      <div className="zen-toolbar">
-        {/* Left: Mode Switcher */}
-        <div className="zen-left">
-          <div className="zen-mode-toggle mono">
             <button
               type="button"
-              className={`zen-mode-btn ${viewMode === "study" ? "on" : ""}`}
-              onClick={() => {
-                setViewMode("study");
-                setQuizComplete(false);
-              }}
+              className="cf-tool-btn"
+              onClick={handleShuffleDeck}
+              title="Shuffle card order"
             >
-              3D Flip
+              🔀 Shuffle
             </button>
+
             <button
               type="button"
-              className={`zen-mode-btn ${viewMode === "quiz" ? "on" : ""}`}
-              onClick={() => {
-                setViewMode("quiz");
-                handleRestartQuiz();
-              }}
+              className="cf-tool-btn"
+              onClick={() => fileInputRef.current?.click()}
+              title="Import Anki CSV"
             >
-              ⚡ Kahoot Quiz
-            </button>
-            <button
-              type="button"
-              className={`zen-mode-btn ${viewMode === "browse" ? "on" : ""}`}
-              onClick={() => {
-                setViewMode("browse");
-                setQuizComplete(false);
-              }}
-            >
-              Browse
+              📥 Import CSV
             </button>
           </div>
-        </div>
 
-        {/* Center: Search & Status Filter */}
-        <div className="zen-center">
-          <button
-            type="button"
-            className={`zen-icon-btn mono ${showSearch ? "on" : ""}`}
-            onClick={() => setShowSearch(!showSearch)}
-            title="Search cards"
-          >
-            🔍 Search
-          </button>
-          <select
-            className="zen-status-select mono"
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setCurrentIndex(0);
-            }}
-          >
-            <option value="ALL">All Statuses</option>
-            <option value="Verified">Verified Only</option>
-            <option value="Needs review">Needs Review</option>
-            <option value="Draft">Draft Only</option>
-          </select>
-        </div>
-
-        {/* Right: Streak & Mastery Pill */}
-        <div className="zen-right mono">
-          {sessionStreak > 0 && (
-            <span className="zen-streak-pill" title="Current study session streak">
-              🔥 {sessionStreak}
+          <div className="udb-right-metrics">
+            {sessionStreak > 0 && (
+              <span className="zen-streak-pill" title="Current session streak">
+                🔥 {sessionStreak} Streak
+              </span>
+            )}
+            <span className="zen-mastery-pill">
+              <span className="live-dot" /> {progressPct}% Mastered ({verifiedCount}/{total})
             </span>
-          )}
-          <span className="zen-mastery-pill" title={`${verifiedCount} of ${total} verified`}>
-            {progressPct}% Mastered
-          </span>
-          <button
-            type="button"
-            className="zen-icon-btn"
-            onClick={() => fileInputRef.current?.click()}
-            title="Import Anki CSV"
-          >
-            📥
-          </button>
+          </div>
         </div>
-      </div>
 
-      {/* Collapsible Search Input */}
-      {showSearch && (
-        <div className="zen-search-dropdown">
-          <input
-            type="text"
-            className="zen-search-input mono"
-            placeholder="Search question, answer, topic tag, or author..."
-            value={searchQuery}
-            autoFocus
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentIndex(0);
-            }}
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              className="zen-search-clear mono"
-              onClick={() => setSearchQuery("")}
-            >
-              ✕
-            </button>
-          )}
-        </div>
-      )}
+        {/* Expandable Search Input */}
+        {showSearch && (
+          <div className="udb-search-expand">
+            <input
+              type="text"
+              className="udb-search-input mono"
+              placeholder="Search concepts, terms, question prompts, or tags..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentIndex(0);
+              }}
+              autoFocus
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                className="udb-search-clear mono"
+                onClick={() => setSearchQuery("")}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* MODE 1: 3D FLIP WITH DYNAMIC ANSWER CONTROLS */}
       {viewMode === "study" && (

@@ -21,19 +21,19 @@ export type EvidenceItem = {
 
 const EVIDENCE_DATABASE: EvidenceItem[] = [
   {
-    id: "cohn-1987-1",
-    course: "POLS 2120",
-    author: "Carol Cohn",
-    work: "Sex and Death in the Rational World of Defense Intellectuals",
-    year: "1987",
-    pages: "691",
-    thesis: "Technostrategic language sanitizes nuclear annihilation through clinical euphemism and gendered imagery, trapping planners within its militarized logic.",
-    quote: "Human death, in nuclear parlance, is most often referred to as ‘collateral damage’.",
+    id: "lutgens-2018-1",
+    course: "GEOG 1160",
+    author: "Frederick K. Lutgens & Edward J. Tarbuck",
+    work: "The Atmosphere: An Introduction to Meteorology",
+    year: "2018",
+    pages: "142–165",
+    thesis: "Atmospheric circulation is the planetary thermodynamic mechanism transferring surplus equatorial solar energy poleward via Hadley, Ferrel, and Polar cells modulated by Coriolis deflection.",
+    quote: "The unequal heating of Earth's surface establishes horizontal pressure gradients, driving winds that transport energy across latitude zones.",
     evidenceKind: "verified-quote",
-    chicagoNotes: "Carol Cohn, “Sex and Death in the Rational World of Defense Intellectuals,” Signs: Journal of Women in Culture and Society 12, no. 4 (1987): 691.",
-    chicagoBib: "Cohn, Carol. “Sex and Death in the Rational World of Defense Intellectuals.” Signs: Journal of Women in Culture and Society 12, no. 4 (1987): 687–718.",
-    tags: ["technostrategic", "nuclear discourse", "feminist IR", "euphemisms"],
-    ck: "pol",
+    chicagoNotes: "Frederick K. Lutgens and Edward J. Tarbuck, The Atmosphere: An Introduction to Meteorology, 14th ed. (Boston: Pearson, 2018), 148.",
+    chicagoBib: "Lutgens, Frederick K., and Edward J. Tarbuck. The Atmosphere: An Introduction to Meteorology. 14th ed. Boston: Pearson, 2018.",
+    tags: ["atmospheric circulation", "Hadley cell", "pressure gradients", "Coriolis force"],
+    ck: "geo",
   },
   {
     id: "sutter-2013-1",
@@ -142,7 +142,7 @@ export default function EvidenceBank() {
           <input
             type="text"
             className="eb-search-input mono"
-            placeholder="Search authors, theses, keywords (e.g. Cohn, hydraulic, wilderness)..."
+            placeholder="Search authors, theses, keywords (e.g. Lutgens, hydraulic, urbanization)..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             aria-label="Search the evidence bank"

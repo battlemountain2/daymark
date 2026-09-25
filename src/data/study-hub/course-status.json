@@ -1,53 +1,53 @@
 {
   "activeTerm": "Fall 2026",
-  "currentWeekNumber": 3,
-  "lastSynced": "2026-09-04T10:58:00-06:00",
+  "currentWeekNumber": 5,
+  "lastSynced": "2026-09-25T17:35:00-06:00",
   "weeklyReview": {
-    "weekTitle": "Week 3 Preparation & Review",
-    "scheduledReviewDate": "Friday, 8:00 PM (Weekly)",
+    "weekTitle": "Week 5 Mid-Term Synthesis & Active Recall",
+    "scheduledReviewDate": "Tonight, Friday 8:00 PM",
     "takeaways": [
       {
-        "course": "POLS 2120",
-        "title": "War, Regime Change, and Competing Explanations",
-        "detail": "Use Fearon, Bunce, and Huntington to compare rationalist bargaining, democratization, and broad civilizational explanations. Ask what each theory treats as the causal mechanism and what evidence could disconfirm it.",
-        "ck": "pol"
+        "course": "GEOG 1160",
+        "title": "Global Pressure Belts and Coriolis Deflection",
+        "detail": "Air moves from subtropical highs toward equatorial lows, deflected rightward in the Northern Hemisphere by Coriolis force, producing the northeast trade winds and mid-latitude westerlies.",
+        "ck": "geo"
+      },
+      {
+        "course": "GEOG 1160L",
+        "title": "Saturation, Dew Point, and Adiabatic Cooling",
+        "detail": "Rising air parcels expand and cool at the dry adiabatic rate (10\u00b0C/km) until reaching dew point temperature (LCL), transitioning to the saturated rate (6\u00b0C/km) with latent heat release.",
+        "ck": "geo"
       },
       {
         "course": "HIST 300",
-        "title": "Water Links Belief, Infrastructure, and Authority",
-        "detail": "Water is simultaneously material and symbolic. Religious practice, irrigation, spatial organization, labor, and political control should be analyzed together rather than as separate histories.",
+        "title": "Monsoons and Trans-Oceanic Merchant Networks",
+        "detail": "Seasonal reversal of Indian Ocean monsoon winds dictated sailing schedules, port-city autonomy, and cultural syncretism across maritime Southeast Asia, India, and East Africa without centralized naval hegemony.",
         "ck": "his"
       },
       {
         "course": "GEOG 1150",
-        "title": "Environmental Policy Turns Values Into Rules",
-        "detail": "Week 3 connects competing environmental values to policy instruments, legal authority, enforcement, and the distribution of costs and benefits. Unit 1b is now correctly filed with this week.",
-        "ck": "geo"
-      },
-      {
-        "course": "GEOG 1160 and 1160L",
-        "title": "Solar Geometry Drives Seasonal and Local Energy Patterns",
-        "detail": "Axial tilt, solar altitude, day length, surface properties, and instrument placement connect lecture-scale seasonality to lab-scale microclimate observations.",
+        "title": "Urban Form, Zoning, and Ecological Footprint",
+        "detail": "Suburban sprawl expands impervious surface runoff and automobile dependency; Transit-Oriented Development (TOD) and mixed-use density reduce per-capita emissions and land consumption.",
         "ck": "geo"
       },
       {
         "course": "GEOG 1115L",
-        "title": "Good Measurement Requires Consistent Reference Conditions",
-        "detail": "Coordinate systems and map projections become interpretable only when the reference ellipsoid, datum, units, and distortion tradeoffs are documented consistently.",
+        "title": "Spatial Queries, Vector Topology, and Attribute Selection",
+        "detail": "Combining boolean SQL attribute queries (WHERE elevation > 2000) with spatial topological operators (ST_Intersects, ST_Within) isolates target environmental features in GIS workflows.",
         "ck": "geo"
       }
     ],
     "weakAreas": [
       {
-        "course": "GEOG 1160",
-        "topic": "Week 3 and Week 4 lecture slides",
-        "reason": "Canvas has the week headings but not the official slide sets yet; use the prep packages provisionally.",
-        "ck": "geo"
+        "course": "HIST 300",
+        "topic": "Maritime Trade Networks & Oceanic Trade Goods",
+        "reason": "Focus on Indian Ocean spice routes, dhow navigation vs Mediterranean galleys, and merchant diaspora enclaves.",
+        "ck": "his"
       },
       {
-        "course": "GEOG 1160L",
-        "topic": "Equipment and project protocol",
-        "reason": "Only the syllabus is visible in Files; preserve room to update the package when official instructions appear.",
+        "course": "GEOG 1115L",
+        "topic": "QGIS Spatial Query Syntax & Python Bounding Boxes",
+        "reason": "Practice coordinate boundary filters and attribute categorization in the Python GIS Study Lab.",
         "ck": "geo"
       }
     ]
@@ -58,15 +58,15 @@
       "name": "Home Planet: Land, Water, Life",
       "where": "Bandelier Hall East 105",
       "ck": "geo",
-      "currentWeek": "Week 3",
-      "currentTopic": "Earth-Sun Connections, Solar Energy, Seasons, and Air Quality",
+      "currentWeek": "Week 5",
+      "currentTopic": "Atmospheric Circulation, Global Wind Belts, Pressure Gradients, and Coriolis Effect",
       "readings": [
-        "Chapter 2",
-        "Mastering Geography 2",
-        "Activity 2: Air Quality"
+        "Chapter 5: Atmospheric Pressure, Winds, and Circulation",
+        "Mastering Geography 5: Global Wind Systems",
+        "Activity 5: Mapping Cyclone and Anticyclone Flow"
       ],
-      "resourceStatus": "Partial",
-      "resourceNote": "Week 3 and Week 4 prep packages are ready; official lecture slides are still waiting on Canvas.",
+      "resourceStatus": "Ready",
+      "resourceNote": "Week 5 & Week 6 slide decks, textbook chapter notes, and flashcard sets are synced.",
       "driveUrl": "https://drive.google.com/drive/folders/1Ri4X9S420uJCmMcCq3yF_eiDZeo9Ly32"
     },
     {
@@ -74,14 +74,15 @@
       "name": "Water in History",
       "where": "Ortega Hall 115",
       "ck": "his",
-      "currentWeek": "Week 3",
-      "currentTopic": "Water, Religion, Hydraulic Systems, and Spatial Archaeology",
+      "currentWeek": "Week 5",
+      "currentTopic": "Oceanic Navigation, Monsoon Wind Systems, Maritime Silk Roads, and Port Cities",
       "readings": [
-        "Arnold - Water in World History, Chapter 1",
-        "Harrower - Water Histories and Spatial Archaeology"
+        "Arnold - Water in World History, Chapter 4: Oceans and Monsoons",
+        "Pearson - The Indian Ocean: Seas in History",
+        "Chaudhuri - Trade and Civilisation in the Indian Ocean"
       ],
       "resourceStatus": "Ready",
-      "resourceNote": "Week 3 through Week 6 packages and Anki decks are complete in Drive.",
+      "resourceNote": "Week 5 Oceans deck (11 cards) and Week 6 Steam & Industry deck (11 cards) are active.",
       "driveUrl": "https://drive.google.com/drive/folders/14y6fHWx4g0rRkyoqb162CXk4D5Ffv-9c"
     },
     {
@@ -89,15 +90,15 @@
       "name": "Intro to Environmental Studies",
       "where": "Mitchell Hall 120",
       "ck": "geo",
-      "currentWeek": "Week 3",
-      "currentTopic": "Environmental Policy and Law",
+      "currentWeek": "Week 5",
+      "currentTopic": "Urbanization, Land Use Zoning, Transportation Infrastructure, and Urban Ecology",
       "readings": [
-        "Unit 1b",
-        "Week 4: Unit 2 and Chapters 6-7",
-        "Week 5: Chapter 22 Urbanization"
+        "Chapter 22: Urbanization and Sustainable Cities",
+        "Unit 3: Land Use Policy, Sprawl, and Runoff Dynamics",
+        "Case Study: Water Scarcity and Heat Island in Southwestern Cities"
       ],
       "resourceStatus": "Ready",
-      "resourceNote": "Week 3 through Week 5 packages and Anki decks are ready.",
+      "resourceNote": "Week 5 Urbanization deck (16 cards) is loaded and ready for spaced recall.",
       "driveUrl": "https://drive.google.com/drive/folders/16Nj2gPVpDJKy-O9Ic1Zs9rIkAd0AVV_1"
     },
     {
@@ -105,14 +106,15 @@
       "name": "Maps & GIScience Laboratory",
       "where": "Bandelier Hall East 106",
       "ck": "geo",
-      "currentWeek": "Week 3",
-      "currentTopic": "Coordinates and Map Projections",
+      "currentWeek": "Week 5",
+      "currentTopic": "Vector Data Models, Spatial Queries, Attribute Joins, and Python Geospatial Automation",
       "readings": [
-        "Week 3 Lab 2: Coordinates, Coordinate Systems, and Projection Distortion",
-        "Week 4 preview: georeferencing a historical map"
+        "Lab 4: Vector Analysis, Select by Location, and Attribute SQL in QGIS",
+        "Automate the Boring Stuff: Flow Control & Spatial Bounding Boxes",
+        "Week 5 Practice: Buffer Analysis and Elevation Life Zones"
       ],
       "resourceStatus": "Ready",
-      "resourceNote": "Week 3 Lab 2 is complete with step-by-step QGIS walkthrough and Anki deck in Drive.",
+      "resourceNote": "Coordinates deck (11 cards) and Python GIS Study Lab integrated.",
       "driveUrl": "https://drive.google.com/drive/folders/1JMS38uAzzQk9q9nxvbsnvXRyVybOdU-j"
     },
     {
@@ -120,14 +122,15 @@
       "name": "Home Planet Laboratory",
       "where": "Bandelier Hall East 106",
       "ck": "geo",
-      "currentWeek": "Week 3",
-      "currentTopic": "Solar Energy, Seasonality, Microclimate Equipment, and Isolines",
+      "currentWeek": "Week 5",
+      "currentTopic": "Atmospheric Moisture, Relative Humidity, Dew Point, and Adiabatic Lapse Rates",
       "readings": [
-        "Week 3 prep: microclimate and isoline mapping",
-        "Week 4 review: atmosphere foundations; no lab meeting"
+        "Lab 5: Sling Psychrometer Measurements, Vapor Pressure, and Dew Point Calculation",
+        "Adiabatic Lapse Rate Exercise: Mountain Rain Shadow Effect",
+        "Week 6 Preview: Severe Weather & Air Masses"
       ],
-      "resourceStatus": "Waiting on Canvas",
-      "resourceNote": "Both prep packages are ready; Canvas Files still contains only the course syllabus.",
+      "resourceStatus": "Ready",
+      "resourceNote": "Lab manual formulas, psychrometric tables, and prep notes verified.",
       "driveUrl": "https://drive.google.com/drive/folders/1ptdCppnVY7WjViL2qU2rLQH4b6hrJKuD"
     }
   ]

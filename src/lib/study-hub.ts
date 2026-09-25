@@ -47,7 +47,13 @@ async function readAnkiCards(): Promise<Flashcard[]> {
 }
 
 export async function getStudyHubData(): Promise<StudyHubData> {
-  const allCards = await readAnkiCards();
+  const activeCourseCodes = new Set(
+    status.courses.map((c) => c.code.replace(/\s+/g, "").toUpperCase())
+  );
+  const rawCards = await readAnkiCards();
+  const allCards = rawCards.filter((card) =>
+    activeCourseCodes.has(card.courseCode.replace(/\s+/g, "").toUpperCase())
+  );
   const courses: CourseStudyInfo[] = status.courses.map((course) => {
     const normalizedCourse = course.code.replace(/\s+/g, "").toUpperCase();
     const cards = allCards.filter(

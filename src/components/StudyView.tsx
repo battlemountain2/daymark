@@ -5,25 +5,14 @@ import { useEffect, useState } from "react";
 import type { StudyHubData } from "@/lib/study-hub-types";
 import FlashcardDeckViewer from "@/components/FlashcardDeckViewer";
 import EvidenceBank from "@/components/EvidenceBank";
-import FocusTimer from "@/components/FocusTimer";
 import PreClassBriefModal from "@/components/PreClassBriefModal";
 import FridayReviewWizard from "@/components/FridayReviewWizard";
 import CodingStudyLab from "@/components/CodingStudyLab";
 import { getPreClassBrief, type PreClassBrief } from "@/lib/pre-class-briefs";
 import { longDate } from "@/lib/localtime";
 
-export default function StudyView({ data, initialMode }: { data: StudyHubData; initialMode?: string }) {
-  const [activeTab, setActiveTab] = useState<"cards" | "courses" | "review" | "evidence" | "focus" | "coding">(
-    initialMode === "coding" || initialMode === "python" ? "coding" : "cards"
-  );
-  const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
-  const [activeBrief, setActiveBrief] = useState<PreClassBrief | null>(null);
-  const [isWizardOpen, setIsWizardOpen] = useState<boolean>(false);
-  const [palette, setPalette] = useState("forest");
+function LiveClock() {
   const [clock, setClock] = useState<{ date: string; time: string } | null>(null);
-
-  const { courses, weeklyReview, allCards, overallDeckStats } = data;
-  const verifiedPct = allCards.length > 0 ? Math.round((overallDeckStats.verified / allCards.length) * 100) : 0;
 
   useEffect(() => {
     const tick = () => {
@@ -48,9 +37,30 @@ export default function StudyView({ data, initialMode }: { data: StudyHubData; i
     return () => clearInterval(t);
   }, []);
 
+  return (
+    <>
+      <span>{clock?.date ?? "\u00a0"}</span>
+      <span>{clock?.time ?? "\u00a0"}</span>
+    </>
+  );
+}
+
+export default function StudyView({ data, initialMode }: { data: StudyHubData; initialMode?: string }) {
+  const [activeTab, setActiveTab] = useState<"cards" | "courses" | "coding" | "review">(
+    initialMode === "coding" || initialMode === "python" ? "coding" : "cards"
+  );
+  const [synthesisView, setSynthesisView] = useState<"takeaways" | "evidence">("takeaways");
+  const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
+  const [activeBrief, setActiveBrief] = useState<PreClassBrief | null>(null);
+  const [isWizardOpen, setIsWizardOpen] = useState<boolean>(false);
+  const [palette, setPalette] = useState("forest");
+
+  const { courses, weeklyReview, allCards, overallDeckStats } = data;
+  const verifiedPct = allCards.length > 0 ? Math.round((overallDeckStats.verified / allCards.length) * 100) : 0;
+
   useEffect(() => {
     const p = localStorage.getItem("palette") || localStorage.getItem("hb:pal");
-    if (p && ["forest", "dusk", "ash", "sandia", "paper"].includes(p)) {
+    if (p && ["forest", "dusk", "ash", "sandia", "paper", "yharnam"].includes(p)) {
       if (p === "forest") document.documentElement.removeAttribute("data-palette");
       else document.documentElement.setAttribute("data-palette", p);
       setPalette(p);
@@ -74,7 +84,7 @@ export default function StudyView({ data, initialMode }: { data: StudyHubData; i
 
   return (
     <div className="wrap study-page-wrap">
-      {/* 1. NATIVE DAYMARK HEADER (Lede + Timestamp + Theme Switcher) */}
+      {/* 1. NATIVE DAYMARK HEADER */}
       <header>
         <div className="ledeblock">
           <div className="kicker mono">
@@ -92,10 +102,9 @@ export default function StudyView({ data, initialMode }: { data: StudyHubData; i
           <Link href="/" className="backlink-inline mono" style={{ textDecoration: "none", color: "var(--accent)", fontWeight: 600 }}>
             ← dashboard
           </Link>
-          <span>{clock?.date ?? "\u00a0"}</span>
-          <span>{clock?.time ?? "\u00a0"}</span>
+          <LiveClock />
           <span className="themes">
-            {["forest", "dusk", "ash", "sandia", "paper"].map((p) => (
+            {["forest", "dusk", "ash", "sandia", "paper", "yharnam"].map((p) => (
               <button
                 key={p}
                 type="button"
@@ -113,13 +122,13 @@ export default function StudyView({ data, initialMode }: { data: StudyHubData; i
       <div className="rule" />
 
       {/* 2. NATIVE DAYMARK FACTS SUMMARY STRIP */}
-      <div className="facts" style={{ margin: "18px 0 28px" }}>
+      <div className="facts" style={{ margin: "18px 0 24px" }}>
         <div className="fact">
           <div className="k">Courses</div>
           <div className="v">{courses.length}</div>
         </div>
         <div className="fact">
-          <div className="k">Total Cards</div>
+          <div className="k">Active Cards</div>
           <div className="v">{allCards.length}</div>
         </div>
         <div className="fact">
@@ -136,8 +145,8 @@ export default function StudyView({ data, initialMode }: { data: StudyHubData; i
         </div>
       </div>
 
-      {/* 3. NATIVE NAVIGATION TABS */}
-      <div className="card-head" style={{ marginBottom: 20 }}>
+      {/* 3. STREAMLINED 4-TAB NAVIGATION */}
+      <div className="card-head" style={{ marginBottom: 18 }}>
         <h2>Study Station</h2>
         <div className="view-toggle mono">
           <button
@@ -153,31 +162,7 @@ export default function StudyView({ data, initialMode }: { data: StudyHubData; i
             className={`view-toggle-btn ${activeTab === "courses" ? "active" : ""}`}
             onClick={() => setActiveTab("courses")}
           >
-            Course Matrix
-          </button>
-          <span className="view-toggle-sep">/</span>
-          <button
-            type="button"
-            className={`view-toggle-btn ${activeTab === "review" ? "active" : ""}`}
-            onClick={() => setActiveTab("review")}
-          >
-            Weekly Review
-          </button>
-          <span className="view-toggle-sep">/</span>
-          <button
-            type="button"
-            className={`view-toggle-btn ${activeTab === "evidence" ? "active" : ""}`}
-            onClick={() => setActiveTab("evidence")}
-          >
-            Evidence Bank
-          </button>
-          <span className="view-toggle-sep">/</span>
-          <button
-            type="button"
-            className={`view-toggle-btn ${activeTab === "focus" ? "active" : ""}`}
-            onClick={() => setActiveTab("focus")}
-          >
-            ⏱️ Focus
+            📚 Courses &amp; Readings
           </button>
           <span className="view-toggle-sep">/</span>
           <button
@@ -185,14 +170,22 @@ export default function StudyView({ data, initialMode }: { data: StudyHubData; i
             className={`view-toggle-btn ${activeTab === "coding" ? "active" : ""}`}
             onClick={() => setActiveTab("coding")}
           >
-            🐍 Python &amp; GIS
+            🐍 Python &amp; GIS Lab
+          </button>
+          <span className="view-toggle-sep">/</span>
+          <button
+            type="button"
+            className={`view-toggle-btn ${activeTab === "review" ? "active" : ""}`}
+            onClick={() => setActiveTab("review")}
+          >
+            📝 Weekly Synthesis &amp; Evidence
           </button>
         </div>
       </div>
 
       {/* Main Tab Content */}
       <div className="study-page-body">
-        {/* TAB 1: FLASHCARDS (DEFAULT) */}
+        {/* TAB 1: FLASHCARDS & RECALL */}
         {activeTab === "cards" && (
           <section className="card span12 study-card">
             <div className="card-body">
@@ -206,11 +199,11 @@ export default function StudyView({ data, initialMode }: { data: StudyHubData; i
           </section>
         )}
 
-        {/* TAB 2: COURSE MATRIX */}
+        {/* TAB 2: COURSE MATRIX & WEEK 5 READINGS */}
         {activeTab === "courses" && (
           <section className="card span12 study-card">
             <div className="card-head">
-              <h2>Active Courses &amp; Syllabi</h2>
+              <h2>Active Courses &amp; Week {data.currentWeekNumber} Syllabi</h2>
               <span className="pill mono">{courses.length} courses active</span>
             </div>
             <div className="card-body">
@@ -230,13 +223,13 @@ export default function StudyView({ data, initialMode }: { data: StudyHubData; i
                       <div className="course-title">{c.name}</div>
 
                       <div className="course-topic-box">
-                        <span className="topic-k mono">Current Topic:</span>
+                        <span className="topic-k mono">Week {data.currentWeekNumber} Focus:</span>
                         <div className="topic-v">{c.currentTopic}</div>
                       </div>
 
                       {c.readings && c.readings.length > 0 && (
                         <div className="course-readings-list">
-                          <span className="topic-k mono">Readings &amp; Sources:</span>
+                          <span className="topic-k mono">Assigned Readings &amp; Labs:</span>
                           <ul>
                             {c.readings.map((r, idx) => (
                               <li key={idx} className="mono">{r}</li>
@@ -245,11 +238,9 @@ export default function StudyView({ data, initialMode }: { data: StudyHubData; i
                         </div>
                       )}
 
-                      {c.nextAssessment && (
-                        <div className="course-next-deadline mono">
-                          <span className="d-icon">⏳</span>
-                          <span className="d-title">{c.nextAssessment.title}</span>
-                          <span className="d-date">{longDate(c.nextAssessment.due).replace(/^\w+,\s*/, "")}</span>
+                      {c.resourceNote && (
+                        <div className="sub mono" style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 8 }}>
+                          Package: {c.resourceNote}
                         </div>
                       )}
 
@@ -289,102 +280,106 @@ export default function StudyView({ data, initialMode }: { data: StudyHubData; i
           </section>
         )}
 
-        {/* TAB 3: WEEKLY REVIEW & 5 TAKEAWAYS */}
+        {/* TAB 3: PYTHON & GIS CODING LAB */}
+        {activeTab === "coding" && <CodingStudyLab />}
+
+        {/* TAB 4: UNIFIED WEEKLY SYNTHESIS & EVIDENCE */}
         {activeTab === "review" && (
           <section className="card span12 study-card">
             <div className="card-head">
               <h2>{weeklyReview.weekTitle}</h2>
-              <span className="pill mono">{weeklyReview.scheduledReviewDate}</span>
-            </div>
-            <div className="card-body">
-              {/* Launch Friday Synthesis Banner */}
-              <div className="friday-wizard-cta-banner">
-                <div className="fwc-text">
-                  <h3>Friday 8:00 PM Synthesis Ritual</h3>
-                  <p className="sub mono">
-                    Guided 5-minute review: check off readings, absorb the 5 core takeaways, and quiz your weak areas.
-                  </p>
-                </div>
+              <div className="view-toggle mono">
                 <button
                   type="button"
-                  className="friday-launch-btn mono"
-                  onClick={() => setIsWizardOpen(true)}
+                  className={`view-toggle-btn ${synthesisView === "takeaways" ? "active" : ""}`}
+                  onClick={() => setSynthesisView("takeaways")}
                 >
-                  ⚡ Launch Friday Wizard →
+                  ✦ Takeaways &amp; Review
+                </button>
+                <span className="view-toggle-sep">/</span>
+                <button
+                  type="button"
+                  className={`view-toggle-btn ${synthesisView === "evidence" ? "active" : ""}`}
+                  onClick={() => setSynthesisView("evidence")}
+                >
+                  🏛️ Evidence Bank
                 </button>
               </div>
-
-              <div className="weekly-review-container" style={{ marginTop: 24 }}>
-                <div className="wr-section">
-                  <div className="wr-section-head mono">
-                    <span>✦ The 5 Core Takeaways This Week</span>
+            </div>
+            <div className="card-body">
+              {synthesisView === "takeaways" ? (
+                <>
+                  {/* Launch Friday Synthesis Banner */}
+                  <div className="friday-wizard-cta-banner">
+                    <div className="fwc-text">
+                      <h3>Friday 8:00 PM Synthesis Ritual</h3>
+                      <p className="sub mono">
+                        Guided 5-minute review: absorb the 5 core takeaways across your courses, check your readings, and sprint your weak areas.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="friday-launch-btn mono"
+                      onClick={() => setIsWizardOpen(true)}
+                    >
+                      ⚡ Launch Friday Wizard →
+                    </button>
                   </div>
-                  <div className="takeaways-list">
-                    {weeklyReview.takeaways.map((t, idx) => (
-                      <div key={idx} className={`takeaway-item ${t.ck}`}>
-                        <div className="takeaway-num mono">0{idx + 1}</div>
-                        <div className="takeaway-content">
-                          <div className="takeaway-meta mono">
-                            <span className={`tagdot ${t.ck}`} />
-                            <span>{t.course}</span>
+
+                  <div className="weekly-review-container" style={{ marginTop: 24 }}>
+                    <div className="wr-section">
+                      <div className="wr-section-head mono">
+                        <span>✦ The 5 Core Takeaways (Fall 2026 Week {data.currentWeekNumber})</span>
+                      </div>
+                      <div className="takeaways-list">
+                        {weeklyReview.takeaways.map((t, idx) => (
+                          <div key={idx} className={`takeaway-item ${t.ck}`}>
+                            <div className="takeaway-num mono">0{idx + 1}</div>
+                            <div className="takeaway-content">
+                              <div className="takeaway-meta mono">
+                                <span className={`tagdot ${t.ck}`} />
+                                <span>{t.course}</span>
+                              </div>
+                              <div className="takeaway-title">{t.title}</div>
+                              <div className="takeaway-detail">{t.detail}</div>
+                            </div>
                           </div>
-                          <div className="takeaway-title">{t.title}</div>
-                          <div className="takeaway-detail">{t.detail}</div>
-                        </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </div>
+                    </div>
 
-                <div className="wr-section" style={{ marginTop: 32 }}>
-                  <div className="wr-section-head mono">
-                    <span>⚠️ Flagged Weak Areas &amp; Spaced Review Queue</span>
-                  </div>
-                  <div className="weak-areas-grid">
-                    {weeklyReview.weakAreas.map((w, idx) => (
-                      <div key={idx} className={`weak-card ${w.ck}`}>
-                        <div className="weak-top mono">
-                          <span className="w-course">{w.course}</span>
-                          <span className="w-badge">Needs Review</span>
-                        </div>
-                        <div className="weak-topic">{w.topic}</div>
-                        <div className="weak-reason">{w.reason}</div>
-                        <button
-                          type="button"
-                          className="weak-action-btn mono"
-                          onClick={() => handleOpenDeck(w.course)}
-                        >
-                          Practice Flashcards →
-                        </button>
+                    <div className="wr-section" style={{ marginTop: 32 }}>
+                      <div className="wr-section-head mono">
+                        <span>⚠️ Flagged Focus Areas &amp; Spaced Review</span>
                       </div>
-                    ))}
+                      <div className="weak-areas-grid">
+                        {weeklyReview.weakAreas.map((w, idx) => (
+                          <div key={idx} className={`weak-card ${w.ck}`}>
+                            <div className="weak-top mono">
+                              <span className="w-course">{w.course}</span>
+                              <span className="w-badge">Needs Review</span>
+                            </div>
+                            <div className="weak-topic">{w.topic}</div>
+                            <div className="weak-reason">{w.reason}</div>
+                            <button
+                              type="button"
+                              className="weak-action-btn mono"
+                              onClick={() => handleOpenDeck(w.course)}
+                            >
+                              Practice Flashcards →
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </>
+              ) : (
+                <EvidenceBank />
+              )}
             </div>
           </section>
         )}
-
-        {/* TAB 4: EVIDENCE BANK */}
-        {activeTab === "evidence" && (
-          <section className="card span12 study-card">
-            <div className="card-body">
-              <EvidenceBank />
-            </div>
-          </section>
-        )}
-
-        {/* TAB 5: FOCUS & SOUNDSCAPES */}
-        {activeTab === "focus" && (
-          <section className="card span12 study-card">
-            <div className="card-body">
-              <FocusTimer />
-            </div>
-          </section>
-        )}
-
-        {/* TAB 6: PYTHON & GIS CODING LAB */}
-        {activeTab === "coding" && <CodingStudyLab />}
       </div>
 
       {/* Pre-Class Brief Modal */}
@@ -399,7 +394,7 @@ export default function StudyView({ data, initialMode }: { data: StudyHubData; i
       )}
 
       <footer>
-        Study Hub cards are parsed from standardized Anki CSVs with SM-2 spaced repetition, in-subject multiple choice sprints, and weekly synthesis.
+        Study Hub cards are parsed from standardized Anki CSVs with SM-2 spaced repetition, Python &amp; GIS coding lab, and Friday synthesis rituals.
         All times in Mountain Time.
       </footer>
     </div>

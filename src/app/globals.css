@@ -5632,6 +5632,114 @@ details.tl[open] summary::after{content:"\2212";}
   box-shadow: none;
 }
 
+/* Unified Streamlined Deck Control Bar */
+.unified-deck-bar {
+  margin: 0 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.udb-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.udb-course-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  align-items: center;
+}
+.udb-mode-toggle {
+  flex-shrink: 0;
+}
+.udb-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+}
+.udb-left-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cf-tool-btn {
+  font-family: inherit;
+  font-size: 11px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+  border-radius: 4px;
+  padding: 4px 9px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+.cf-tool-btn:hover, .cf-tool-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.cf-tool-select {
+  font-family: inherit;
+  font-size: 11px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.cf-tool-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.udb-right-metrics {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.udb-search-expand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 6px 10px;
+}
+.udb-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 12px;
+  color: var(--ink);
+  font-family: inherit;
+}
+.udb-search-clear {
+  background: none;
+  border: none;
+  color: var(--ink-3);
+  cursor: pointer;
+  font-size: 11px;
+}
+
 /* Horizontal Class Filter Strip */
 .class-filter-bar {
   margin: 0 0 16px;
