@@ -22,7 +22,8 @@ const DEFAULT_TAGS = [
 
 const STORAGE_KEY = "hb:scratchpad:v2";
 const WIDTH_STORAGE_KEY = "hb:scratchpad-width";
-const DEFAULT_DRAWER_WIDTH = 580;
+const SIDEBAR_STORAGE_KEY = "hb:scratchpad-sidebar";
+const DEFAULT_DRAWER_WIDTH = 600;
 
 export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "General" }: ScratchpadDrawerProps) {
   const [activeTag, setActiveTag] = useState<string>(defaultTag);
@@ -42,20 +43,27 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
   const [drawerWidth, setDrawerWidth] = useState<number>(() => {
     if (typeof window === "undefined") return DEFAULT_DRAWER_WIDTH;
     const saved = localStorage.getItem(WIDTH_STORAGE_KEY);
-    return saved ? Math.max(420, parseInt(saved, 10)) : DEFAULT_DRAWER_WIDTH;
+    return saved ? Math.max(450, parseInt(saved, 10)) : DEFAULT_DRAWER_WIDTH;
   });
   const [isResizing, setIsResizing] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Sidebar State
+  const [showSidebar, setShowSidebar] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    const saved = localStorage.getItem(SIDEBAR_STORAGE_KEY);
+    return saved !== null ? saved === "true" : true;
+  });
+  const [sidebarSearch, setSidebarSearch] = useState("");
+  const [allVaultNotes, setAllVaultNotes] = useState<VaultNote[]>([]);
+  const [selectedNoteId, setSelectedNoteId] = useState<string>("draft");
+  const [collapsedFolders, setCollapsedFolders] = useState<Record<string, boolean>>({});
 
   // Notifications & State Feedback
   const [copied, setCopied] = useState(false);
   const [savedPing, setSavedPing] = useState(false);
   const [bannerMsg, setBannerMsg] = useState<string | null>(null);
   const [isHandoffRunning, setIsHandoffRunning] = useState(false);
-
-  // Vault History Explorer
-  const [vaultNotes, setVaultNotes] = useState<VaultNote[]>([]);
-  const [selectedVaultNoteId, setSelectedVaultNoteId] = useState<string>("draft");
 
   // Inline Copilot State
   const [copilotQuery, setCopilotQuery] = useState("");
@@ -73,7 +81,6 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
   const [ankiSource, setAnkiSource] = useState("");
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const drawerRef = useRef<HTMLDivElement | null>(null);
 
   // Sync defaultTag if provided
   useEffect(() => {
@@ -82,27 +89,26 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
     }
   }, [defaultTag]);
 
-  // Load vault notes for the active course
-  const loadVaultHistory = useCallback(async (course: string) => {
+  // Load All Vault Notes for Sidebar
+  const loadAllVaultNotes = useCallback(async () => {
     try {
-      const res = await fetch(`/api/vault?course=${encodeURIComponent(course)}`);
+      const res = await fetch("/api/vault");
       if (res.ok) {
         const data = await res.json();
-        setVaultNotes(data.notes || []);
+        setAllVaultNotes(data.notes || []);
       }
     } catch (e) {
-      console.warn("Could not fetch vault history", e);
+      console.warn("Could not fetch vault notes", e);
     }
   }, []);
 
   useEffect(() => {
     if (isOpen) {
-      loadVaultHistory(activeTag);
-      setSelectedVaultNoteId("draft");
+      loadAllVaultNotes();
     }
-  }, [isOpen, activeTag, loadVaultHistory]);
+  }, [isOpen, loadAllVaultNotes]);
 
-  // Focus textarea when opened in edit or split mode
+  // Focus textarea when opened
   useEffect(() => {
     if (isOpen && !showAnkiModal && viewMode !== "preview") {
       const t = setTimeout(() => {
@@ -111,6 +117,18 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
       return () => clearTimeout(t);
     }
   }, [isOpen, activeTag, showAnkiModal, viewMode]);
+
+  // Toggle Sidebar with auto-width adjustment
+  const handleToggleSidebar = () => {
+    const nextState = !showSidebar;
+    setShowSidebar(nextState);
+    localStorage.setItem(SIDEBAR_STORAGE_KEY, String(nextState));
+
+    if (nextState && drawerWidth < 740 && !isFullscreen) {
+      setDrawerWidth(760);
+      localStorage.setItem(WIDTH_STORAGE_KEY, "760");
+    }
+  };
 
   // Handle Drag Resizing
   const handleMouseDownResizer = (e: React.MouseEvent) => {
@@ -122,7 +140,8 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
     if (!isResizing) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      const newWidth = Math.max(420, Math.min(window.innerWidth - 30, window.innerWidth - e.clientX));
+      const minW = showSidebar ? 560 : 420;
+      const newWidth = Math.max(minW, Math.min(window.innerWidth - 30, window.innerWidth - e.clientX));
       setDrawerWidth(newWidth);
     };
 
@@ -137,14 +156,14 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isResizing, drawerWidth]);
+  }, [isResizing, drawerWidth, showSidebar]);
 
   const handleResetResizer = () => {
     setDrawerWidth(DEFAULT_DRAWER_WIDTH);
     localStorage.setItem(WIDTH_STORAGE_KEY, DEFAULT_DRAWER_WIDTH.toString());
   };
 
-  // Keyboard Shortcuts (Escape to close, Cmd+Enter for Handoff)
+  // Keyboard Shortcuts
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -286,33 +305,31 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
     setTimeout(() => setBannerMsg(null), 2500);
   };
 
-  // 🗂️ Switch between Vault History and Draft
-  const handleVaultNoteSelect = (noteId: string) => {
-    setSelectedVaultNoteId(noteId);
-    if (noteId === "draft") {
-      // Return to local working draft
-      return;
-    }
-    const found = vaultNotes.find(n => n.id === noteId);
-    if (found) {
-      const updated = { ...notes, [activeTag]: found.rawBody || found.content };
+  // 🗂️ Select Note from Sidebar
+  const handleSelectNote = (course: string, noteId: string, noteContent?: string) => {
+    setActiveTag(course);
+    setSelectedNoteId(noteId);
+    if (noteContent !== undefined) {
+      const updated = { ...notes, [course]: noteContent };
       setNotes(updated);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      setBannerMsg(`📂 Loaded vault note: ${found.title}`);
-      setTimeout(() => setBannerMsg(null), 3000);
     }
   };
 
-  const handleNewNoteDraft = () => {
-    if (currentContent.trim() && !window.confirm("Start fresh note for today? Current draft will be preserved in vault upon handoff.")) {
-      return;
-    }
-    const updated = { ...notes, [activeTag]: "" };
+  const handleNewNoteDraft = (targetCourse?: string) => {
+    const course = targetCourse || activeTag;
+    setActiveTag(course);
+    setSelectedNoteId("draft");
+    const updated = { ...notes, [course]: "" };
     setNotes(updated);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    setSelectedVaultNoteId("draft");
-    setBannerMsg(`✦ Started fresh note draft for ${activeTag}`);
+    setBannerMsg(`✦ Started fresh draft for ${course}`);
     setTimeout(() => setBannerMsg(null), 2500);
+    textareaRef.current?.focus();
+  };
+
+  const toggleFolder = (course: string) => {
+    setCollapsedFolders(prev => ({ ...prev, [course]: !prev[course] }));
   };
 
   const handleCopy = async () => {
@@ -461,7 +478,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
     }
   };
 
-  // 🚀 Handoff to Agent: Enriches note with syllabus connections & Anki cards
+  // 🚀 Handoff to Agent
   const handleAgentHandoff = async () => {
     if (!currentContent.trim()) return;
     setIsHandoffRunning(true);
@@ -500,7 +517,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
         const providerBadge = data.provider ? ` [${data.provider}]` : "";
         setBannerMsg(`✓${providerBadge} Enriched notes & generated ${data.generatedCards?.length || 0} Anki cards!`);
         setTimeout(() => setBannerMsg(null), 4000);
-        loadVaultHistory(activeTag);
+        loadAllVaultNotes();
       }
     } catch (err) {
       console.error("Agent handoff error", err);
@@ -509,29 +526,6 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
     } finally {
       setIsHandoffRunning(false);
     }
-  };
-
-  // 📋 Copy prompt formatted for ChatGPT or Gemini mobile/web app
-  const handleCopyAIPrompt = async (modelName: "ChatGPT" | "Gemini") => {
-    const prompt = [
-      `You are my academic copilot for ${activeTag} at UNM (Fall 2026).`,
-      `Here are my raw lecture notes from today:`,
-      `"""`,
-      currentContent,
-      `"""`,
-      ``,
-      `Please:`,
-      `1. Connect these concepts to the Week 5 syllabus topics and readings.`,
-      `2. Insert Obsidian wiki-links [[Concept]] connecting to related regional geography or water history ideas.`,
-      `3. Generate 3-5 high-yield Anki flashcards formatted as Front / Back.`,
-      `4. Add Obsidian callout boxes (> [!NOTE] or > [!WARNING]) for exam tips.`,
-    ].join("\n");
-
-    try {
-      await navigator.clipboard.writeText(prompt);
-      setBannerMsg(`📋 Prompt copied for ${modelName}! Ready to paste in app.`);
-      setTimeout(() => setBannerMsg(null), 3000);
-    } catch {}
   };
 
   // Helper to render Obsidian Markdown preview
@@ -614,7 +608,6 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
   return (
     <div className="scratchpad-overlay" onClick={onClose} role="dialog" aria-modal="true">
       <div
-        ref={drawerRef}
         className={`scratchpad-drawer ${isFullscreen ? "fullscreen" : ""}`}
         style={!isFullscreen ? { width: `${drawerWidth}px` } : undefined}
         onClick={(e) => e.stopPropagation()}
@@ -633,32 +626,18 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
         <div className="scratchpad-header">
           <div className="scratchpad-title-group">
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span className="scratchpad-badge mono">⌘J Academic Vault</span>
-              {/* Vault Note Switcher Dropdown */}
-              <select
-                className="scratchpad-vault-select mono"
-                value={selectedVaultNoteId}
-                onChange={(e) => handleVaultNoteSelect(e.target.value)}
-                title="Switch between current draft and saved vault notes"
-              >
-                <option value="draft">● Current Draft</option>
-                {vaultNotes.map((vn) => (
-                  <option key={vn.id} value={vn.id}>
-                    {vn.date} · {vn.title.slice(0, 22)}
-                  </option>
-                ))}
-              </select>
+              {/* Sidebar Explorer Toggle */}
               <button
                 type="button"
-                className="scratchpad-tag-btn mono"
-                style={{ padding: "2px 7px", fontSize: 10 }}
-                onClick={handleNewNoteDraft}
-                title="Start a fresh note draft for today"
+                className={`sidebar-toggle-btn mono ${showSidebar ? "active" : ""}`}
+                onClick={handleToggleSidebar}
+                title={showSidebar ? "Hide Vault Sidebar" : "Show Vault Sidebar"}
               >
-                + New
+                🗂️ {showSidebar ? "Hide Vault" : `Vault (${allVaultNotes.length})`}
               </button>
+              <span className="scratchpad-badge mono">⌘J Academic Vault</span>
             </div>
-            <h3 className="scratchpad-title">Course-Aware Lecture Vault</h3>
+            <h3 className="scratchpad-title">{activeTag} Lecture Notes</h3>
           </div>
 
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -718,203 +697,284 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
           </div>
         )}
 
-        {/* Course Tag Selector & Quick AI Prompt Helpers */}
-        <div className="scratchpad-tags-bar">
-          <span className="scratchpad-tags-label mono">Course:</span>
-          <div className="scratchpad-tags-scroll">
-            {DEFAULT_TAGS.map((t) => {
-              const hasNotes = Boolean(notes[t.id]?.trim());
-              const isActive = activeTag === t.id;
-              return (
+        {/* Dual-Pane Body (Sidebar + Main Canvas) */}
+        <div className="scratchpad-body-container">
+          {/* 🗂️ VAULT EXPLORER SIDEBAR */}
+          {showSidebar && (
+            <aside className="scratchpad-sidebar mono">
+              <div className="sidebar-head">
+                <span className="sidebar-head-title">Vault Explorer</span>
                 <button
-                  key={t.id}
                   type="button"
-                  className={`scratchpad-tag-btn mono ${isActive ? "active" : ""} ${t.ck}`}
-                  onClick={() => setActiveTag(t.id)}
+                  className="scratchpad-tag-btn mono"
+                  style={{ padding: "2px 7px", fontSize: 10 }}
+                  onClick={() => handleNewNoteDraft()}
+                  title="Start a fresh draft for this course"
                 >
-                  {t.label}
-                  {hasNotes && <span className="scratchpad-tag-dot" />}
+                  + New Note
                 </button>
-              );
-            })}
-          </div>
-
-          <div className="ai-handoff-chips mono">
-            <button
-              type="button"
-              className="ai-chip gemini"
-              onClick={() => handleCopyAIPrompt("Gemini")}
-              title="Copy formatted syllabus prompt for Google Gemini"
-            >
-              🔵 Gemini
-            </button>
-            <button
-              type="button"
-              className="ai-chip gpt"
-              onClick={() => handleCopyAIPrompt("ChatGPT")}
-              title="Copy formatted syllabus prompt for ChatGPT"
-            >
-              🟢 ChatGPT
-            </button>
-          </div>
-        </div>
-
-        {/* Main Note Canvas / Preview / Split View */}
-        <div className={`scratchpad-editor-wrap ${viewMode === "split" ? "split-view" : ""}`}>
-          {viewMode === "edit" ? (
-            <textarea
-              ref={textareaRef}
-              className="scratchpad-textarea mono"
-              value={currentContent}
-              onChange={handleTextChange}
-              placeholder={`Jot raw lecture notes, lab findings, or quotes for ${activeTag}...\n\n- Tap "🚀 Handoff to Agent" to enrich with syllabus context & Anki cards\n- Use [[Concept]] for Obsidian-style bi-directional links\n- Auto-saved directly to local Markdown vault`}
-              spellCheck={false}
-            />
-          ) : viewMode === "split" ? (
-            <>
-              <textarea
-                ref={textareaRef}
-                className="scratchpad-textarea mono"
-                value={currentContent}
-                onChange={handleTextChange}
-                placeholder={`Writing live in Split Mode for ${activeTag}...`}
-                spellCheck={false}
-              />
-              <div className="obsidian-preview-pane">
-                {renderObsidianPreview(currentContent)}
               </div>
-            </>
-          ) : (
-            <div className="obsidian-preview-pane">
-              {renderObsidianPreview(currentContent)}
-            </div>
-          )}
-        </div>
 
-        {/* Inline Ask Copilot Bar */}
-        <div className="scratchpad-copilot-bar mono">
-          {copilotAnswer && (
-            <div className="scratchpad-copilot-answer-card">
-              <div className="scratchpad-copilot-answer-head">
-                <span>✦ Copilot Insight ({activeTag})</span>
-                <div className="scratchpad-copilot-answer-actions">
-                  <button
-                    type="button"
-                    className="scratchpad-copilot-insert-btn"
-                    onClick={handleInsertCopilotAnswer}
-                  >
-                    + Insert into note
-                  </button>
-                  <button
-                    type="button"
-                    style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-3)" }}
-                    onClick={() => setCopilotAnswer(null)}
-                  >
-                    ✕
-                  </button>
+              {/* Sidebar Search Bar */}
+              <div className="sidebar-search">
+                <input
+                  type="text"
+                  placeholder="Filter notes..."
+                  value={sidebarSearch}
+                  onChange={(e) => setSidebarSearch(e.target.value)}
+                />
+              </div>
+
+              {/* Folder Navigation */}
+              <div className="sidebar-nav-scroll">
+                {DEFAULT_TAGS.map((t) => {
+                  const courseNotes = allVaultNotes.filter(
+                    (n) => n.course.replace(/\s+/g, "").toUpperCase() === t.id.replace(/\s+/g, "").toUpperCase()
+                  );
+                  const isCollapsed = collapsedFolders[t.id];
+                  const hasDraft = Boolean(notes[t.id]?.trim());
+
+                  // Filter by search query if any
+                  const filteredCourseNotes = courseNotes.filter((n) =>
+                    !sidebarSearch || n.title.toLowerCase().includes(sidebarSearch.toLowerCase()) || n.filename.toLowerCase().includes(sidebarSearch.toLowerCase())
+                  );
+
+                  return (
+                    <div key={t.id} className="sidebar-folder">
+                      <div
+                        className="sidebar-folder-title"
+                        onClick={() => toggleFolder(t.id)}
+                      >
+                        <span>{isCollapsed ? "▸" : "▾"} 📁 {t.label}</span>
+                        <span style={{ opacity: 0.6 }}>{courseNotes.length + (hasDraft ? 1 : 0)}</span>
+                      </div>
+
+                      {!isCollapsed && (
+                        <div style={{ paddingLeft: 10 }}>
+                          {/* Active Draft Item */}
+                          <button
+                            type="button"
+                            className={`sidebar-note-item ${activeTag === t.id && selectedNoteId === "draft" ? "active" : ""}`}
+                            onClick={() => handleSelectNote(t.id, "draft")}
+                          >
+                            <span className="sidebar-note-status-dot draft" />
+                            <span className="sidebar-note-label">
+                              ● Current Draft {hasDraft ? `(${notes[t.id].trim().split(/\s+/).length}w)` : "(empty)"}
+                            </span>
+                          </button>
+
+                          {/* Saved Vault Notes */}
+                          {filteredCourseNotes.map((vn) => {
+                            const isSelected = activeTag === t.id && selectedNoteId === vn.id;
+                            return (
+                              <button
+                                key={vn.id}
+                                type="button"
+                                className={`sidebar-note-item ${isSelected ? "active" : ""}`}
+                                onClick={() => handleSelectNote(t.id, vn.id, vn.rawBody || vn.content)}
+                                title={`${vn.filename} (${vn.date})`}
+                              >
+                                <span
+                                  className={`sidebar-note-status-dot ${vn.agentStatus === "enriched" ? "enriched" : "raw"}`}
+                                  title={`Status: ${vn.agentStatus}`}
+                                />
+                                <span className="sidebar-note-label">
+                                  {vn.title.replace(new RegExp(`^${vn.date}-?`), "")}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </aside>
+          )}
+
+          {/* MAIN EDITOR & ACTION PANE */}
+          <div className="scratchpad-main-pane">
+            {/* Course Tag Selector Chips */}
+            <div className="scratchpad-tags-bar">
+              <span className="scratchpad-tags-label mono">Course:</span>
+              <div className="scratchpad-tags-scroll">
+                {DEFAULT_TAGS.map((t) => {
+                  const hasNotes = Boolean(notes[t.id]?.trim());
+                  const isActive = activeTag === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      className={`scratchpad-tag-btn mono ${isActive ? "active" : ""} ${t.ck}`}
+                      onClick={() => handleSelectNote(t.id, "draft")}
+                    >
+                      {t.label}
+                      {hasNotes && <span className="scratchpad-tag-dot" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Note Canvas / Preview / Split View */}
+            <div className={`scratchpad-editor-wrap ${viewMode === "split" ? "split-view" : ""}`}>
+              {viewMode === "edit" ? (
+                <textarea
+                  ref={textareaRef}
+                  className="scratchpad-textarea mono"
+                  value={currentContent}
+                  onChange={handleTextChange}
+                  placeholder={`Jot raw lecture notes, lab findings, or quotes for ${activeTag}...\n\n- Tap "🚀 Handoff to Agent" to enrich with syllabus context & Anki cards\n- Use [[Concept]] for Obsidian-style bi-directional links\n- Auto-saved directly to local Markdown vault`}
+                  spellCheck={false}
+                />
+              ) : viewMode === "split" ? (
+                <>
+                  <textarea
+                    ref={textareaRef}
+                    className="scratchpad-textarea mono"
+                    value={currentContent}
+                    onChange={handleTextChange}
+                    placeholder={`Writing live in Split Mode for ${activeTag}...`}
+                    spellCheck={false}
+                  />
+                  <div className="obsidian-preview-pane">
+                    {renderObsidianPreview(currentContent)}
+                  </div>
+                </>
+              ) : (
+                <div className="obsidian-preview-pane">
+                  {renderObsidianPreview(currentContent)}
                 </div>
-              </div>
-              <div>{renderWithWikiLinks(copilotAnswer)}</div>
+              )}
             </div>
-          )}
 
-          <form className="scratchpad-copilot-input-row" onSubmit={handleAskCopilot}>
-            <input
-              type="text"
-              className="scratchpad-copilot-input mono"
-              placeholder={`Ask Copilot quick question about ${activeTag}...`}
-              value={copilotQuery}
-              onChange={(e) => setCopilotQuery(e.target.value)}
-            />
-            <button
-              type="submit"
-              className="scratchpad-copilot-submit"
-              disabled={!copilotQuery.trim() || isCopilotLoading}
-            >
-              {isCopilotLoading ? "⚡ Querying..." : "⚡ Ask Copilot"}
-            </button>
-          </form>
-        </div>
+            {/* Inline Ask Copilot Bar */}
+            <div className="scratchpad-copilot-bar mono">
+              {copilotAnswer && (
+                <div className="scratchpad-copilot-answer-card">
+                  <div className="scratchpad-copilot-answer-head">
+                    <span>✦ Copilot Insight ({activeTag})</span>
+                    <div className="scratchpad-copilot-answer-actions">
+                      <button
+                        type="button"
+                        className="scratchpad-copilot-insert-btn"
+                        onClick={handleInsertCopilotAnswer}
+                      >
+                        + Insert into note
+                      </button>
+                      <button
+                        type="button"
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-3)" }}
+                        onClick={() => setCopilotAnswer(null)}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                  <div>{renderWithWikiLinks(copilotAnswer)}</div>
+                </div>
+              )}
 
-        {/* Footer & Metrics */}
-        <div className="scratchpad-footer">
-          <div className="scratchpad-metrics mono">
-            <span>{words} {words === 1 ? "word" : "words"}</span>
-            <span className="dot-sep">·</span>
-            <span>{chars} chars</span>
-            <span className="dot-sep">·</span>
-            <span className={`save-indicator ${savedPing ? "saving" : ""}`}>
-              {savedPing ? "Saving..." : "Saved to Vault"}
-            </span>
-          </div>
+              <form className="scratchpad-copilot-input-row" onSubmit={handleAskCopilot}>
+                <input
+                  type="text"
+                  className="scratchpad-copilot-input mono"
+                  placeholder={`Ask Copilot quick question about ${activeTag}...`}
+                  value={copilotQuery}
+                  onChange={(e) => setCopilotQuery(e.target.value)}
+                />
+                <button
+                  type="submit"
+                  className="scratchpad-copilot-submit"
+                  disabled={!copilotQuery.trim() || isCopilotLoading}
+                >
+                  {isCopilotLoading ? "⚡ Querying..." : "⚡ Ask Copilot"}
+                </button>
+              </form>
+            </div>
 
-          <div className="scratchpad-actions mono">
-            {/* 🎙️ Voice Dictation Button */}
-            <button
-              type="button"
-              className={`scratchpad-act-btn dictate ${isListening ? "listening" : ""}`}
-              onClick={toggleListening}
-              title={isListening ? "Stop voice dictation" : "Start live voice dictation (speech-to-text)"}
-            >
-              {isListening ? "🎙️ Listening..." : "🎙️ Dictate"}
-            </button>
+            {/* Footer & Metrics */}
+            <div className="scratchpad-footer">
+              <div className="scratchpad-metrics mono">
+                <span>{words} {words === 1 ? "word" : "words"}</span>
+                <span className="dot-sep">·</span>
+                <span>{chars} chars</span>
+                <span className="dot-sep">·</span>
+                <span className={`save-indicator ${savedPing ? "saving" : ""}`}>
+                  {savedPing ? "Saving..." : "Saved to Vault"}
+                </span>
+              </div>
 
-            {/* 🚀 Main Handoff to Agent Button */}
-            <button
-              type="button"
-              className={`scratchpad-act-btn handoff ${isHandoffRunning ? "loading" : ""}`}
-              onClick={handleAgentHandoff}
-              disabled={!currentContent.trim() || isHandoffRunning}
-              title="Trigger agent to cross-reference syllabus, enrich notes, and mine Anki cards"
-            >
-              {isHandoffRunning ? "⏳ Enriching..." : "🚀 Handoff to Agent"}
-            </button>
+              <div className="scratchpad-actions mono">
+                {/* 🎙️ Voice Dictation Button */}
+                <button
+                  type="button"
+                  className={`scratchpad-act-btn dictate ${isListening ? "listening" : ""}`}
+                  onClick={toggleListening}
+                  title={isListening ? "Stop voice dictation" : "Start live voice dictation (speech-to-text)"}
+                >
+                  {isListening ? "🎙️ Listening..." : "🎙️ Dictate"}
+                </button>
 
-            <button
-              type="button"
-              className="scratchpad-act-btn highlight"
-              onClick={handleOpenAnkiModal}
-              disabled={!currentContent.trim()}
-              title="Convert highlighted text or note into an Anki card"
-            >
-              ⚡ Make Card
-            </button>
-            <button
-              type="button"
-              className="scratchpad-act-btn star"
-              onClick={handleSendToSynthesis}
-              disabled={!currentContent.trim()}
-              title="Send note to Friday 8:00 PM Synthesis Evidence Bank"
-            >
-              ★ To Synthesis
-            </button>
-            <button
-              type="button"
-              className="scratchpad-act-btn"
-              onClick={handleCopy}
-              disabled={!currentContent}
-              title="Copy current note to clipboard"
-            >
-              {copied ? "✓ Copied" : "📋 Copy"}
-            </button>
-            <button
-              type="button"
-              className="scratchpad-act-btn"
-              onClick={handleExport}
-              disabled={!currentContent}
-              title="Download as Obsidian .md"
-            >
-              ⬇ Export .md
-            </button>
-            <button
-              type="button"
-              className="scratchpad-act-btn danger"
-              onClick={handleClear}
-              disabled={!currentContent}
-              title="Clear active note"
-            >
-              🗑 Clear
-            </button>
+                {/* 🚀 Main Handoff to Agent Button */}
+                <button
+                  type="button"
+                  className={`scratchpad-act-btn handoff ${isHandoffRunning ? "loading" : ""}`}
+                  onClick={handleAgentHandoff}
+                  disabled={!currentContent.trim() || isHandoffRunning}
+                  title="Trigger agent to cross-reference syllabus, enrich notes, and mine Anki cards"
+                >
+                  {isHandoffRunning ? "⏳ Enriching..." : "🚀 Handoff to Agent"}
+                </button>
+
+                <button
+                  type="button"
+                  className="scratchpad-act-btn highlight"
+                  onClick={handleOpenAnkiModal}
+                  disabled={!currentContent.trim()}
+                  title="Convert highlighted text or note into an Anki card"
+                >
+                  ⚡ Make Card
+                </button>
+                <button
+                  type="button"
+                  className="scratchpad-act-btn star"
+                  onClick={handleSendToSynthesis}
+                  disabled={!currentContent.trim()}
+                  title="Send note to Friday 8:00 PM Synthesis Evidence Bank"
+                >
+                  ★ To Synthesis
+                </button>
+                <button
+                  type="button"
+                  className="scratchpad-act-btn"
+                  onClick={handleCopy}
+                  disabled={!currentContent}
+                  title="Copy current note to clipboard"
+                >
+                  {copied ? "✓ Copied" : "📋 Copy"}
+                </button>
+                <button
+                  type="button"
+                  className="scratchpad-act-btn"
+                  onClick={handleExport}
+                  disabled={!currentContent}
+                  title="Download as Obsidian .md"
+                >
+                  ⬇ Export .md
+                </button>
+                <button
+                  type="button"
+                  className="scratchpad-act-btn danger"
+                  onClick={handleClear}
+                  disabled={!currentContent}
+                  title="Clear active note"
+                >
+                  🗑 Clear
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
