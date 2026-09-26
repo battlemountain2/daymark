@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isSignedIn } from "@/lib/auth";
-import { listVaultNotes, saveVaultNote, enrichVaultNote } from "@/lib/vault";
+import { listVaultNotes, saveVaultNote, enrichVaultNote, answerCopilotQuery } from "@/lib/vault";
 
 export async function GET(req: Request) {
   if (!(await isSignedIn())) {
@@ -21,7 +21,16 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { action, course, title, content, rawContent } = body;
+    const { action, course, title, content, rawContent, query, noteContext } = body;
+
+    if (action === "ask_copilot") {
+      const answer = await answerCopilotQuery({
+        course: course || "General",
+        query: query || "",
+        noteContext: noteContext || "",
+      });
+      return NextResponse.json({ success: true, answer });
+    }
 
     if (action === "handoff") {
       const result = await enrichVaultNote({

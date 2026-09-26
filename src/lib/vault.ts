@@ -573,3 +573,99 @@ export async function enrichVaultNote(params: {
     provider,
   };
 }
+
+export async function answerCopilotQuery(params: {
+  course: string;
+  query: string;
+  noteContext: string;
+}): Promise<string> {
+  const { course, query, noteContext } = params;
+  const crib = COURSE_CRIBS[course];
+
+  const geminiKey =
+    process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== "[SENSITIVE]"
+      ? process.env.GEMINI_API_KEY
+      : null;
+
+  const openaiKey =
+    process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== "[SENSITIVE]"
+      ? process.env.OPENAI_API_KEY
+      : null;
+
+  const prompt = `You are an academic copilot for a UNM undergraduate studying ${course} (Fall 2026).
+Course Context: ${crib?.name || course}
+Theses: ${crib?.theses?.join(" | ") || "Environmental and spatial systems of New Mexico"}
+Current Note Excerpt:
+"""
+${noteContext.slice(0, 2500)}
+"""
+
+Student Question:
+"${query}"
+
+Provide a concise, direct, high-yield academic response (2-3 sentences). Use regional New Mexico or Albuquerque context if applicable. If introducing a key term, wrap it in [[Wiki-Link]] format.`;
+
+  // 1. Try Gemini 1.5 Flash
+  if (geminiKey) {
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.3, maxOutputTokens: 300 },
+          }),
+          signal: AbortSignal.timeout(8000),
+        }
+      );
+      if (res.ok) {
+        const json = await res.json();
+        const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) return text.trim();
+      }
+    } catch (e) {
+      console.warn("Copilot Gemini query error", e);
+    }
+  }
+
+  // 2. Try OpenAI GPT-4o-mini
+  if (openaiKey) {
+    try {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${openaiKey}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: prompt }],
+          max_tokens: 300,
+          temperature: 0.3,
+        }),
+        signal: AbortSignal.timeout(8000),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.choices?.[0]?.message?.content;
+        if (text) return text.trim();
+      }
+    } catch (e) {
+      console.warn("Copilot OpenAI query error", e);
+    }
+  }
+
+  // 3. Deterministic Fallback
+  if (crib && crib.keyConcepts.length > 0) {
+    const match = crib.keyConcepts.find((c) =>
+      query.toLowerCase().includes(c.term.toLowerCase())
+    );
+    if (match) {
+      return `${match.term}: ${match.def} (from ${course} framework).`;
+    }
+  }
+
+  return `In ${course}, this relates directly to [[${crib?.theses?.[0]?.slice(0, 50) || course}]] within New Mexico's regional environmental framework.`;
+}

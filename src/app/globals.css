@@ -5603,10 +5603,172 @@ details.tl[open] summary::after{content:"\2212";}
   opacity: 0.4;
   cursor: not-allowed;
 }
+
 .scratchpad-act-btn.danger:hover:not(:disabled) {
   border-color: #d32f2f;
   color: #d32f2f;
 }
+
+/* Scratchpad Drag Resizer & Fullscreen */
+.scratchpad-drawer {
+  position: relative;
+  transition: width 0.05s ease-out;
+}
+.scratchpad-drawer.fullscreen {
+  width: 100vw !important;
+  max-width: 100vw !important;
+  border-left: none !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+.scratchpad-resizer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s ease;
+  z-index: 20;
+}
+.scratchpad-resizer:hover,
+.scratchpad-resizer.dragging {
+  background: color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+/* Split View Pane */
+.scratchpad-editor-wrap.split-view {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+.scratchpad-editor-wrap.split-view .scratchpad-textarea {
+  border-right: 1px solid var(--line);
+  padding: 16px 20px;
+  height: 100%;
+}
+.scratchpad-editor-wrap.split-view .obsidian-preview-pane {
+  height: 100%;
+  overflow-y: auto;
+  padding: 16px 20px;
+  background: var(--surface-2);
+}
+
+/* Dictation Mode Pulsing */
+.scratchpad-act-btn.dictate.listening {
+  background: #d32f2f;
+  color: white;
+  border-color: #d32f2f;
+  animation: pulseMic 1.2s infinite;
+}
+@keyframes pulseMic {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.4); }
+  50% { transform: scale(1.03); box-shadow: 0 0 0 8px rgba(211, 47, 47, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(211, 47, 47, 0); }
+}
+
+/* Inline Copilot Bar */
+.scratchpad-copilot-bar {
+  background: var(--surface-2);
+  border-top: 1px solid var(--line);
+  padding: 8px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.scratchpad-copilot-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.scratchpad-copilot-input {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 6px;
+  outline: none;
+  font-family: inherit;
+}
+.scratchpad-copilot-input:focus {
+  border-color: var(--accent);
+}
+.scratchpad-copilot-submit {
+  background: var(--accent);
+  color: var(--surface);
+  border: none;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s ease;
+}
+.scratchpad-copilot-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.scratchpad-copilot-answer-card {
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: fadeIn 0.15s ease-out;
+}
+.scratchpad-copilot-answer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 600;
+}
+.scratchpad-copilot-answer-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.scratchpad-copilot-insert-btn {
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.scratchpad-copilot-insert-btn:hover {
+  background: var(--accent);
+  color: var(--surface);
+}
+
+/* Vault Note Picker Dropdown */
+.scratchpad-vault-select {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+  max-width: 170px;
+}
+
 
 /* ==========================================================================
    DAYMARK STUDY HUB UPGRADES (Native Built-in, Class Filtering, Kahoot Sprints)
