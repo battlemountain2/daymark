@@ -22,6 +22,37 @@ type Props = {
 
 export default function CommuteRadar({ nextClass, nowMinutes, weather }: Props) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [advisory, setAdvisory] = useState<string | null>(null);
+  const [isAdvisoryLoading, setIsAdvisoryLoading] = useState(false);
+
+  const handleFetchAdvisory = async () => {
+    if (!nextClass || !commutePlan) return;
+    setIsAdvisoryLoading(true);
+    try {
+      const res = await fetch("/api/study-hub", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "commute_advisory",
+          classTitle: nextClass.title || nextClass.code,
+          classWhere: nextClass.where,
+          classStart: fmtTime(commutePlan.classStartMins),
+          driveMins: commutePlan.driveMins,
+          leaveByTime: fmtTime(commutePlan.leaveByMinutes),
+          minutesUntilLeave: commutePlan.minutesUntilLeave,
+          weather,
+        }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setAdvisory(json.advisory || null);
+      }
+    } catch (e) {
+      console.warn("Commute advisory error", e);
+    } finally {
+      setIsAdvisoryLoading(false);
+    }
+  };
 
   const commutePlan = useMemo(() => {
     if (!nextClass) return null;
@@ -159,6 +190,24 @@ export default function CommuteRadar({ nextClass, nowMinutes, weather }: Props) 
           {isRain && <span>🌧️ Albuquerque Rain Caution (+4m buffer)</span>}
         </div>
       )}
+
+      {/* Copilot Live Route Advisory */}
+      <div style={{ margin: "10px 0 6px", display: "flex", flexDirection: "column", gap: 6 }}>
+        <button
+          type="button"
+          className="cr-toggle-btn"
+          style={{ width: "fit-content", padding: "4px 10px", fontSize: 11 }}
+          onClick={handleFetchAdvisory}
+          disabled={isAdvisoryLoading}
+        >
+          {isAdvisoryLoading ? "⚡ Analyzing Route via Copilot..." : "✦ Copilot Route Advisory"}
+        </button>
+        {advisory && (
+          <div style={{ background: "color-mix(in srgb, var(--accent) 8%, var(--surface))", border: "1px solid color-mix(in srgb, var(--accent) 30%, transparent)", borderRadius: 6, padding: "8px 12px", fontSize: 12, lineHeight: 1.45, color: "var(--ink)" }}>
+            <strong>🚗 Copilot SitRep:</strong> {advisory}
+          </div>
+        )}
+      </div>
 
       {/* Expandable Route Timeline */}
       <button

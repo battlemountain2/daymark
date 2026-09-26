@@ -16,12 +16,28 @@ type Props = {
   initialCards: Flashcard[];
   courses: CourseStudyInfo[];
   selectedCourseFilter?: string | null;
-  initialViewMode?: "study" | "quiz" | "browse";
+  initialViewMode?: "study" | "quiz" | "exam" | "browse";
 };
 
 type QuizChoice = {
   text: string;
   isCorrect: boolean;
+};
+
+type TutorExplanation = {
+  intuition: string;
+  mnemonic: string;
+  localAnchor: string;
+  provider: string;
+};
+
+type ExamQuestion = {
+  id: string;
+  question: string;
+  choices: string[];
+  correctIndex: number;
+  explanation: string;
+  concept: string;
 };
 
 type SortMode = "default" | "shuffle" | "needsReview" | "unverified";
@@ -40,7 +56,13 @@ export default function FlashcardDeckViewer({
   const [showSearch, setShowSearch] = useState<boolean>(false);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isFlipped, setIsFlipped] = useState<boolean>(false);
-  const [viewMode, setViewMode] = useState<"study" | "quiz" | "browse">(initialViewMode);
+  const [viewMode, setViewMode] = useState<"study" | "quiz" | "exam" | "browse">(initialViewMode);
+  const [tutorExplanation, setTutorExplanation] = useState<TutorExplanation | null>(null);
+  const [isTutorLoading, setIsTutorLoading] = useState<boolean>(false);
+  const [examQuestions, setExamQuestions] = useState<ExamQuestion[]>([]);
+  const [examAnswers, setExamAnswers] = useState<Record<number, number>>({});
+  const [isExamLoading, setIsExamLoading] = useState<boolean>(false);
+  const [isExamSubmitted, setIsExamSubmitted] = useState<boolean>(false);
 
   // SM-2 Spaced Repetition & Session Tracking
   const [srsStore, setSrsStore] = useState<SRSStore>({});
@@ -309,6 +331,71 @@ export default function FlashcardDeckViewer({
     setQuizComplete(false);
   };
 
+  useEffect(() => {
+    setTutorExplanation(null);
+  }, [currentIndex]);
+
+  const handleTriggerTutor = async () => {
+    if (!currentCard || isTutorLoading) return;
+    setIsTutorLoading(true);
+    try {
+      const res = await fetch("/api/study-hub", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "socratic_tutor",
+          front: currentCard.front,
+          back: currentCard.back,
+          courseCode: currentCard.courseCode,
+          topic: currentCard.parsedTag?.topic,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTutorExplanation(data.explanation || null);
+      }
+    } catch (e) {
+      console.warn("Tutor fetch error", e);
+    } finally {
+      setIsTutorLoading(false);
+    }
+  };
+
+  const handleGenerateExam = async () => {
+    setIsExamLoading(true);
+    setIsExamSubmitted(false);
+    setExamAnswers({});
+    const course = activeCourse === "ALL" ? "GEOG 1160" : activeCourse;
+    try {
+      const res = await fetch("/api/study-hub", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "generate_exam",
+          courseCode: course,
+          count: 5,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setExamQuestions(data.questions || []);
+      }
+    } catch (e) {
+      console.warn("Exam generation error", e);
+    } finally {
+      setIsExamLoading(false);
+    }
+  };
+
+  const handleSelectExamChoice = (qIdx: number, choiceIdx: number) => {
+    if (isExamSubmitted) return;
+    setExamAnswers((prev) => ({ ...prev, [qIdx]: choiceIdx }));
+  };
+
+  const handleSubmitExam = () => {
+    setIsExamSubmitted(true);
+  };
+
   // Touch Swipe Handlers
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStartX(e.touches[0].clientX);
@@ -476,6 +563,20 @@ export default function FlashcardDeckViewer({
               }}
             >
               📋 All ({filteredCards.length})
+            </button>
+            <span className="view-toggle-sep">/</span>
+            <button
+              type="button"
+              className={`view-toggle-btn ${viewMode === "exam" ? "active" : ""}`}
+              onClick={() => {
+                setViewMode("exam");
+                setQuizComplete(false);
+                if (examQuestions.length === 0) {
+                  handleGenerateExam();
+                }
+              }}
+            >
+              📝 Midterm Exam
             </button>
           </div>
         </div>
@@ -717,6 +818,45 @@ export default function FlashcardDeckViewer({
                 )}
               </div>
 
+              {/* Socratic Tutor Section */}
+              <div className="socratic-tutor-container">
+                <button
+                  type="button"
+                  className="socratic-tutor-btn mono"
+                  onClick={handleTriggerTutor}
+                  disabled={isTutorLoading}
+                >
+                  {isTutorLoading ? "⚡ Analyzing with Copilot..." : "💡 Socratic Tutor: Plain-English & Mnemonic"}
+                </button>
+
+                {tutorExplanation && (
+                  <div className="socratic-tutor-card mono">
+                    <div className="stc-head">
+                      <span>💡 Socratic Copilot ({tutorExplanation.provider})</span>
+                      <button
+                        type="button"
+                        style={{ background: "none", border: "none", color: "var(--ink-3)", cursor: "pointer" }}
+                        onClick={() => setTutorExplanation(null)}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <div className="stc-section">
+                      <strong>🧠 Plain-English Intuition:</strong>
+                      <p>{tutorExplanation.intuition}</p>
+                    </div>
+                    <div className="stc-section">
+                      <strong>⚡ Memory Mnemonic:</strong>
+                      <p>{tutorExplanation.mnemonic}</p>
+                    </div>
+                    <div className="stc-section">
+                      <strong>📍 New Mexico / Albuquerque Anchor:</strong>
+                      <p>{tutorExplanation.localAnchor}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Minimal Keyboard Hint */}
               <div className="zen-shortcuts-hint mono">
                 <span>{!isFlipped ? "[Space] Reveal" : "[1–4] Rate recall"}</span>
@@ -853,6 +993,111 @@ export default function FlashcardDeckViewer({
             </div>
           ) : (
             <div className="deck-empty mono">No cards available for quiz.</div>
+          )}
+        </div>
+      )}
+
+      {/* MODE 4: MIDTERM PRACTICE EXAM SIMULATOR */}
+      {viewMode === "exam" && (
+        <div className="midterm-exam-container mono">
+          <div className="exam-hero-card">
+            <span className="pill mono live">📝 Midterm Simulator</span>
+            <h2 style={{ margin: 0, fontSize: 18 }}>
+              {activeCourse === "ALL" ? "GEOG 1160" : activeCourse} Practice Exam
+            </h2>
+            <p className="sub mono" style={{ maxWidth: 500, margin: 0 }}>
+              Synthesized from UNM Fall 2026 course cribs, regional geography/history theses, and active midterm objectives.
+            </p>
+            <button
+              type="button"
+              className="deck-btn primary sm-btn"
+              onClick={handleGenerateExam}
+              disabled={isExamLoading}
+            >
+              {isExamLoading ? "⚡ Generating Exam via AI..." : "🔄 Generate Fresh Exam"}
+            </button>
+          </div>
+
+          {isExamSubmitted && (
+            <div className="exam-score-banner">
+              <span style={{ fontSize: 24 }}>🏆</span>
+              <h3 style={{ margin: 0 }}>
+                Score:{" "}
+                {
+                  examQuestions.filter((q, idx) => examAnswers[idx] === q.correctIndex)
+                    .length
+                }{" "}
+                / {examQuestions.length} Correct (
+                {Math.round(
+                  (examQuestions.filter((q, idx) => examAnswers[idx] === q.correctIndex)
+                    .length /
+                    Math.max(1, examQuestions.length)) *
+                    100
+                )}
+                %)
+              </h3>
+              <p className="sub mono" style={{ margin: 0 }}>
+                Review detailed explanations and distractor analyses below.
+              </p>
+            </div>
+          )}
+
+          {examQuestions.map((q, qIdx) => {
+            const selected = examAnswers[qIdx];
+            return (
+              <div key={q.id} className="exam-q-card">
+                <div className="exam-q-head">
+                  <span className="mono" style={{ fontSize: 12, opacity: 0.7 }}>
+                    Question {qIdx + 1} of {examQuestions.length}
+                  </span>
+                  <span className="exam-q-concept mono">{q.concept}</span>
+                </div>
+                <div className="exam-q-text">{q.question}</div>
+                <div className="exam-choices-list">
+                  {q.choices.map((choice, cIdx) => {
+                    let btnClass = "exam-choice-btn";
+                    if (selected === cIdx) btnClass += " selected";
+                    if (isExamSubmitted) {
+                      if (cIdx === q.correctIndex) btnClass += " correct";
+                      else if (selected === cIdx) btnClass += " wrong";
+                    }
+                    return (
+                      <button
+                        key={cIdx}
+                        type="button"
+                        className={btnClass}
+                        onClick={() => handleSelectExamChoice(qIdx, cIdx)}
+                        disabled={isExamSubmitted}
+                      >
+                        <span className="choice-letter mono">
+                          {["A", "B", "C", "D"][cIdx]}.
+                        </span>
+                        <span>{choice}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {isExamSubmitted && (
+                  <div className="exam-explanation-box">
+                    <strong>💡 Explanation:</strong> {q.explanation}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {examQuestions.length > 0 && !isExamSubmitted && (
+            <div style={{ textAlign: "center", marginTop: 12 }}>
+              <button
+                type="button"
+                className="deck-btn primary"
+                style={{ padding: "10px 24px", fontSize: 13 }}
+                onClick={handleSubmitExam}
+                disabled={Object.keys(examAnswers).length === 0}
+              >
+                🏁 Submit & Grade Exam ({Object.keys(examAnswers).length}/{examQuestions.length} answered)
+              </button>
+            </div>
           )}
         </div>
       )}

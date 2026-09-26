@@ -13,6 +13,35 @@ export default function FridayReviewWizard({ data, onClose }: Props) {
   const [takeawayIdx, setTakeawayIdx] = useState<number>(0);
   const [checkedReadings, setCheckedReadings] = useState<Record<number, boolean>>({});
   const [quizAnswers, setQuizAnswers] = useState<Record<number, boolean>>({});
+  const [aiMemo, setAiMemo] = useState<string | null>(null);
+  const [isAiMemoLoading, setIsAiMemoLoading] = useState<boolean>(false);
+
+  const handleGenerateAIMemo = async () => {
+    setIsAiMemoLoading(true);
+    try {
+      const res = await fetch("/api/study-hub", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "ai_friday_synthesis",
+          weekNum,
+          takeaways: data.takeaways,
+          weakAreas: data.weakAreas,
+          scheduledDate: data.scheduledReviewDate,
+        }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.memo) {
+          setAiMemo(json.memo);
+        }
+      }
+    } catch (e) {
+      console.warn("AI Memo generation error", e);
+    } finally {
+      setIsAiMemoLoading(false);
+    }
+  };
 
   const toggleReading = (idx: number) => {
     setCheckedReadings((prev) => ({ ...prev, [idx]: !prev[idx] }));
@@ -63,7 +92,7 @@ export default function FridayReviewWizard({ data, onClose }: Props) {
   };
 
   const handleDownloadReport = () => {
-    const md = generateReportMarkdown();
+    const md = aiMemo || generateReportMarkdown();
     const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -314,7 +343,16 @@ export default function FridayReviewWizard({ data, onClose }: Props) {
                 <p className="sub mono" style={{ fontSize: 11, margin: "0 0 14px", color: "var(--ink-2)" }}>
                   Download your complete Week {weekNum} synthesis takeaways, citations, and study stats for archiving.
                 </p>
-                <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+                <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap", marginBottom: 12 }}>
+                  <button
+                    type="button"
+                    className="deck-btn primary mono"
+                    onClick={handleGenerateAIMemo}
+                    disabled={isAiMemoLoading}
+                    title="Deeply synthesize cross-course themes using Gemini 1.5 Flash"
+                  >
+                    {isAiMemoLoading ? "⚡ Synthesizing Memo..." : "🚀 Generate AI Executive Memo"}
+                  </button>
                   <button type="button" className="deck-btn mono" onClick={handleDownloadReport} title="Save as Markdown (.md)">
                     📥 Download .md
                   </button>
@@ -322,6 +360,15 @@ export default function FridayReviewWizard({ data, onClose }: Props) {
                     🖨️ Print / Save PDF
                   </button>
                 </div>
+
+                {aiMemo && (
+                  <div style={{ textAlign: "left", marginTop: 14, padding: "12px 14px", background: "color-mix(in srgb, var(--accent) 7%, var(--surface))", border: "1px solid color-mix(in srgb, var(--accent) 30%, transparent)", borderRadius: 8, maxHeight: 220, overflowY: "auto", fontSize: 12, lineHeight: 1.5 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--accent)", marginBottom: 6 }}>
+                      ✦ Gemini 1.5 Executive Academic Synthesis
+                    </div>
+                    <pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", margin: 0 }}>{aiMemo}</pre>
+                  </div>
+                )}
               </div>
 
               <div className="fw-actions" style={{ justifyContent: "center", marginTop: 24 }}>
