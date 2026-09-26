@@ -11,3 +11,4 @@ local.db
 *.db-shm
 *.db-wal
 *.tar.gz
+.env*

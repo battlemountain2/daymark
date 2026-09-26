@@ -255,7 +255,8 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
         }
 
         setViewMode("preview");
-        setBannerMsg(`✓ Agent enriched notes & generated ${data.generatedCards?.length || 0} Anki cards!`);
+        const providerBadge = data.provider ? ` [${data.provider}]` : "";
+        setBannerMsg(`✓${providerBadge} Enriched notes & generated ${data.generatedCards?.length || 0} Anki cards!`);
         setTimeout(() => setBannerMsg(null), 4000);
       }
     } catch (err) {
