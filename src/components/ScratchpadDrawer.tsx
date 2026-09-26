@@ -23,6 +23,7 @@ const STORAGE_KEY = "hb:scratchpad:v2";
 
 export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "General" }: ScratchpadDrawerProps) {
   const [activeTag, setActiveTag] = useState<string>(defaultTag);
+  const [viewMode, setViewMode] = useState<"edit" | "preview">("edit");
   const [notes, setNotes] = useState<Record<string, string>>(() => {
     if (typeof window === "undefined") return { General: "" };
     try {
@@ -37,6 +38,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
   const [copied, setCopied] = useState(false);
   const [savedPing, setSavedPing] = useState(false);
   const [bannerMsg, setBannerMsg] = useState<string | null>(null);
+  const [isHandoffRunning, setIsHandoffRunning] = useState(false);
 
   // 1-Click Anki Card Composer Modal
   const [showAnkiModal, setShowAnkiModal] = useState(false);
@@ -53,15 +55,15 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
     }
   }, [defaultTag]);
 
-  // Focus textarea when opened
+  // Focus textarea when opened in edit mode
   useEffect(() => {
-    if (isOpen && !showAnkiModal) {
+    if (isOpen && !showAnkiModal && viewMode === "edit") {
       const t = setTimeout(() => {
         textareaRef.current?.focus();
       }, 80);
       return () => clearTimeout(t);
     }
-  }, [isOpen, activeTag, showAnkiModal]);
+  }, [isOpen, activeTag, showAnkiModal, viewMode]);
 
   // Handle Escape key
   useEffect(() => {
@@ -105,8 +107,8 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
     if (!currentContent) return;
     const now = new Date();
     const dateStr = now.toISOString().slice(0, 10);
-    const filename = `${activeTag.toLowerCase().replace(/\s+/g, "_")}-notes-${dateStr}.txt`;
-    const blob = new Blob([currentContent], { type: "text/plain;charset=utf-8" });
+    const filename = `${activeTag.toLowerCase().replace(/\s+/g, "_")}-notes-${dateStr}.md`;
+    const blob = new Blob([currentContent], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -171,7 +173,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
       list.unshift(newCard);
       localStorage.setItem("hb:custom-anki-cards", JSON.stringify(list));
       window.dispatchEvent(new CustomEvent("custom-anki-updated"));
-      
+
       setShowAnkiModal(false);
       setBannerMsg(`⚡ Created Anki Card for ${activeTag}!`);
       setTimeout(() => setBannerMsg(null), 3000);
@@ -217,6 +219,142 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
     }
   };
 
+  // 🚀 Handoff to Agent: Enriches note with syllabus connections & Anki cards
+  const handleAgentHandoff = async () => {
+    if (!currentContent.trim()) return;
+    setIsHandoffRunning(true);
+    setBannerMsg("🚀 Handoff in progress: Agent is analyzing syllabus & enriching notes...");
+
+    try {
+      const res = await fetch("/api/vault", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "handoff",
+          course: activeTag,
+          title: `${activeTag} Lecture Note`,
+          rawContent: currentContent,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Handoff API error");
+      const data = await res.json();
+
+      if (data.enrichedMarkdown) {
+        const updated = { ...notes, [activeTag]: data.enrichedMarkdown };
+        setNotes(updated);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+        // Inject mined Anki cards into active deck
+        if (data.generatedCards && data.generatedCards.length > 0) {
+          const stored = localStorage.getItem("hb:custom-anki-cards");
+          const list: Flashcard[] = stored ? JSON.parse(stored) : [];
+          const combined = [...data.generatedCards, ...list];
+          localStorage.setItem("hb:custom-anki-cards", JSON.stringify(combined));
+          window.dispatchEvent(new CustomEvent("custom-anki-updated"));
+        }
+
+        setViewMode("preview");
+        setBannerMsg(`✓ Agent enriched notes & generated ${data.generatedCards?.length || 0} Anki cards!`);
+        setTimeout(() => setBannerMsg(null), 4000);
+      }
+    } catch (err) {
+      console.error("Agent handoff error", err);
+      setBannerMsg("⚠️ Agent handoff failed. Notes preserved locally.");
+      setTimeout(() => setBannerMsg(null), 3500);
+    } finally {
+      setIsHandoffRunning(false);
+    }
+  };
+
+  // 📋 Copy prompt formatted for ChatGPT or Gemini mobile/web app
+  const handleCopyAIPrompt = async (modelName: "ChatGPT" | "Gemini") => {
+    const prompt = [
+      `You are my academic copilot for ${activeTag} at UNM (Fall 2026).`,
+      `Here are my raw lecture notes from today:`,
+      `"""`,
+      currentContent,
+      `"""`,
+      ``,
+      `Please:`,
+      `1. Connect these concepts to the Week 5 syllabus topics and readings.`,
+      `2. Insert Obsidian wiki-links [[Concept]] connecting to related regional geography or water history ideas.`,
+      `3. Generate 3-5 high-yield Anki flashcards formatted as Front / Back.`,
+      `4. Add Obsidian callout boxes (> [!NOTE] or > [!WARNING]) for exam tips.`,
+    ].join("\n");
+
+    try {
+      await navigator.clipboard.writeText(prompt);
+      setBannerMsg(`📋 Prompt copied for ${modelName}! Ready to paste in app.`);
+      setTimeout(() => setBannerMsg(null), 3000);
+    } catch {}
+  };
+
+  // Helper to render Obsidian Markdown preview
+  const renderObsidianPreview = (content: string) => {
+    if (!content.trim()) {
+      return <div className="sub mono" style={{ padding: 24, textAlign: "center" }}>No notes to preview yet. Switch to Editor to write.</div>;
+    }
+
+    const lines = content.split("\n");
+    return (
+      <div className="obsidian-preview-content">
+        {lines.map((line, idx) => {
+          const trimmed = line.trim();
+          if (trimmed.startsWith("# ")) {
+            return <h1 key={idx} className="obs-h1">{trimmed.slice(2)}</h1>;
+          }
+          if (trimmed.startsWith("## ")) {
+            return <h2 key={idx} className="obs-h2">{trimmed.slice(3)}</h2>;
+          }
+          if (trimmed.startsWith("### ")) {
+            return <h3 key={idx} className="obs-h3">{trimmed.slice(4)}</h3>;
+          }
+          if (trimmed.startsWith("> [!NOTE]")) {
+            return <div key={idx} className="obs-callout note mono">💡 {trimmed.replace("> [!NOTE]", "").trim()}</div>;
+          }
+          if (trimmed.startsWith("> [!WARNING]")) {
+            return <div key={idx} className="obs-callout warn mono">⚠️ {trimmed.replace("> [!WARNING]", "").trim()}</div>;
+          }
+          if (trimmed.startsWith("> ")) {
+            return <blockquote key={idx} className="obs-quote">{trimmed.slice(2)}</blockquote>;
+          }
+          if (trimmed === "---") {
+            return <hr key={idx} className="obs-divider" />;
+          }
+          if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+            // Highlight [[Wiki-Links]]
+            const text = trimmed.slice(2);
+            return (
+              <li key={idx} className="obs-li">
+                {renderWithWikiLinks(text)}
+              </li>
+            );
+          }
+          if (!trimmed) {
+            return <div key={idx} style={{ height: 8 }} />;
+          }
+          return <p key={idx} className="obs-p">{renderWithWikiLinks(line)}</p>;
+        })}
+      </div>
+    );
+  };
+
+  const renderWithWikiLinks = (str: string) => {
+    const parts = str.split(/(\[\[.*?\]\])/g);
+    return parts.map((part, i) => {
+      if (part.startsWith("[[") && part.endsWith("]]")) {
+        const link = part.slice(2, -2);
+        return (
+          <span key={i} className="obs-wikilink mono" title={`Concept Link: ${link}`}>
+            [[{link}]]
+          </span>
+        );
+      }
+      return part;
+    });
+  };
+
   // Metrics
   const words = currentContent.trim() ? currentContent.trim().split(/\s+/).length : 0;
   const chars = currentContent.length;
@@ -232,17 +370,36 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
         {/* Drawer Header */}
         <div className="scratchpad-header">
           <div className="scratchpad-title-group">
-            <div className="scratchpad-badge mono">⌘J Scratchpad</div>
-            <h3 className="scratchpad-title">Course-Aware Brain Dump</h3>
+            <div className="scratchpad-badge mono">⌘J Academic Vault</div>
+            <h3 className="scratchpad-title">Course-Aware Lecture Vault</h3>
           </div>
-          <button
-            type="button"
-            className="scratchpad-close-btn mono"
-            onClick={onClose}
-            title="Close (Esc)"
-          >
-            ✕ Esc
-          </button>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {/* View Mode Toggle: Edit vs Obsidian Preview */}
+            <div className="obs-mode-toggle mono">
+              <button
+                type="button"
+                className={`obs-btn ${viewMode === "edit" ? "active" : ""}`}
+                onClick={() => setViewMode("edit")}
+              >
+                ✎ Editor
+              </button>
+              <button
+                type="button"
+                className={`obs-btn ${viewMode === "preview" ? "active" : ""}`}
+                onClick={() => setViewMode("preview")}
+              >
+                ✦ Obsidian View
+              </button>
+            </div>
+            <button
+              type="button"
+              className="scratchpad-close-btn mono"
+              onClick={onClose}
+              title="Close (Esc)"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Status Notification Banner */}
@@ -252,7 +409,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
           </div>
         )}
 
-        {/* Course Tag Selector */}
+        {/* Course Tag Selector & Quick AI Copilot Dropdowns */}
         <div className="scratchpad-tags-bar">
           <span className="scratchpad-tags-label mono">Course:</span>
           <div className="scratchpad-tags-scroll">
@@ -272,18 +429,44 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
               );
             })}
           </div>
+
+          {/* Quick AI Prompt Helpers */}
+          <div className="ai-handoff-chips mono">
+            <button
+              type="button"
+              className="ai-chip gemini"
+              onClick={() => handleCopyAIPrompt("Gemini")}
+              title="Copy formatted syllabus prompt for Google Gemini"
+            >
+              🔵 Gemini Prompt
+            </button>
+            <button
+              type="button"
+              className="ai-chip gpt"
+              onClick={() => handleCopyAIPrompt("ChatGPT")}
+              title="Copy formatted syllabus prompt for ChatGPT / Whisper"
+            >
+              🟢 ChatGPT Prompt
+            </button>
+          </div>
         </div>
 
-        {/* Main Note Canvas */}
+        {/* Main Note Canvas / Preview */}
         <div className="scratchpad-editor-wrap">
-          <textarea
-            ref={textareaRef}
-            className="scratchpad-textarea mono"
-            value={currentContent}
-            onChange={handleTextChange}
-            placeholder={`Jot lecture notes, lab findings, or quotes for ${activeTag}...\n\n- Highlight text & click "⚡ Create Anki Card" to build flashcards\n- Click "★ Send to Friday Synthesis" to push directly into Evidence Bank\n- Auto-saves locally in browser`}
-            spellCheck={false}
-          />
+          {viewMode === "edit" ? (
+            <textarea
+              ref={textareaRef}
+              className="scratchpad-textarea mono"
+              value={currentContent}
+              onChange={handleTextChange}
+              placeholder={`Jot raw lecture notes, lab findings, or quotes for ${activeTag}...\n\n- Tap "🚀 Handoff to Agent" to enrich with syllabus context & Anki cards\n- Use [[Concept]] for Obsidian-style bi-directional links\n- Auto-saved directly to local Markdown vault`}
+              spellCheck={false}
+            />
+          ) : (
+            <div className="obsidian-preview-pane">
+              {renderObsidianPreview(currentContent)}
+            </div>
+          )}
         </div>
 
         {/* Footer & Metrics */}
@@ -294,11 +477,22 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
             <span>{chars} chars</span>
             <span className="dot-sep">·</span>
             <span className={`save-indicator ${savedPing ? "saving" : ""}`}>
-              {savedPing ? "Saving..." : "Saved"}
+              {savedPing ? "Saving..." : "Saved to Vault"}
             </span>
           </div>
 
           <div className="scratchpad-actions mono">
+            {/* 🚀 Main Handoff to Agent Button */}
+            <button
+              type="button"
+              className={`scratchpad-act-btn handoff ${isHandoffRunning ? "loading" : ""}`}
+              onClick={handleAgentHandoff}
+              disabled={!currentContent.trim() || isHandoffRunning}
+              title="Trigger agent to cross-reference syllabus, enrich notes, and mine Anki cards"
+            >
+              {isHandoffRunning ? "⏳ Enriching..." : "🚀 Handoff to Agent"}
+            </button>
+
             <button
               type="button"
               className="scratchpad-act-btn highlight"
@@ -331,9 +525,9 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
               className="scratchpad-act-btn"
               onClick={handleExport}
               disabled={!currentContent}
-              title="Download as .txt"
+              title="Download as Obsidian .md"
             >
-              ⬇ Export
+              ⬇ Export .md
             </button>
             <button
               type="button"

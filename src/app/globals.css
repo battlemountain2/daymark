@@ -6898,3 +6898,143 @@ details.tl[open] summary::after{content:"\2212";}
   border-top: 1px solid var(--line);
   font-size: 11px;
 }
+
+/* Obsidian View & Agent Handoff Styles */
+.obs-mode-toggle {
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+}
+.obs-btn {
+  background: none;
+  border: none;
+  color: var(--ink-3);
+  font-size: 10.5px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.obs-btn.active {
+  background: var(--bg);
+  color: var(--accent);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+.ai-handoff-chips {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+.ai-chip {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--ink);
+  transition: all 0.15s ease;
+}
+.ai-chip.gemini:hover {
+  border-color: #5b8def;
+  color: #5b8def;
+}
+.ai-chip.gpt:hover {
+  border-color: #10a37f;
+  color: #10a37f;
+}
+.scratchpad-act-btn.handoff {
+  background: linear-gradient(135deg, #10a37f 0%, #2a9d8f 100%);
+  color: #fff;
+  border: none;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(16, 163, 127, 0.3);
+}
+.scratchpad-act-btn.handoff:hover:not(:disabled) {
+  opacity: 0.95;
+  transform: translateY(-1px);
+}
+.scratchpad-act-btn.handoff.loading {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+/* Obsidian Preview Rendering */
+.obsidian-preview-pane {
+  height: 100%;
+  overflow-y: auto;
+  padding: 16px 20px;
+  background: var(--bg);
+}
+.obsidian-preview-content {
+  max-width: 680px;
+  margin: 0 auto;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.obs-h1 {
+  font-size: 18px;
+  border-bottom: 2px solid var(--line);
+  padding-bottom: 6px;
+  margin: 0 0 12px;
+  color: var(--ink);
+}
+.obs-h2 {
+  font-size: 15px;
+  color: var(--accent);
+  margin: 20px 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.obs-h3 {
+  font-size: 13px;
+  color: var(--ink);
+  margin: 14px 0 6px;
+}
+.obs-p {
+  margin: 0 0 8px;
+  color: var(--ink);
+}
+.obs-li {
+  margin-left: 20px;
+  margin-bottom: 4px;
+  color: var(--ink);
+}
+.obs-divider {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 18px 0;
+}
+.obs-callout {
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin: 12px 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.obs-callout.note {
+  background: rgba(82, 183, 136, 0.1);
+  border-left: 3px solid var(--accent);
+  color: var(--ink);
+}
+.obs-callout.warn {
+  background: rgba(224, 122, 95, 0.1);
+  border-left: 3px solid #e07a5f;
+  color: var(--ink);
+}
+.obs-wikilink {
+  background: rgba(82, 183, 136, 0.15);
+  color: var(--accent);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 11px;
+  border: 1px solid rgba(82, 183, 136, 0.3);
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-block;
+  margin: 0 2px;
+}
