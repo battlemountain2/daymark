@@ -70,7 +70,21 @@ export default function FlashcardDeckViewer({
   }, []);
 
   useEffect(() => {
-    setCards(initialCards);
+    const loadCustom = () => {
+      try {
+        const stored = localStorage.getItem("hb:custom-anki-cards");
+        const custom: Flashcard[] = stored ? JSON.parse(stored) : [];
+        const base = [...initialCards];
+        const existingIds = new Set(base.map(c => c.id));
+        const combined = [...base, ...custom.filter(c => !existingIds.has(c.id))];
+        setCards(combined);
+      } catch {
+        setCards(initialCards);
+      }
+    };
+    loadCustom();
+    window.addEventListener("custom-anki-updated", loadCustom);
+    return () => window.removeEventListener("custom-anki-updated", loadCustom);
   }, [initialCards]);
 
   useEffect(() => {

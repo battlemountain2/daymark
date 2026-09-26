@@ -19,6 +19,7 @@ import type { Music } from "@/lib/music";
 import MusicPanel, { MusicSkeleton } from "@/components/MusicPanel";
 import StudyGlance, { StudyGlanceSkeleton } from "@/components/StudyGlance";
 import FitnessGlance from "@/components/FitnessGlance";
+import CommuteRadar from "@/components/CommuteRadar";
 import CampusHopMap from "@/components/CampusHopMap";
 import PreClassBriefModal from "@/components/PreClassBriefModal";
 import PomodoroModal from "@/components/PomodoroModal";
@@ -535,6 +536,12 @@ export default function Dashboard({
                 );
               })}
             </div>
+
+            {/* UNM South Lot Commute Radar */}
+            <CommuteRadar
+              nextClass={leave ? leave.next : (todayClasses.find(c => hhmm(c.end) > now.minutes) || todayClasses[0] || null)}
+              nowMinutes={now.minutes}
+            />
 
             {leave && (
               <div className="callout leave-callout">

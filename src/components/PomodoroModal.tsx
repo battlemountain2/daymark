@@ -19,7 +19,7 @@ const COURSES = [
   { code: "HIST 300", label: "HIST 300" },
   { code: "GEOG 1160", label: "GEOG 1160" },
   { code: "GEOG 1150", label: "GEOG 1150" },
-  { code: "PHED 2996", label: "PHED 2996" },
+  { code: "GEOG 1160L", label: "GEOG 1160L" },
 ];
 
 export default function PomodoroModal({

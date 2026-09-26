@@ -5,13 +5,14 @@ import type { StudyHubData, CourseStudyInfo } from "@/lib/study-hub";
 import FlashcardDeckViewer from "@/components/FlashcardDeckViewer";
 import { longDate } from "@/lib/localtime";
 
+import GradeSimulator from "@/components/GradeSimulator";
 type Props = {
   promise: Promise<StudyHubData>;
 };
 
 export default function StudyHubPanel({ promise }: Props) {
   const data = use(promise);
-  const [activeTab, setActiveTab] = useState<"overview" | "cards" | "review">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "cards" | "review" | "grades">("overview");
   const [selectedCourseForDeck, setSelectedCourseForDeck] = useState<string | null>(null);
 
   const { courses, weeklyReview, allCards, overallDeckStats } = data;
@@ -57,6 +58,13 @@ export default function StudyHubPanel({ promise }: Props) {
             onClick={() => setActiveTab("review")}
           >
             Weekly Review & Takeaways
+          </button>
+          <button
+            type="button"
+            className={`study-tab ${activeTab === "grades" ? "on" : ""}`}
+            onClick={() => setActiveTab("grades")}
+          >
+            📊 Grade Simulator
           </button>
         </div>
       </div>

@@ -54,9 +54,7 @@ export const DEFAULT_TERM: Term = {
     5: [
       { start: "14:00", end: "14:50", code: "GEOG 1150", title: "Intro to Environmental Studies", where: "Mitchell Hall 120", ck: "geo" },
     ],
-    6: [
-      { start: "10:00", end: "11:30", code: "PHED 2996", title: "Intro to Fitness — online coursework", where: "Online", ck: "fit" },
-    ],
+    6: [],
   },
 };
 

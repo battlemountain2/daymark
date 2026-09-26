@@ -22,6 +22,96 @@ export default function FridayReviewWizard({ data, onClose }: Props) {
     setQuizAnswers((prev) => ({ ...prev, [qIdx]: isCorrect }));
   };
 
+  const weekNum = data.weekTitle.match(/\d+/)?.[0] || "5";
+
+  const generateReportMarkdown = () => {
+    const lines = [
+      `# DAYMARK ACADEMIC EXECUTIVE BRIEF`,
+      `**Term**: Fall 2026 · Week ${weekNum}`,
+      `**Synthesis Date**: ${data.scheduledReviewDate} Ritual`,
+      `**Student**: Brayan | University of New Mexico`,
+      ``,
+      `---`,
+      ``,
+      `## I. CORE COURSE SYNTHESIS & TAKEAWAYS`,
+    ];
+
+    data.takeaways.forEach((t, i) => {
+      lines.push(`### 0${i + 1}. [${t.course}] ${t.title}`);
+      lines.push(`${t.detail}`);
+      lines.push(``);
+    });
+
+    lines.push(`---`);
+    lines.push(``);
+    lines.push(`## II. IDENTIFIED WEAK SPOTS & RESOLUTION NOTES`);
+    data.weakAreas.forEach((w) => {
+      lines.push(`- **${w.course}**: ${w.topic}`);
+      lines.push(`  *Resolution Strategy*: ${w.reason}`);
+    });
+
+    lines.push(``);
+    lines.push(`---`);
+    lines.push(``);
+    lines.push(`## III. SYNTHESIS STREAK & VERIFICATION`);
+    lines.push(`- **Weekly Review Ritual**: Fully Completed & Verified`);
+    lines.push(`- **Active Courses Covered**: 5 Active Frameworks (GEOG 1160, GEOG 1160L, HIST 300, GEOG 1150, GEOG 1115L)`);
+    lines.push(`- **Status**: Ready for Week ${parseInt(weekNum, 10) + 1}`);
+    lines.push(``);
+    lines.push(`*Generated via Daymark Academic Cockpit.*`);
+    return lines.join("\n");
+  };
+
+  const handleDownloadReport = () => {
+    const md = generateReportMarkdown();
+    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Daymark-Week-0${weekNum}-Executive-Brief.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handlePrintPDF = () => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Daymark Week ${weekNum} Executive Brief</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 40px; color: #111; line-height: 1.6; max-width: 800px; margin: 0 auto; }
+            h1 { font-size: 22px; border-bottom: 2px solid #222; padding-bottom: 8px; margin-bottom: 6px; }
+            h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.05em; color: #444; border-bottom: 1px solid #ddd; padding-bottom: 4px; margin-top: 24px; }
+            h3 { font-size: 14px; margin-bottom: 4px; color: #1a4d2e; }
+            p { margin: 0 0 10px; font-size: 13px; }
+            ul { margin: 0 0 16px 20px; font-size: 13px; }
+            li { margin-bottom: 6px; }
+            .meta { font-family: monospace; font-size: 12px; color: #666; margin-bottom: 20px; }
+            @media print { body { padding: 0; } }
+          </style>
+        </head>
+        <body>
+          <h1>DAYMARK ACADEMIC EXECUTIVE BRIEF</h1>
+          <div class="meta">Term: Fall 2026 · Week ${weekNum} | Date: ${data.scheduledReviewDate} | Student: Brayan</div>
+          <h2>I. Core Course Synthesis & Takeaways</h2>
+          ${data.takeaways.map((t, i) => `<h3>0${i+1}. [${t.course}] ${t.title}</h3><p>${t.detail}</p>`).join("")}
+          <h2>II. Identified Weak Spots & Targeted Strategies</h2>
+          <ul>
+            ${data.weakAreas.map(w => `<li><strong>${w.course} - ${w.topic}:</strong> ${w.reason}</li>`).join("")}
+          </ul>
+          <h2>III. Semester Synthesis Status</h2>
+          <p>✓ All 5 course frameworks acknowledged, synthesized, and verified for Week ${weekNum}.</p>
+          <script>window.onload = function() { window.print(); }<\/script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   return (
     <div className="brief-modal-scrim" onClick={onClose} role="dialog" aria-modal="true">
       <div className="friday-wizard-box" onClick={(e) => e.stopPropagation()}>
@@ -204,17 +294,36 @@ export default function FridayReviewWizard({ data, onClose }: Props) {
             </div>
           )}
 
-          {/* STEP 4: CELEBRATION BADGE */}
+          {/* STEP 4: CELEBRATION BADGE & EXECUTIVE REPORT */}
           {step === 4 && (
             <div className="fw-step-content" style={{ textAlign: "center", padding: "20px 0" }}>
               <div style={{ fontSize: 48, marginBottom: 12 }}>🏆</div>
               <h2 style={{ margin: "0 0 8px" }}>Weekly Synthesis Complete!</h2>
-              <p className="sub mono" style={{ maxWidth: 440, margin: "0 auto 20px" }}>
+              <p className="sub mono" style={{ maxWidth: 460, margin: "0 auto 16px" }}>
                 You have completed your Friday 8:00 PM review ritual. All 5 course frameworks, takeaways, and weak spots are reinforced.
               </p>
               <div className="fw-stamp-badge mono">
                 <span>🔥 SEMESTER SYNTHESIS STREAK ACTIVE</span>
               </div>
+
+              {/* 1-Click Executive Report Export */}
+              <div className="fw-export-box" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--line)", borderRadius: 10, padding: "16px", maxWidth: 460, margin: "24px auto 0" }}>
+                <div className="mono" style={{ fontSize: 11, fontWeight: 700, color: "var(--accent)", textTransform: "uppercase", marginBottom: 6 }}>
+                  📄 1-Page Academic Executive Brief
+                </div>
+                <p className="sub mono" style={{ fontSize: 11, margin: "0 0 14px", color: "var(--ink-2)" }}>
+                  Download your complete Week {weekNum} synthesis takeaways, citations, and study stats for archiving.
+                </p>
+                <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+                  <button type="button" className="deck-btn mono" onClick={handleDownloadReport} title="Save as Markdown (.md)">
+                    📥 Download .md
+                  </button>
+                  <button type="button" className="deck-btn mono" onClick={handlePrintPDF} title="Print or Save as PDF">
+                    🖨️ Print / Save PDF
+                  </button>
+                </div>
+              </div>
+
               <div className="fw-actions" style={{ justifyContent: "center", marginTop: 24 }}>
                 <button type="button" className="deck-btn primary mono" onClick={onClose}>
                   Done &amp; Close Wizard

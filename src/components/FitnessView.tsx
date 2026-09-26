@@ -127,7 +127,7 @@ export default function FitnessView() {
             ← dashboard
           </Link>
           <span className="pill mono live">
-            PHED 2996 · Fall 2026
+            Personal Training & Health · Fall 2026
           </span>
         </div>
 

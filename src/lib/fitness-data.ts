@@ -254,7 +254,7 @@ export const GYM_TIPS: TipSection[] = [
     ],
   },
   {
-    title: "SLEEP & RECOVERY (PHED 2996 PRINCIPLE)",
+    title: "SLEEP & HYPERTROPHY RECOVERY",
     color: "#FD79A8",
     icon: "😴",
     tips: [

@@ -92,25 +92,25 @@ export const COURSE_CRIBS: Record<string, CourseCrib> = {
       "What spatial interventions effectively mitigate the Urban Heat Island effect in Albuquerque's South Valley?"
     ]
   },
-  "PHED 2996": {
-    code: "PHED 2996",
-    name: "Introduction to Fitness",
-    themeColor: "#E07A5F",
+  "GEOG 1160L": {
+    code: "GEOG 1160L",
+    name: "Home Planet Laboratory",
+    themeColor: "#3D85C6",
     theses: [
-      "Hypertrophic adaptation is stimulated through mechanical tension, progressive overload, and sufficient proximity to failure (1–3 Reps in Reserve).",
-      "Systemic fatigue accumulates from central nervous system load, necessitating scheduled deload phases and 48–72 hours of muscle group recovery.",
-      "Energy balance dictates tissue partition: a conservative 200–300 kcal surplus with 0.8–1.0g protein/lb bodyweight maximizes muscle protein synthesis while minimizing adiposity."
+      "Physical geography laboratory observation requires empirical measurement of thermodynamic, hydrological, and lithospheric variables.",
+      "Adiabatic lapse rates dictate cloud formation: dry parcels cool at 10°C/km until saturation (LCL), transitioning to moist adiabatic cooling (6°C/km) with latent heat release.",
+      "Psychrometric tables and sling psychrometer measurements determine relative humidity and dew point temperature through evaporative cooling differentials."
     ],
     keyConcepts: [
-      { term: "RPE / RIR", def: "Rate of Perceived Exertion (1–10 scale) and Reps in Reserve measuring proximity to muscular failure." },
-      { term: "Progressive Overload", def: "Systematically increasing load, volume, movement control, or density over successive microcycles." },
-      { term: "Mechanical Tension", def: "The fundamental driver of hypertrophy created by muscle fibers producing force against external resistance through full range." },
-      { term: "Active Recovery", def: "Low-intensity non-fatiguing movement (walking, mobility) promoting lymph circulation, blood flow, and metabolic clearance." }
+      { term: "Lifting Condensation Level (LCL)", def: "The precise altitude where an ascending air parcel cools to its dew point, triggering condensation and cloud base formation." },
+      { term: "Sling Psychrometer", def: "Instrument using dry-bulb and wet-bulb thermometers to calculate relative humidity based on evaporative latent heat absorption." },
+      { term: "Adiabatic Lapse Rates", def: "Rate of temperature change in an ascending or descending gas parcel without external thermal exchange (DAR: 10°C/km, MAR: 6°C/km)." },
+      { term: "Orographic Rain Shadow", def: "Precipitation depletion on leeward mountain flanks caused by adiabatic descent and compression warming." }
     ],
     promptQuestions: [
-      "Why is training at 1–2 RIR superior to absolute technical failure for multi-joint compound movements?",
-      "How does eccentric tempo influence mechanical tension and micro-trauma in hypertrophy protocols?",
-      "What is the optimal protein distribution frequency across waking hours to maximize MPS peaks?"
+      "How does the difference between wet-bulb and dry-bulb temperature correlate with environmental relative humidity?",
+      "Why does an ascending air parcel cool at a slower rate once condensation begins above the LCL?",
+      "How do Sandia mountain rain shadows affect precipitation distribution across the Rio Grande valley?"
     ]
   }
 };

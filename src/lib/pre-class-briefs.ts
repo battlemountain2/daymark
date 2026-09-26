@@ -129,26 +129,6 @@ export const PRE_CLASS_BRIEFS: Record<string, PreClassBrief> = {
       "Keep the prep package provisional until the official Canvas handout appears.",
     ],
   },
-  "PHED 2996": {
-    code: "PHED 2996",
-    title: "Intro to Fitness",
-    where: "Online",
-    ck: "fit",
-    reading: "Canvas videos: Body Composition and Girth Measurement; Week 4 preview: Static vs Dynamic Stretching and Cooling Down",
-    thesis: "Body-composition and girth measurements become useful only when technique, landmarks, units, and testing conditions are consistent enough to support comparison over time.",
-    authorDebate: "Field measurements are practical and repeatable but indirect. Their value comes less from a single precise-looking number than from standardized technique and cautious interpretation of trends.",
-    questions: [
-      {
-        q: "Which anatomical landmarks and testing conditions must be documented to make a girth measurement repeatable?",
-        cite: "Canvas Body Composition and Girth Measurement videos",
-      },
-    ],
-    keyTakeaways: [
-      "Use the same landmark, posture, tape tension, and time conditions.",
-      "Treat field estimates as trends with measurement error, not exact diagnoses.",
-      "Follow the official Canvas submission procedure for the exercise.",
-    ],
-  },
 };
 
 export function getPreClassBrief(courseCode: string): PreClassBrief | null {

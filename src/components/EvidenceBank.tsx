@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { type ColourKey } from "@/lib/term";
 
 export type EvidenceItem = {
@@ -101,9 +101,26 @@ export default function EvidenceBank() {
   const [search, setSearch] = useState("");
   const [selectedCourse, setSelectedCourse] = useState("ALL");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [customItems, setCustomItems] = useState<EvidenceItem[]>([]);
+
+  useEffect(() => {
+    const loadCustom = () => {
+      try {
+        const stored = localStorage.getItem("hb:custom-synthesis-evidence");
+        if (stored) {
+          setCustomItems(JSON.parse(stored));
+        }
+      } catch {}
+    };
+    loadCustom();
+    window.addEventListener("custom-evidence-updated", loadCustom);
+    return () => window.removeEventListener("custom-evidence-updated", loadCustom);
+  }, []);
+
+  const allEvidence = useMemo(() => [...customItems, ...EVIDENCE_DATABASE], [customItems]);
 
   const filtered = useMemo(() => {
-    return EVIDENCE_DATABASE.filter((item) => {
+    return allEvidence.filter((item) => {
       if (selectedCourse !== "ALL" && item.course !== selectedCourse) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
