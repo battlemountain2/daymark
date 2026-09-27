@@ -7517,3 +7517,62 @@ details.tl[open] summary::after{content:"\2212";}
   border-color: var(--accent);
   color: var(--accent);
 }
+
+/* A readable agenda at the card's width, without a horizontally clipped week. */
+.week-agenda { container-type:inline-size; }
+.week-day { padding:16px 0; border-top:1px solid var(--line); }
+.week-day-label { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.week-day-label h3 { margin:0; font-family:inherit; font-size:14px; font-weight:650; }
+.week-day.is-today .week-day-label h3 { color:var(--accent); }
+.week-classes { display:grid; gap:8px; min-width:0; }
+.week-class { border-left:3px solid var(--line-strong); padding-left:10px; min-width:0; }
+.week-class.geo { border-color:var(--geo); }
+.week-class.pol { border-color:var(--pol); }
+.week-class.his { border-color:var(--his); }
+.week-class.fit { border-color:var(--fit); }
+.week-class.adm { border-color:var(--adm); }
+.week-class summary { display:grid; grid-template-columns:112px minmax(0,1fr) 16px; gap:10px; align-items:start; cursor:pointer; list-style:none; padding:10px 0; min-height:44px; }
+.week-class summary::-webkit-details-marker { display:none; }
+.week-time { font-size:11px; line-height:1.6; color:var(--ink-2); }
+.week-title { font-size:14px; line-height:1.4; overflow-wrap:anywhere; }
+.week-expand { color:var(--ink-3); }
+.week-class[open] .week-expand { transform:rotate(45deg); }
+.week-class.active-now { background:var(--accent-soft); }
+.week-details { padding:0 0 10px; font-size:13px; color:var(--ink-2); }
+.week-details p { margin:4px 0 12px; }
+.week-other summary { cursor:pointer; padding:14px 0; }
+.week-free { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding:12px 0; color:var(--accent); }
+@container (max-width:420px) {
+  .week-class summary { grid-template-columns:minmax(0,1fr) 16px; gap:3px 10px; }
+  .week-time { grid-column:1; }
+  .week-title { grid-column:1; grid-row:2; }
+  .week-expand { grid-column:2; grid-row:1 / 3; align-self:center; }
+}
+.wx-selection-label { font-size:12px; margin:20px 0 8px; }
+.sky-page .wxhero { color:#f7faf8; padding:56px 20px 24px; margin:16px 0 24px; border-radius:12px; background:linear-gradient(110deg,rgba(8,20,28,.82),rgba(8,20,28,.65)); }
+.sky-page .wxhero .backlink { left:20px; color:#f7faf8; }
+.wx-facts,.wx-sun-summary { display:flex; flex-wrap:wrap; gap:16px 28px; margin:22px 0; }
+.wx-facts > span,.wx-sun-summary > span { display:flex; flex-direction:column; gap:4px; font-size:13px; }
+.wx-facts strong,.wx-sun-summary strong { font-size:17px; }
+.wx-facts small,.wx-data-note { font-size:12px; }
+.wx-data-note { margin:4px 0; }
+.wx-range,.wx-timeline-control { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.wx-range button[aria-pressed="true"] { color:var(--accent); border-color:var(--accent); background:var(--accent-soft); }
+.wx-timeline-control { justify-content:space-between; margin:16px 0 8px; }
+.wx-hour-slider { width:100%; accent-color:var(--accent); min-height:44px; }
+.wx-hour-options { display:flex; gap:8px; overflow-x:auto; padding:8px 2px 16px; }
+.wx-hour-options button { flex:0 0 104px; display:flex; flex-direction:column; gap:7px; padding:12px 8px; border:1px solid var(--line); border-radius:8px; color:var(--ink); background:var(--surface); font:inherit; cursor:pointer; }
+.wx-hour-options button span,.wx-hour-options button small { font-size:12px; }
+.wx-hour-options button strong { font-size:22px; }
+.wx-hour-options button[aria-pressed="true"] { border-color:var(--accent); background:var(--accent-soft); box-shadow:0 0 0 1px var(--accent); }
+.wx-day-row { display:grid; grid-template-columns:130px minmax(0,1fr) auto; gap:16px; padding:14px 0; border-bottom:1px solid var(--line); align-items:baseline; }
+.wx-day-row:last-child { border-bottom:0; }
+.wx-day-row > span:last-child { white-space:nowrap; }
+.wx-hourly .card-head { flex-wrap:wrap; gap:12px; }
+.wx-hour-summary { padding:12px; border-left:3px solid var(--accent); line-height:1.6; background:var(--accent-soft); }
+.wx-trend summary { cursor:pointer; padding:14px 0; min-height:44px; }
+@media(max-width:600px) {
+  .wx-day-row { grid-template-columns:minmax(0,1fr) auto; gap:5px 12px; }
+  .wx-day-row > span:nth-child(2) { grid-row:2; grid-column:1 / -1; font-size:14px; color:var(--ink-2); }
+  .wx-day-row > span:last-child { grid-row:1; grid-column:2; }
+}

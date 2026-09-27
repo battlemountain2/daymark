@@ -11,6 +11,8 @@
  * rate-limit or block anonymous traffic, so NWS_USER_AGENT is not optional.
  */
 
+import { parseWindMph } from "./weather-display";
+
 export type Forecast = {
   place: string;
   updated: string;
@@ -103,13 +105,13 @@ export async function getForecast(lat: string, lon: string): Promise<Forecast> {
     tempF: p.temperature,
     precipChance: p.probabilityOfPrecipitation?.value ?? 0,
     humidity: p.relativeHumidity?.value ?? null,
-    windMph: parseInt(String(p.windSpeed ?? "").replace(/\D+/g, ""), 10) || null,
+    windMph: parseWindMph(p.windSpeed),
     windDir: p.windDirection ?? null,
     shortForecast: p.shortForecast,
     isDaytime: !!p.isDaytime,
   }));
 
-  const days = (forecast?.properties?.periods ?? []).slice(0, 8).map((p: any) => ({
+  const days = (forecast?.properties?.periods ?? []).slice(0, 14).map((p: any) => ({
     name: p.name,
     isDaytime: !!p.isDaytime,
     tempF: p.temperature,

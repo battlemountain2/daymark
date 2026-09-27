@@ -454,6 +454,7 @@ export default function Dashboard({
               <button
                 type="button"
                 className={`view-toggle-btn ${viewMode === "today" ? "active" : ""}`}
+                aria-pressed={viewMode === "today"}
                 onClick={() => setViewMode("today")}
               >
                 Today
@@ -462,6 +463,7 @@ export default function Dashboard({
               <button
                 type="button"
                 className={`view-toggle-btn ${viewMode === "week" ? "active" : ""}`}
+                aria-pressed={viewMode === "week"}
                 onClick={() => setViewMode("week")}
               >
                 Week

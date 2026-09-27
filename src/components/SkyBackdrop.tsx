@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import SkyScene from "@/components/SkyScene";
 import { sunPosition } from "@/lib/solar";
 import type { WeatherResult } from "@/app/page";
+import type { Forecast } from "@/lib/weather";
 
 /**
  * The sky, promoted from a tile to the whole page.
@@ -25,9 +26,10 @@ type Props = {
   weather?: WeatherResult | null;
   /** Scrub time, so the sky and the controls move together. */
   at?: Date | null;
+  forecastHour?: Forecast["hours"][number];
 };
 
-export default function SkyBackdrop({ weatherPromise, weather = null, at = null }: Props) {
+export default function SkyBackdrop({ weatherPromise, weather = null, at = null, forecastHour }: Props) {
   const [wx, setWx] = useState<WeatherResult | null>(weather);
   const [par, setPar] = useState(0);
 
@@ -92,9 +94,9 @@ export default function SkyBackdrop({ weatherPromise, weather = null, at = null 
 
   const today = wx?.days?.find((d) => d.isDaytime) ?? wx?.days?.[0];
   const shared = {
-    condition: wx?.current?.sky ?? null,
-    forecast: today?.shortForecast ?? null,
-    precipChance: today?.precipChance ?? null,
+    condition: forecastHour?.shortForecast ?? wx?.current?.sky ?? null,
+    forecast: forecastHour?.shortForecast ?? today?.shortForecast ?? null,
+    precipChance: forecastHour?.precipChance ?? today?.precipChance ?? null,
     at,
   };
 

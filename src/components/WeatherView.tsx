@@ -1,126 +1,86 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import SkyBackdrop from "@/components/SkyBackdrop";
 import HourStrip, { rainWindow } from "@/components/HourStrip";
-import SunPanel from "@/components/SunPanel";
-import Tonight from "@/components/Tonight";
-import Orrery from "@/components/Orrery";
-import { sunPosition } from "@/lib/solar";
-import { atLocalMinutes, minutesIntoLocalDay, clockAt } from "@/lib/localtime";
+import { dailyForecast, forecastTime } from "@/lib/weather-display";
+import type { WeatherResult } from "@/app/page";
+import type { sunTimes } from "@/lib/weather";
+import type { Term } from "@/lib/term";
 
-/**
- * Weather, given the whole screen.
- *
- * The dashboard's job is one glance; this is where the detail lives — the full
- * hourly run, the sun's path, the moon. The sky here is deliberately tall,
- * because at this size it's the point rather than a background.
- */
+const SunPanel = dynamic(() => import("@/components/SunPanel"));
+const Tonight = dynamic(() => import("@/components/Tonight"));
+const Orrery = dynamic(() => import("@/components/Orrery"));
 
-const LAT = 35.1064;
-const LON = -106.632;
-
-export default function WeatherView({ weather, sun, term }: { weather: any; sun: any; term: import("@/lib/term").Term }) {
-  // The page-wide sky belongs here, not on the dashboard.
-  const [at, setAt] = useState<Date | null>(null);
-  const [nowMin, setNowMin] = useState<number | null>(null);
-
+export default function WeatherView({ weather, sun, term }: {
+  weather: WeatherResult; sun: ReturnType<typeof sunTimes>; term: Term;
+}) {
+  const [selected, setSelected] = useState<string | null>(null);
+  const [range, setRange] = useState(12);
+  const [astronomy, setAstronomy] = useState(false);
+  const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
-    const tick = () => setNowMin(minutesIntoLocalDay(new Date()));
-    tick();
-    const t = setInterval(tick, 60000);
-    return () => clearInterval(t);
+    setNow(Date.now());
+    const timer = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(timer);
   }, []);
 
-  const err = weather?.error;
-  const cur = weather?.current;
-  const days = (weather?.days ?? []).filter((d: any) => d.isDaytime).slice(0, 5);
-  const today = days[0];
-  const hours = weather?.hours ?? [];
-  const rain = hours.length ? rainWindow(hours) : null;
+  const hours = (weather.hours ?? []).filter(h => now == null || Date.parse(h.time) + 3600000 > now);
+  const shown = hours.slice(0, range);
+  const hour = hours.find(h => h.time === selected);
+  const currentHour = hours[0];
+  const cur = weather.current;
+  const observed = !hour && cur?.tempF != null;
+  const forecast = hour ?? currentHour;
+  const temp = observed ? cur.tempF : forecast?.tempF;
+  const sky = observed ? cur.sky ?? currentHour?.shortForecast : forecast?.shortForecast;
+  const wind = observed ? cur.windMph : forecast?.windMph;
+  const direction = observed ? cur.windDir : forecast?.windDir;
+  const humidity = observed ? cur.humidity : forecast?.humidity;
+  const days = dailyForecast(weather.days ?? []);
+  const rain = rainWindow(hours);
+  const label = hour ? `Forecast · ${forecastTime(hour.time)}` : observed ? "Current observation" : "Current-hour forecast · observation unavailable";
 
-  const scrub = at == null ? null : minutesIntoLocalDay(at);
-  const shownMin = scrub ?? nowMin;
-  const shownElev = shownMin == null ? null
-    : sunPosition(LAT, LON, atLocalMinutes(new Date(), shownMin)).elevation;
-
-  return (
-    <div className="wrap wx-view sky-page">
-      <SkyBackdrop weather={weather} at={at} />
-      <div className="skyscrim" aria-hidden="true" />
-
-      <div className="wxhero">
-        <Link href="/" className="backlink mono">← dashboard</Link>
-        <div className="wxbig">
-          {cur?.tempF ?? today?.tempF ?? "—"}<sup>°F</sup>
-        </div>
-        <div className="wxsky">{cur?.sky ?? today?.shortForecast ?? "—"}</div>
-        <div className="wxsub">
-          {weather?.place ?? "Albuquerque, NM"}
-          {today ? ` · high ${today.tempF}°` : ""}
-          {rain ? ` · ${rain}` : ""}
-        </div>
+  return <div className="wrap wx-view sky-page">
+    <SkyBackdrop weather={weather} at={hour ? new Date(hour.time) : null} forecastHour={hour ?? (!observed ? currentHour : undefined)} />
+    <div className="skyscrim" aria-hidden="true" />
+    <div className="wxhero">
+      <Link href="/" className="backlink mono">← dashboard</Link>
+      <p className="wx-selection-label mono" role="status">{label}</p>
+      <div className="wxbig">{temp ?? "—"}<sup>°F</sup></div>
+      <div className="wxsky">{sky ?? "Conditions unavailable"}</div>
+      <div className="wxsub">{weather.place ?? "Albuquerque, NM"}</div>
+      <div className="wx-facts">
+        <span>Wind <strong>{wind == null ? "—" : `${direction ?? ""} ${wind} mph`}</strong></span>
+        <span>Humidity <strong>{humidity == null ? "—" : `${humidity}%`}</strong></span>
+        <span>Rain chance <strong>{forecast ? `${forecast.precipChance}%` : "—"}</strong><small>hourly forecast</small></span>
       </div>
-
-      {err ? (
-        <section className="card span12"><div className="card-body"><div className="sub">{err}</div></div></section>
-      ) : (
-        <>
-          {nowMin != null && (
-            <div className={`scrub wxscrub${scrub != null ? " on" : ""}`}>
-              <input type="range" min={0} max={1439} step={1} value={shownMin ?? 0}
-                aria-label="Preview the sky at a different time of day"
-                onChange={(e) => setAt(atLocalMinutes(new Date(), Number(e.currentTarget.value)))} />
-              <div className="scrub-read mono">
-                <span className="scrub-time">{clockAt(atLocalMinutes(new Date(), shownMin ?? 0))}</span>
-                <span className="sub">{shownElev == null ? "" : `sun ${shownElev.toFixed(0)}°`}</span>
-                {scrub != null && (
-                  <button type="button" className="scrub-now" onClick={() => setAt(null)}>back to now</button>
-                )}
-              </div>
-            </div>
-          )}
-
-          <div className="grid">
-            <section className="card span12">
-              <div className="card-head">
-                <h2>Next 36 hours</h2>
-                <span className="pill mono live">{hours.length} hours available</span>
-              </div>
-              <div className="card-body">
-                {rain && <div className="wxrain">{rain}</div>}
-                <HourStrip hours={hours} />
-                <div className="sub mono" style={{ fontSize: 10.5, marginTop: 8 }}>
-                  Scroll sideways · bars are chance of precipitation
-                </div>
-              </div>
-            </section>
-
-            <SunPanel term={term} />
-
-            <Tonight />
-
-            <Orrery />
-
-            <section className="card span5">
-              <div className="card-head"><h2>The week</h2></div>
-              <div className="card-body">
-                {days.map((d: any) => (
-                  <div className="day" key={d.name}>
-                    <div className="name mono">{d.name.slice(0, 3).toLowerCase()}</div>
-                    <div className="desc">
-                      <b>{d.shortForecast}.</b>
-                      {d.precipChance ? <span className="tag storm mono">{d.precipChance}%</span> : null}
-                    </div>
-                    <div className="hi mono">{d.tempF}°</div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </div>
-        </>
-      )}
+      {observed && cur.observedAt && <p className="wx-data-note">Observed {forecastTime(cur.observedAt)}</p>}
+      {!observed && !hour && currentHour && <p className="wx-data-note">For {forecastTime(currentHour.time)}</p>}
+      {weather.updated && <p className="wx-data-note">NWS forecast updated {forecastTime(weather.updated)}</p>}
     </div>
-  );
+
+    {weather.error ? <section className="card"><div className="card-body"><p role="status">Weather is temporarily unavailable. Please try again later.</p></div></section> : <div className="grid">
+      <section className="card span12 wx-hourly">
+        <div className="card-head"><h2>Hour by hour</h2><div className="wx-range" aria-label="Forecast range">{[12,36].map(n => <button type="button" className="btn mono" key={n} aria-pressed={range === n} onClick={() => { setRange(n); setSelected(null); }}>{n} hours</button>)}</div></div>
+        <div className="card-body">
+          {rain && <p className="wxrain">{rain}</p>}
+          <p className="sub">Choose an hour to preview its weather and sky. All times are Mountain Time.</p>
+          {shown.length > 0 ? <>
+            <div className="wx-timeline-control"><label htmlFor="forecast-hour">{hour ? forecastTime(hour.time) : "Preview forecast hours"}</label><button type="button" className="btn" onClick={() => setSelected(null)} disabled={!hour}>Back to now</button></div>
+            <input className="wx-hour-slider" id="forecast-hour" type="range" min={0} max={shown.length - 1} value={Math.max(0, shown.findIndex(h => h.time === selected))} aria-valuetext={forecastTime((hour ?? shown[0]).time)} onChange={e => setSelected(shown[Number(e.target.value)].time)} />
+            <div className="wx-hour-options" aria-label="Select forecast hour">{shown.map(h => <button type="button" key={h.time} aria-pressed={selected === h.time} onClick={() => setSelected(h.time)}><span>{forecastTime(h.time)}</span><strong>{h.tempF}°</strong><small>{h.precipChance}% rain</small></button>)}</div>
+            {hour && <p className="wx-hour-summary" role="status"><strong>{forecastTime(hour.time)} · {hour.tempF}°F</strong><br />{hour.shortForecast} · {hour.precipChance}% rain · {hour.windMph == null ? "Wind unavailable" : `${hour.windDir ?? ""} ${hour.windMph} mph wind`}</p>}
+            <details className="wx-trend"><summary>Temperature &amp; rain trend</summary><HourStrip hours={shown} /></details>
+            <p className="sub">{shown.length} forecast hours shown · bars indicate chance of precipitation.</p>
+          </> : <p className="sub">Hourly forecast unavailable. Daily forecasts may still be available below.</p>}
+        </div>
+      </section>
+      <section className="card span12"><div className="card-head"><h2>The week</h2><span className="mono sub">High / low</span></div><div className="card-body wx-days">{days.map(d => <div className="wx-day-row" key={d.name}><strong>{d.name}</strong><span>{d.shortForecast}{d.precipChance != null && d.precipChance > 0 ? ` · ${d.precipChance}% rain` : ""}</span><span className="mono">{d.high == null ? "—" : `${d.high}°`} / {d.low == null ? "—" : `${d.low}°`}</span></div>)}{!days.length && <p className="sub">Daily forecast unavailable.</p>}</div></section>
+      <section className="card span12"><div className="card-head"><h2>Sun &amp; night sky</h2></div><div className="card-body"><div className="wx-sun-summary"><span>Sunrise <strong>{sun.sunrise ?? "—"}</strong></span><span>Sunset <strong>{sun.sunset ?? "—"}</strong></span><span>Daylight <strong>{sun.daylight ?? "—"}</strong></span></div><button type="button" className="btn" aria-expanded={astronomy} aria-controls="sky-astronomy" onClick={() => setAstronomy(v => !v)}>{astronomy ? "Hide astronomy" : "Explore astronomy"}</button><p className="sub">Astronomy panels show today / now, independently of the forecast preview.</p></div></section>
+      {astronomy && <div className="grid span12" id="sky-astronomy"><SunPanel term={term} /><Tonight /><Orrery /></div>}
+    </div>}
+  </div>;
 }

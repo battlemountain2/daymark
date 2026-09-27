@@ -5,7 +5,7 @@ import type { State } from "@/lib/db";
 import { cloudStorage } from "@/lib/cloud-storage";
 import { useCloudRevision } from "@/lib/use-cloud-revision";
 type Tab = Category | "all" | "listen" | "saved";
-const tabs: { key: Tab; label: string }[] = [{key:"all",label:"For you"},{key:"news",label:"News"},{key:"music",label:"Music"},{key:"linux",label:"Linux"},{key:"tech",label:"Tech"},{key:"screen",label:"TV + film"},{key:"listen",label:"Listen later"},{key:"saved",label:"Saved"}];
+const tabs: { key: Tab; label: string }[] = [{key:"all",label:"Your mix"},{key:"news",label:"News"},{key:"music",label:"Music"},{key:"linux",label:"Linux"},{key:"tech",label:"Tech"},{key:"screen",label:"TV + film"},{key:"culture",label:"Culture"},{key:"listen",label:"Audio"},{key:"saved",label:"Saved"}];
 type Preferences = Record<string, boolean | Story>;
 type Digest = { day: string; provider: string; items: { id: string; summary: string; url: string; source: string }[] };
 export default function NewsPanel({ promise, st, mutate }: { promise: Promise<Story[]>; st: State; mutate: (body: Record<string, unknown>) => void }) {

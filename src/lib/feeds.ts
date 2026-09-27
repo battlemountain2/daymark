@@ -17,7 +17,7 @@
 
 import { unstable_cache } from "next/cache";
 
-export type Category = "linux" | "music" | "tech" | "screen" | "news";
+export type Category = "linux" | "music" | "tech" | "screen" | "news" | "culture";
 
 export type Source = {
   name: string;
@@ -78,7 +78,7 @@ export const SOURCES: Source[] = [
   // it; Bandcamp Daily and a scoped news query cover the rest.
   { name: "Bandcamp Daily", url: "https://daily.bandcamp.com/feed", cat: "music" },
   { name: "Stereogum", url: "https://www.stereogum.com/feed/", cat: "music" },
-  { name: "Dazed", url: "https://www.dazeddigital.com/rss", cat: "music" },
+  { name: "Dazed", url: "https://www.dazeddigital.com/rss", cat: "culture" },
   { name: "Google News", cat: "music",
     url: "https://news.google.com/rss/search?q=hyperpop+OR+%22PC+Music%22+OR+%22digicore%22+when:14d&hl=en-US&gl=US&ceid=US:en" },
 
@@ -103,6 +103,8 @@ export const SOURCES: Source[] = [
 
   { name: "Variety", url: "https://variety.com/feed/", cat: "screen" },
   { name: "AV Club", url: "https://www.avclub.com/rss", cat: "screen" },
+  { name: "Source New Mexico", url: "https://sourcenm.com/feed/", cat: "news", take: 5, cap: 512 * 1024 },
+  { name: "New Mexico In Depth", url: "https://nmindepth.com/feed/", cat: "news", take: 5, cap: 512 * 1024 },
 ];
 
 export type Story = {
@@ -253,7 +255,7 @@ async function readCapped(src: Source, cap: number): Promise<string> {
 async function readOne(src: Source, revalidate: number): Promise<Story[]> {
   try {
     if (src.cap) return parse(await readCapped(src, src.cap), src, src.take ?? 12);
-    const res = await fetch(src.url, { headers: HEADERS, next: { revalidate } });
+    const res = await fetch(src.url, { headers: HEADERS, next: { revalidate }, signal: AbortSignal.timeout(8000) });
     if (!res.ok) return [];
     return parse(await res.text(), src, src.take ?? 12);
   } catch {
@@ -271,7 +273,7 @@ async function readOne(src: Source, revalidate: number): Promise<Story[]> {
  */
 export const getStories = unstable_cache(
   async (): Promise<Story[]> => readStories(SOURCES),
-  ["feeds"],
+  ["feeds-v2-local-culture"],
   { revalidate: 60 * 30, tags: ["feeds"] }
 );
 
