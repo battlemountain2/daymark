@@ -34,7 +34,9 @@ export function rainWindow(hours: Hour[], threshold = 30): string | null {
     if ((!wet || i === next24.length - 1) && start >= 0) {
       const end = wet ? i : i - 1;
       const a = hourLabel(next24[start].time);
-      const b = hourLabel(next24[Math.min(end + 1, next24.length - 1)].time);
+      const endTime = new Date(Date.parse(next24[end].time) + 3600000).toISOString();
+      const localDate = (iso: string) => new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date(iso));
+      const b = hourLabel(endTime) + (localDate(endTime) !== localDate(next24[start].time) ? " tomorrow" : "");
       const peak = Math.max(...next24.slice(start, end + 1).map((h) => h.precipChance));
       const word = peak >= 60 ? "Rain likely" : peak >= 40 ? "Showers possible" : "A chance of rain";
       return start === end ? `${word} around ${a}.` : `${word} ${a}–${b}.`;

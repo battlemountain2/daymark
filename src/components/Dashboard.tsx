@@ -1,4 +1,5 @@
 "use client";
+import AgentStatus from "@/components/AgentStatus";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -91,7 +92,7 @@ function LedeWithCanvas({
   canvasPromise: Promise<CanvasResult>; weatherPromise: Promise<WeatherResult>; greeting: string;
 }) {
   const c = use(canvasPromise);
-  const items = buildItems(c.assignments, st);
+  const items = buildItems(c.assignments, st).filter(i => !st.dismissed.includes(i.id));
   return (
     <Suspense fallback={<LedeView greeting={greeting} l={lede({ ...base, items, weather: null })} />}>
       <LedeWithWeather base={base} items={items} promise={weatherPromise} greeting={greeting} />
@@ -189,7 +190,7 @@ export default function Dashboard({
   useEffect(() => {
     let alive = true;
     Promise.resolve(canvasPromise).then(
-      (c) => { if (alive) setWork(buildItems(c.assignments, st)); },
+      (c) => { if (alive) setWork(buildItems(c.assignments, st).filter(i => !st.dismissed.includes(i.id))); },
       () => { if (alive) setWork([]); }
     );
     return () => { alive = false; };
@@ -655,6 +656,7 @@ export default function Dashboard({
         />
       )}
 
+      <AgentStatus />
       <footer>
         Assignments come from your Canvas calendar feed, and your ticks live in a database — so
         checking something off on your phone shows up on your laptop, and an edit made with no

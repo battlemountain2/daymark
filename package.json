@@ -6,17 +6,19 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint src",
+    "test": "tsx --test tests/*.test.ts",
     "typecheck": "tsc --noEmit",
     "setup": "node scripts/setup.mjs",
     "gen-vapid": "node scripts/gen-vapid.mjs",
     "prune": "node scripts/prune.mjs"
   },
+  "overrides": { "postcss": "^8.5.23" },
   "dependencies": {
     "@libsql/client": "^0.14.0",
-    "next": "^15.1.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "next": "^15.5.26",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
@@ -24,6 +26,9 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/web-push": "^3.6.4",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^15.5.26",
+    "tsx": "^4.23.15",
     "typescript": "^5.7.0"
   }
 }

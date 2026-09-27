@@ -25,7 +25,7 @@ jobs:
           DASHBOARD_URL: ${{ secrets.DASHBOARD_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          TARGET_URL="${DASHBOARD_URL:-https://hey-brayan.vercel.app}"
+          TARGET_URL="${DASHBOARD_URL:-https://daymark-bry8.vercel.app}"
           # Strip trailing slash
           TARGET_URL="${TARGET_URL%/}"
           # Ensure https scheme
@@ -55,6 +55,8 @@ jobs:
             echo "✓ Successfully checked notification schedule."
           elif [ "$HTTP_CODE" = "401" ] || [ "$HTTP_CODE" = "503" ]; then
             echo "Note: Endpoint reached but authorization failed ($HTTP_CODE). Configure CRON_SECRET on Vercel and GitHub Secrets."
+            exit 1
           else
             echo "Endpoint check completed with status $HTTP_CODE."
+            exit 1
           fi

@@ -26,7 +26,6 @@ export default function QuickStudyModal({ dueCards, onClose, onFinish }: Props) 
 
   useEffect(() => {
     setSrsStore(loadSRSStore());
-    setCards(dueCards);
   }, [dueCards]);
 
   useEffect(() => {
@@ -47,7 +46,7 @@ export default function QuickStudyModal({ dueCards, onClose, onFinish }: Props) 
   const currentCard = cards[idx];
 
   const handleGrade = (grade: SRSGrade) => {
-    if (!currentCard) return;
+    if (!currentCard || !isFlipped) return;
     const prevSRS = srsStore[currentCard.id] || INITIAL_SRS_STATE(currentCard.id);
     const updated = calculateNextSRS(prevSRS, grade);
     const newStore = saveSRSCard(updated);
@@ -67,7 +66,7 @@ export default function QuickStudyModal({ dueCards, onClose, onFinish }: Props) 
   const isComplete = idx >= cards.length;
 
   return (
-    <div className="brief-modal-scrim" onClick={onClose} role="dialog" aria-modal="true">
+    <div className="brief-modal-scrim" onClick={onClose} role="dialog" aria-modal="true" aria-label="Quick study review">
       <div className="quick-study-box" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="qs-header">

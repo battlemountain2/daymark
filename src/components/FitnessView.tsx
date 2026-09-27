@@ -1,6 +1,9 @@
 "use client";
+import { cloudStorage } from "@/lib/cloud-storage";
+
 
 import Link from "next/link";
+import { useCloudRevision } from "@/lib/use-cloud-revision";
 import { useEffect, useState } from "react";
 import {
   WORKOUT_DAYS,
@@ -12,6 +15,8 @@ import {
 } from "@/lib/fitness-data";
 
 export default function FitnessView() {
+  const cloudRevision = useCloudRevision();
+  const [weekStart, setWeekStart] = useState("");
   const [activeDayIdx, setActiveDayIdx] = useState<number>(1); // Default to Monday
   const [view, setView] = useState<"gym" | "home">("gym");
   const [tab, setTab] = useState<"schedule" | "nutrition" | "tips">("schedule");
@@ -30,13 +35,23 @@ export default function FitnessView() {
         weekday: "long",
       }).format(new Date());
       const idx = WORKOUT_DAYS.findIndex((d) => d.day.toLowerCase() === parts.toLowerCase());
-      if (idx !== -1) setActiveDayIdx(idx);
+      if (cloudRevision === 0 && idx !== -1) setActiveDayIdx(idx);
 
       // Load checked sets
-      const saved = localStorage.getItem("daymark:workout:sets");
-      if (saved) setCheckedSets(JSON.parse(saved));
+      const date = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Denver" }).format(new Date());
+      const monday = new Date(`${date}T12:00:00Z`);
+      monday.setUTCDate(monday.getUTCDate() - (monday.getUTCDay() + 6) % 7);
+      const week = monday.toISOString().slice(0, 10);
+      setWeekStart(week);
+      const saved = cloudStorage.getItem("daymark:workout:sets");
+      if (saved) {
+        const sets = JSON.parse(saved);
+        const migrated = Object.fromEntries(Object.entries(sets).map(([k,v]) => [/^\d{4}-/.test(k) ? k : `${week}:${k}`,v]));
+        setCheckedSets(migrated as Record<string, boolean>);
+        if (JSON.stringify(sets) !== JSON.stringify(migrated)) cloudStorage.setItem("daymark:workout:sets", JSON.stringify(migrated));
+      }
     } catch {}
-  }, []);
+  }, [cloudRevision]);
 
   // Rest timer countdown
   useEffect(() => {
@@ -81,20 +96,23 @@ export default function FitnessView() {
     const next = { ...checkedSets, [key]: !checkedSets[key] };
     setCheckedSets(next);
     try {
-      localStorage.setItem("daymark:workout:sets", JSON.stringify(next));
+      cloudStorage.setItem("daymark:workout:sets", JSON.stringify(next));
+      const history = JSON.parse(cloudStorage.getItem("daymark:workout:history") || "{}");
+      history[crypto.randomUUID()] = { at: new Date().toISOString(), set: key, completed: next[key] };
+      cloudStorage.setItem("daymark:workout:history", JSON.stringify(history));
     } catch {}
   };
 
   const clearTodaySets = () => {
     const current = WORKOUT_DAYS[activeDayIdx];
-    const prefix = `${current.day}:`;
+    const prefix = `${weekStart}:${current.day}:`;
     const next = { ...checkedSets };
     for (const k of Object.keys(next)) {
       if (k.startsWith(prefix)) delete next[k];
     }
     setCheckedSets(next);
     try {
-      localStorage.setItem("daymark:workout:sets", JSON.stringify(next));
+      cloudStorage.setItem("daymark:workout:sets", JSON.stringify(next));
     } catch {}
   };
 
@@ -111,7 +129,7 @@ export default function FitnessView() {
     const count = m ? parseInt(m[1], 10) : 3;
     let done = 0;
     for (let s = 1; s <= count; s++) {
-      if (checkedSets[`${current.day}:${ex.name}:${s}`]) done++;
+      if (checkedSets[`${weekStart}:${current.day}:${ex.name}:${s}`]) done++;
     }
     return acc + done;
   }, 0);
@@ -313,7 +331,7 @@ export default function FitnessView() {
                           <span className="fec-set-lbl">Log Sets:</span>
                           {Array.from({ length: setCount }, (_, sIdx) => {
                             const setNum = sIdx + 1;
-                            const key = `${current.day}:${ex.name}:${setNum}`;
+                            const key = `${weekStart}:${current.day}:${ex.name}:${setNum}`;
                             const isDone = !!checkedSets[key];
 
                             return (

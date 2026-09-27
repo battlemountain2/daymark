@@ -1,6 +1,9 @@
 "use client";
+import { cloudStorage } from "@/lib/cloud-storage";
+
 
 import { useState, useEffect } from "react";
+import { useCloudRevision } from "@/lib/use-cloud-revision";
 import { CODING_CHAPTERS, type CodingChapter, type QuizQuestion } from "@/data/coding-study";
 
 type SavedProgress = {
@@ -12,6 +15,7 @@ type SavedProgress = {
 };
 
 export default function CodingStudyLab() {
+  const cloudRevision = useCloudRevision();
   const [selectedChapterId, setSelectedChapterId] = useState<string>("ch1");
   const [activeSection, setActiveSection] = useState<"quiz" | "gis" | "zed" | "cheatsheet">("quiz");
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
@@ -27,10 +31,10 @@ export default function CodingStudyLab() {
   // Load progress from localStorage
   useEffect(() => {
     try {
-      const raw = localStorage.getItem("daymark:coding-progress");
+      const raw = cloudStorage.getItem("daymark:coding-progress");
       if (raw) setProgress(JSON.parse(raw));
     } catch {}
-  }, []);
+  }, [cloudRevision]);
 
   // Save progress
   const saveProgress = (chId: string, score: number, total: number) => {
@@ -46,7 +50,7 @@ export default function CodingStudyLab() {
         },
       };
       try {
-        localStorage.setItem("daymark:coding-progress", JSON.stringify(updated));
+        cloudStorage.setItem("daymark:coding-progress", JSON.stringify(updated));
       } catch {}
       return updated;
     });

@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "./refinements.css";
+import CloudSync from "@/components/CloudSync";
 
 export const metadata: Metadata = {
   title: "Daymark",
@@ -43,11 +45,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               `var h=new Date().toLocaleString("en-US",{timeZone:"America/Denver",hour:"numeric",hour12:false});` +
               `document.documentElement.setAttribute("data-theme",(+h<6||+h>=20)?"dark":"light");}` +
               `}catch(e){}` +
-              `if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}`,
+              (process.env.NODE_ENV === "production"
+                ? `if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}`
+                : `if("serviceWorker" in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});});}if("caches" in window){caches.keys().then(function(ks){ks.filter(function(k){return k.startsWith("daymark-");}).forEach(function(k){caches.delete(k);});});}`),
           }}
         />
       </head>
-      <body>{children}</body>
+      <body>{children}<CloudSync /></body>
     </html>
   );
 }

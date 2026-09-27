@@ -1,3 +1,4 @@
+import { cloudStorage } from "@/lib/cloud-storage";
 /**
  * SuperMemo SM-2 Spaced Repetition Algorithm.
  *
@@ -92,7 +93,7 @@ const LOCAL_STORAGE_KEY = "daymark:srs:v1";
 export function loadSRSStore(): SRSStore {
   if (typeof window === "undefined") return {};
   try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    const raw = cloudStorage.getItem(LOCAL_STORAGE_KEY);
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
@@ -103,7 +104,7 @@ export function saveSRSCard(state: SRSCardState): SRSStore {
   const store = loadSRSStore();
   store[state.cardId] = state;
   try {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(store));
+    cloudStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(store));
   } catch {}
   return store;
 }
@@ -118,9 +119,8 @@ export function getDueCards(
   todayIso: string,
   store: SRSStore
 ): Flashcard[] {
-  return cards.filter((card) => {
-    const srs = store[card.id];
-    if (!srs) return true; // Brand new card, due for initial review
-    return !srs.dueDate || srs.dueDate <= todayIso;
-  });
+  const reviews = cards.filter(card => store[card.id] && store[card.id].dueDate <= todayIso);
+  const introducedToday = Object.values(store).filter(s => s.history?.[0]?.date === todayIso).length;
+  const newCards = cards.filter(card => !store[card.id]).slice(0, Math.max(0, 10 - introducedToday));
+  return [...reviews, ...newCards];
 }

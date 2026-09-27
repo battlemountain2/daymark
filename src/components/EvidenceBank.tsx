@@ -1,4 +1,6 @@
 "use client";
+import { cloudStorage } from "@/lib/cloud-storage";
+
 
 import { useState, useMemo, useEffect } from "react";
 import { type ColourKey } from "@/lib/term";
@@ -106,7 +108,7 @@ export default function EvidenceBank() {
   useEffect(() => {
     const loadCustom = () => {
       try {
-        const stored = localStorage.getItem("hb:custom-synthesis-evidence");
+        const stored = cloudStorage.getItem("hb:custom-synthesis-evidence");
         if (stored) {
           setCustomItems(JSON.parse(stored));
         }

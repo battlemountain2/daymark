@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { isSignedIn } from "@/lib/auth";
 import { listVaultNotes, saveVaultNote, enrichVaultNote, answerCopilotQuery } from "@/lib/vault";
+import { claimAIRequest } from "@/lib/ai";
+import { readInput, textField, InputError } from "@/lib/api-input";
+export const maxDuration = 60;
 
 export async function GET(req: Request) {
   if (!(await isSignedIn())) {
@@ -20,8 +23,13 @@ export async function POST(req: Request) {
   }
 
   try {
-    const body = await req.json();
-    const { action, course, title, content, rawContent, query, noteContext } = body;
+    const body = await readInput(req);
+    const action = textField(body, "action", "save", 40);
+    if (!["save", "handoff", "ask_copilot"].includes(action)) throw new InputError("Unknown action.");
+    const course = textField(body, "course", "General", 100), title = textField(body, "title", "Lecture Note", 200);
+    const content = textField(body, "content", "", 40000), rawContent = textField(body, "rawContent", "", 20000);
+    const query = textField(body, "query", "", 2000), noteContext = textField(body, "noteContext", "", 12000);
+    if (action !== "save" && !await claimAIRequest()) return NextResponse.json({ error: "Hourly AI limit reached. Try again next hour." }, { status: 429 });
 
     if (action === "ask_copilot") {
       const answer = await answerCopilotQuery({
@@ -43,14 +51,14 @@ export async function POST(req: Request) {
 
     // Default: Save note
     const note = await saveVaultNote({
+      id: body.id === undefined ? undefined : textField(body, "id", "", 100),
       course: course || "General",
       title: title || "Lecture Note",
       content: content || "",
     });
 
     return NextResponse.json({ success: true, note });
-  } catch (err: any) {
-    console.error("Vault API Error:", err);
-    return NextResponse.json({ error: err.message || "Failed to process vault request" }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof InputError ? err.message : "Vault is unavailable. Your draft remains on this device." }, { status: err instanceof InputError ? 400 : 503 });
   }
 }

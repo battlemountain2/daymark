@@ -1,6 +1,9 @@
 "use client";
+import { cloudStorage } from "@/lib/cloud-storage";
+
 
 import { useEffect, useState, useMemo } from "react";
+import { useCloudRevision } from "@/lib/use-cloud-revision";
 import { soundscape, type SoundscapeType } from "@/lib/soundscape";
 import { COURSE_CRIBS, type CourseCrib } from "@/lib/course-crib-data";
 
@@ -30,6 +33,7 @@ export default function PomodoroModal({
   onClose: () => void;
 }) {
   const [mode, setMode] = useState<Mode>("focus");
+  const cloudRevision = useCloudRevision();
   const [cycle, setCycle] = useState<number>(1);
   const [totalSeconds, setTotalSeconds] = useState<number>(25 * 60);
   const [secondsLeft, setSecondsLeft] = useState<number>(25 * 60);
@@ -47,7 +51,7 @@ export default function PomodoroModal({
   useEffect(() => {
     try {
       const todayStr = new Date().toISOString().slice(0, 10);
-      const raw = localStorage.getItem("daymark:focus-stats");
+      const raw = cloudStorage.getItem("daymark:focus-stats");
       if (raw) {
         const stats: FocusStats = JSON.parse(raw);
         if (stats.date === todayStr) {
@@ -55,12 +59,12 @@ export default function PomodoroModal({
         }
       }
     } catch {}
-  }, []);
+  }, [cloudRevision]);
 
   const recordFocusCompletion = (mins: number, courseCode: string | null) => {
     try {
       const todayStr = new Date().toISOString().slice(0, 10);
-      const raw = localStorage.getItem("daymark:focus-stats");
+      const raw = cloudStorage.getItem("daymark:focus-stats");
       let stats: FocusStats = {
         date: todayStr,
         totalMinutes: 0,
@@ -76,7 +80,10 @@ export default function PomodoroModal({
       if (courseCode) {
         stats.byCourse[courseCode] = (stats.byCourse[courseCode] || 0) + mins;
       }
-      localStorage.setItem("daymark:focus-stats", JSON.stringify(stats));
+      cloudStorage.setItem("daymark:focus-stats", JSON.stringify(stats));
+      const history = JSON.parse(cloudStorage.getItem("daymark:focus-history") || "{}");
+      history[crypto.randomUUID()] = { date: todayStr, minutes: mins, course: courseCode };
+      cloudStorage.setItem("daymark:focus-history", JSON.stringify(history));
       setTodayFocusMins(stats.totalMinutes);
     } catch {}
   };

@@ -1,6 +1,9 @@
 "use client";
+import { cloudStorage } from "@/lib/cloud-storage";
+
 
 import { useEffect, useMemo, useState, useRef } from "react";
+import { useCloudRevision } from "@/lib/use-cloud-revision";
 import type { Flashcard, CardStatus, CourseStudyInfo } from "@/lib/study-hub-types";
 import {
   calculateNextSRS,
@@ -66,6 +69,7 @@ export default function FlashcardDeckViewer({
 
   // SM-2 Spaced Repetition & Session Tracking
   const [srsStore, setSrsStore] = useState<SRSStore>({});
+  const cloudRevision = useCloudRevision();
   const [sessionStreak, setSessionStreak] = useState<number>(0);
   const [sessionReviewed, setSessionReviewed] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -89,12 +93,12 @@ export default function FlashcardDeckViewer({
 
   useEffect(() => {
     setSrsStore(loadSRSStore());
-  }, []);
+  }, [cloudRevision]);
 
   useEffect(() => {
     const loadCustom = () => {
       try {
-        const stored = localStorage.getItem("hb:custom-anki-cards");
+        const stored = cloudStorage.getItem("hb:custom-anki-cards");
         const custom: Flashcard[] = stored ? JSON.parse(stored) : [];
         const base = [...initialCards];
         const existingIds = new Set(base.map(c => c.id));
@@ -701,7 +705,7 @@ export default function FlashcardDeckViewer({
               >
                 <div className="flashcard-inner">
                   {/* Front Side (Question) */}
-                  <div className="flashcard-face flashcard-front">
+                  <div className="flashcard-face flashcard-front" aria-hidden={isFlipped}>
                     <div className="card-topline">
                       <span className="course-chip mono">
                         <span className={`tagdot ${getCourseColorKey(currentCard.courseCode)}`} />
@@ -730,7 +734,7 @@ export default function FlashcardDeckViewer({
                   </div>
 
                   {/* Back Side (Answer) */}
-                  <div className="flashcard-face flashcard-back">
+                  <div className="flashcard-face flashcard-back" aria-hidden={!isFlipped}>
                     <div className="card-topline">
                       <span className="course-chip mono">
                         <span className={`tagdot ${getCourseColorKey(currentCard.courseCode)}`} />

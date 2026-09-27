@@ -135,7 +135,7 @@ function toHorizon(raHours: number, decDeg: number, lat: number, lon: number, wh
   const alt = Math.asin(
     Math.sin(latR) * Math.sin(dec) + Math.cos(latR) * Math.cos(dec) * Math.cos(ha)
   ) * DEG;
-  let az = Math.atan2(
+  const az = Math.atan2(
     Math.sin(ha),
     Math.cos(ha) * Math.sin(latR) - Math.tan(dec) * Math.cos(latR)
   ) * DEG + 180;

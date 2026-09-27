@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { isSignedIn } from "@/lib/auth";
 import { getStudyHubData } from "@/lib/study-hub";
+import { claimAIRequest } from "@/lib/ai";
+import { readInput, textField, InputError } from "@/lib/api-input";
+export const maxDuration = 60;
 import {
   generateSocraticTutor,
   generatePracticeExam,
@@ -38,8 +41,14 @@ export async function POST(req: Request) {
   }
 
   try {
-    const body = await req.json();
+    const body = await readInput(req) as Record<string, any>;
     const { action } = body;
+    if (!["socratic_tutor", "generate_exam", "ai_friday_synthesis", "commute_advisory"].includes(action)) throw new InputError("Unknown action.");
+    for (const key of ["front", "back", "courseCode", "topic", "weekNum", "scheduledDate", "classTitle", "classWhere", "classStart", "leaveByTime"]) if (body[key] !== undefined) textField(body, key);
+    if (body.count !== undefined && (!Number.isInteger(body.count) || body.count < 1 || body.count > 10)) throw new InputError("Choose 1–10 questions.");
+    for (const key of ["takeaways", "weakAreas"]) if (body[key] !== undefined && (!Array.isArray(body[key]) || body[key].length > 30 || !body[key].every((v: unknown) => v && typeof v === "object" && Object.values(v).every(x => typeof x === "string" && x.length <= 4000)))) throw new InputError(`Invalid ${key}.`);
+    for (const key of ["driveMins", "minutesUntilLeave"]) if (body[key] !== undefined && (typeof body[key] !== "number" || !Number.isFinite(body[key]))) throw new InputError(`Invalid ${key}.`);
+    if (!await claimAIRequest()) return NextResponse.json({ error: "Hourly AI limit reached. Try again next hour." }, { status: 429 });
 
     if (action === "socratic_tutor") {
       const { front, back, courseCode, topic } = body;
@@ -87,8 +96,7 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
-  } catch (err: any) {
-    console.error("Study Hub API error", err);
-    return NextResponse.json({ error: err.message || "Failed to process request" }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof InputError ? err.message : "The study assistant is unavailable. Please try again." }, { status: err instanceof InputError ? 400 : 503 });
   }
 }

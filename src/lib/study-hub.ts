@@ -1,6 +1,8 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import courseStatus from "@/data/study-hub/course-status.json";
+import { getTerm } from "./get-term";
+import { daysBetween } from "./localtime";
 import { type ColourKey } from "@/lib/term";
 import {
   type CourseStudyInfo,
@@ -47,6 +49,9 @@ async function readAnkiCards(): Promise<Flashcard[]> {
 }
 
 export async function getStudyHubData(): Promise<StudyHubData> {
+  const term = await getTerm();
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Denver" }).format(new Date());
+  const week = Math.max(1, Math.floor(daysBetween(term.start, today) / 7) + 1);
   const activeCourseCodes = new Set(
     status.courses.map((c) => c.code.replace(/\s+/g, "").toUpperCase())
   );
@@ -62,16 +67,17 @@ export async function getStudyHubData(): Promise<StudyHubData> {
 
     return {
       ...course,
+      currentWeek: `Week ${week} · materials last updated ${status.lastSynced.slice(0, 10)}`,
       cards,
       deckStats: calculateDeckStats(cards),
     };
   });
 
   return {
-    activeTerm: status.activeTerm,
-    currentWeekNumber: status.currentWeekNumber,
+    activeTerm: term.name,
+    currentWeekNumber: week,
     lastSynced: status.lastSynced,
-    weeklyReview: status.weeklyReview,
+    weeklyReview: { ...status.weeklyReview, weekTitle: `Week ${week} review · saved reading material`, scheduledReviewDate: "Weekly review · Fridays at 8 PM Mountain Time" },
     courses,
     allCards,
     overallDeckStats: calculateDeckStats(allCards),

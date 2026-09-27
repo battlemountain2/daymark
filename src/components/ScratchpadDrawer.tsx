@@ -1,6 +1,9 @@
 "use client";
+import { cloudStorage, getCloudStatus } from "@/lib/cloud-storage";
+
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useCloudRevision } from "@/lib/use-cloud-revision";
 import type { Flashcard } from "@/lib/study-hub-types";
 import type { EvidenceItem } from "@/components/EvidenceBank";
 import type { VaultNote } from "@/lib/vault";
@@ -26,14 +29,16 @@ const SIDEBAR_STORAGE_KEY = "hb:scratchpad-sidebar";
 const DEFAULT_DRAWER_WIDTH = 600;
 
 export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "General" }: ScratchpadDrawerProps) {
+  const cloudRevision = useCloudRevision();
+  const dialogRef = useRef<HTMLDivElement>(null);
   const [activeTag, setActiveTag] = useState<string>(defaultTag);
   const [viewMode, setViewMode] = useState<"edit" | "split" | "preview">("edit");
   const [notes, setNotes] = useState<Record<string, string>>(() => {
     if (typeof window === "undefined") return { General: "" };
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
+      const saved = cloudStorage.getItem(STORAGE_KEY);
       if (saved) return JSON.parse(saved);
-      const old = localStorage.getItem("hb:scratchpad:notes");
+      const old = cloudStorage.getItem("hb:scratchpad:notes");
       if (old) return { General: old };
     } catch {}
     return { General: "" };
@@ -42,7 +47,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
   // Resizable Drawer & Fullscreen State
   const [drawerWidth, setDrawerWidth] = useState<number>(() => {
     if (typeof window === "undefined") return DEFAULT_DRAWER_WIDTH;
-    const saved = localStorage.getItem(WIDTH_STORAGE_KEY);
+    const saved = cloudStorage.getItem(WIDTH_STORAGE_KEY);
     return saved ? Math.max(450, parseInt(saved, 10)) : DEFAULT_DRAWER_WIDTH;
   });
   const [isResizing, setIsResizing] = useState(false);
@@ -51,7 +56,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
   // Sidebar State
   const [showSidebar, setShowSidebar] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
-    const saved = localStorage.getItem(SIDEBAR_STORAGE_KEY);
+    const saved = cloudStorage.getItem(SIDEBAR_STORAGE_KEY);
     return saved !== null ? saved === "true" : true;
   });
   const [sidebarSearch, setSidebarSearch] = useState("");
@@ -64,6 +69,14 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
   const [savedPing, setSavedPing] = useState(false);
   const [bannerMsg, setBannerMsg] = useState<string | null>(null);
   const [isHandoffRunning, setIsHandoffRunning] = useState(false);
+  const [isSavingVault, setIsSavingVault] = useState(false);
+  const [cloudMessage, setCloudMessage] = useState("Draft saved on this device");
+  const saveId = useRef<string | null>(null);
+  useEffect(() => {
+    const update = () => setCloudMessage(getCloudStatus().message);
+    update(); window.addEventListener("daymark:sync-status", update);
+    return () => window.removeEventListener("daymark:sync-status", update);
+  }, []);
 
   // Inline Copilot State
   const [copilotQuery, setCopilotQuery] = useState("");
@@ -81,6 +94,26 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
   const [ankiSource, setAnkiSource] = useState("");
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  useEffect(() => {
+    try { const saved = JSON.parse(cloudStorage.getItem(STORAGE_KEY) || "null"); if (saved) setNotes(saved); } catch {}
+  }, [cloudRevision]);
+  useEffect(() => {
+    if (!isOpen) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    if (window.innerWidth < 600) setShowSidebar(false);
+    const trap = (event: KeyboardEvent) => {
+      if (event.key !== "Tab") return;
+      const root = dialogRef.current?.querySelector('[aria-label="Create flashcard"]') || dialogRef.current;
+      const controls = Array.from(root?.querySelectorAll<HTMLElement>('button:not([disabled]),a[href],input,textarea,select,[tabindex="0"]') || []).filter(el => el.getClientRects().length);
+      const first = controls[0], last = controls[controls.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !root?.contains(document.activeElement))) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && (document.activeElement === last || !root?.contains(document.activeElement))) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener("keydown", trap);
+    return () => { document.body.style.overflow = overflow; document.removeEventListener("keydown", trap); previous?.focus(); };
+  }, [isOpen]);
 
   // Sync defaultTag if provided
   useEffect(() => {
@@ -122,11 +155,11 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
   const handleToggleSidebar = () => {
     const nextState = !showSidebar;
     setShowSidebar(nextState);
-    localStorage.setItem(SIDEBAR_STORAGE_KEY, String(nextState));
+    cloudStorage.setItem(SIDEBAR_STORAGE_KEY, String(nextState));
 
     if (nextState && drawerWidth < 740 && !isFullscreen) {
       setDrawerWidth(760);
-      localStorage.setItem(WIDTH_STORAGE_KEY, "760");
+      cloudStorage.setItem(WIDTH_STORAGE_KEY, "760");
     }
   };
 
@@ -147,7 +180,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
 
     const handleMouseUp = () => {
       setIsResizing(false);
-      localStorage.setItem(WIDTH_STORAGE_KEY, drawerWidth.toString());
+      cloudStorage.setItem(WIDTH_STORAGE_KEY, drawerWidth.toString());
     };
 
     window.addEventListener("mousemove", handleMouseMove);
@@ -160,7 +193,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
 
   const handleResetResizer = () => {
     setDrawerWidth(DEFAULT_DRAWER_WIDTH);
-    localStorage.setItem(WIDTH_STORAGE_KEY, DEFAULT_DRAWER_WIDTH.toString());
+    cloudStorage.setItem(WIDTH_STORAGE_KEY, DEFAULT_DRAWER_WIDTH.toString());
   };
 
   // Keyboard Shortcuts
@@ -182,13 +215,26 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
   }, [isOpen, onClose, showAnkiModal, isFullscreen]);
 
   const currentContent = notes[activeTag] || "";
+  const saveCopyToVault = async () => {
+    setIsSavingVault(true);
+    saveId.current ||= crypto.randomUUID();
+    try {
+      const res = await fetch("/api/vault", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "save", id: saveId.current, course: activeTag, title: `${activeTag} Lecture Note`, content: currentContent }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      saveId.current = null;
+      setBannerMsg("Saved a copy to your cloud Vault.");
+      await loadAllVaultNotes();
+    } catch (error) { setBannerMsg(error instanceof Error ? error.message : "Save failed; draft remains on this device."); }
+    finally { setIsSavingVault(false); }
+  };
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
     const updated = { ...notes, [activeTag]: val };
     setNotes(updated);
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      cloudStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       setSavedPing(true);
       setTimeout(() => setSavedPing(false), 800);
     } catch {}
@@ -236,7 +282,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
             : `- ${transcript.trim()}`;
           const updated = { ...notes, [activeTag]: updatedText };
           setNotes(updated);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+          cloudStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
           setBannerMsg(`🎙️ Dictated: "${transcript.trim().slice(0, 45)}..."`);
           setTimeout(() => setBannerMsg(null), 3000);
         }
@@ -298,7 +344,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
     const snippet = `\n\n> [!TIP] Copilot Q&A: ${copilotQuery.trim()}\n> ${copilotAnswer}\n`;
     const updated = { ...notes, [activeTag]: (currentContent + snippet).trim() };
     setNotes(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    cloudStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     setCopilotAnswer(null);
     setCopilotQuery("");
     setBannerMsg("✓ Inserted Copilot answer into note!");
@@ -312,7 +358,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
     if (noteContent !== undefined) {
       const updated = { ...notes, [course]: noteContent };
       setNotes(updated);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      cloudStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     }
   };
 
@@ -322,7 +368,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
     setSelectedNoteId("draft");
     const updated = { ...notes, [course]: "" };
     setNotes(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    cloudStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     setBannerMsg(`✦ Started fresh draft for ${course}`);
     setTimeout(() => setBannerMsg(null), 2500);
     textareaRef.current?.focus();
@@ -355,7 +401,6 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
         `title: "${activeTag} Lecture Notes"`,
         `course: "${activeTag}"`,
         `date: "${dateStr}"`,
-        `week: 5`,
         `tags: ["lecture", "${activeTag.toLowerCase().replace(/\s+/g, "-")}"]`,
         `vault: "Obsidian"`,
         `---`,
@@ -384,7 +429,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
       const updated = { ...notes, [activeTag]: "" };
       setNotes(updated);
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        cloudStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       } catch {}
     }
   };
@@ -427,10 +472,10 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
     };
 
     try {
-      const stored = localStorage.getItem("hb:custom-anki-cards");
+      const stored = cloudStorage.getItem("hb:custom-anki-cards");
       const list: Flashcard[] = stored ? JSON.parse(stored) : [];
       list.unshift(newCard);
-      localStorage.setItem("hb:custom-anki-cards", JSON.stringify(list));
+      cloudStorage.setItem("hb:custom-anki-cards", JSON.stringify(list));
       window.dispatchEvent(new CustomEvent("custom-anki-updated"));
 
       setShowAnkiModal(false);
@@ -465,10 +510,10 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
     };
 
     try {
-      const stored = localStorage.getItem("hb:custom-synthesis-evidence");
+      const stored = cloudStorage.getItem("hb:custom-synthesis-evidence");
       const list: EvidenceItem[] = stored ? JSON.parse(stored) : [];
       list.unshift(item);
-      localStorage.setItem("hb:custom-synthesis-evidence", JSON.stringify(list));
+      cloudStorage.setItem("hb:custom-synthesis-evidence", JSON.stringify(list));
       window.dispatchEvent(new CustomEvent("custom-evidence-updated"));
 
       setBannerMsg(`★ Pushed to Friday 8:00 PM Evidence Bank!`);
@@ -502,14 +547,14 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
       if (data.enrichedMarkdown) {
         const updated = { ...notes, [activeTag]: data.enrichedMarkdown };
         setNotes(updated);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        cloudStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
 
         // Inject mined Anki cards into active deck
         if (data.generatedCards && data.generatedCards.length > 0) {
-          const stored = localStorage.getItem("hb:custom-anki-cards");
+          const stored = cloudStorage.getItem("hb:custom-anki-cards");
           const list: Flashcard[] = stored ? JSON.parse(stored) : [];
           const combined = [...data.generatedCards, ...list];
-          localStorage.setItem("hb:custom-anki-cards", JSON.stringify(combined));
+          cloudStorage.setItem("hb:custom-anki-cards", JSON.stringify(combined));
           window.dispatchEvent(new CustomEvent("custom-anki-updated"));
         }
 
@@ -606,10 +651,10 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
   if (!isOpen) return null;
 
   return (
-    <div className="scratchpad-overlay" onClick={onClose} role="dialog" aria-modal="true">
+    <div ref={dialogRef} className="scratchpad-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label="Academic Vault and scratchpad">
       <div
         className={`scratchpad-drawer ${isFullscreen ? "fullscreen" : ""}`}
-        style={!isFullscreen ? { width: `${drawerWidth}px` } : undefined}
+        style={!isFullscreen ? { width: `min(${drawerWidth}px, 100vw)` } : undefined}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Left Resizer Drag Handle (Only when not in fullscreen) */}
@@ -825,7 +870,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
                   className="scratchpad-textarea mono"
                   value={currentContent}
                   onChange={handleTextChange}
-                  placeholder={`Jot raw lecture notes, lab findings, or quotes for ${activeTag}...\n\n- Tap "🚀 Handoff to Agent" to enrich with syllabus context & Anki cards\n- Use [[Concept]] for Obsidian-style bi-directional links\n- Auto-saved directly to local Markdown vault`}
+                  placeholder={`Jot lecture notes, lab findings, or quotes for ${activeTag}...\n\nDrafts save on this device and sync to your account. Save a copy to the Vault when ready, or ask an agent to help review it.`}
                   spellCheck={false}
                 />
               ) : viewMode === "split" ? (
@@ -902,11 +947,12 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
                 <span>{chars} chars</span>
                 <span className="dot-sep">·</span>
                 <span className={`save-indicator ${savedPing ? "saving" : ""}`}>
-                  {savedPing ? "Saving..." : "Saved to Vault"}
+                  {savedPing ? "Saving draft…" : cloudMessage}
                 </span>
               </div>
 
               <div className="scratchpad-actions mono">
+                <button type="button" className="scratchpad-act-btn" disabled={!currentContent.trim() || isSavingVault} onClick={() => void saveCopyToVault()}>{isSavingVault ? "Saving…" : "Save copy to Vault"}</button>
                 {/* 🎙️ Voice Dictation Button */}
                 <button
                   type="button"
@@ -981,7 +1027,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
         {/* 1-Click Anki Card Creator Modal */}
         {showAnkiModal && (
           <div className="anki-quick-modal-backdrop" onClick={() => setShowAnkiModal(false)}>
-            <div className="anki-quick-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="anki-quick-modal" role="dialog" aria-modal="true" aria-label="Create flashcard" onClick={(e) => e.stopPropagation()}>
               <div className="anki-modal-head">
                 <span className="mono anki-badge">⚡ 1-Click Anki Generator</span>
                 <button
@@ -998,6 +1044,8 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
                   <label className="mono anki-label">Front (Question / Prompt):</label>
                   <textarea
                     className="anki-input mono"
+                    aria-label="Flashcard question"
+                    autoFocus
                     rows={3}
                     value={ankiFront}
                     onChange={(e) => setAnkiFront(e.target.value)}
@@ -1010,6 +1058,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
                   <label className="mono anki-label">Back (Answer / Definition):</label>
                   <textarea
                     className="anki-input mono"
+                    aria-label="Flashcard answer"
                     rows={4}
                     value={ankiBack}
                     onChange={(e) => setAnkiBack(e.target.value)}
@@ -1023,6 +1072,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
                   <input
                     type="text"
                     className="anki-input-inline mono"
+                    aria-label="Source citation"
                     value={ankiSource}
                     onChange={(e) => setAnkiSource(e.target.value)}
                   />

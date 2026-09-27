@@ -86,13 +86,16 @@ export default function TodoPanel({ promise, st, busy, nowIso, mutate }: Props) 
   const canvasError = canvas.error;
   const [adding, setAdding] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
+  const [taskView, setTaskView] = useState<"open" | "overdue" | "completed">("open");
+  const [limit, setLimit] = useState(10);
   const [activeEnergyTier, setActiveEnergyTier] = useState<EnergyTier>("all");
 
   const now = { iso: nowIso };
   const items = useMemo(() => buildItems(canvas.assignments, st), [canvas.assignments, st]);
   const upcoming = items.filter((i) => daysBetween(now.iso, i.due) >= 0);
-  const hiddenCount = upcoming.filter((i) => !i.mine && st.dismissed.includes(i.id)).length;
-  const visible = upcoming.filter((i) => showHidden || i.mine || !st.dismissed.includes(i.id));
+  const hiddenCount = items.filter((i) => !i.mine && st.dismissed.includes(i.id)).length;
+  const overdue = items.filter(i => !i.done && daysBetween(now.iso, i.due) < 0 && !st.dismissed.includes(i.id));
+  const visible = items.filter(i => (showHidden || i.mine || !st.dismissed.includes(i.id)) && (taskView === "completed" ? i.done : taskView === "overdue" ? !i.done && daysBetween(now.iso, i.due) < 0 : !i.done));
   const doneCount = items.filter((i) => i.done).length;
 
   const circadian = useMemo(() => getCircadianWindow(), []);
@@ -145,6 +148,9 @@ export default function TodoPanel({ promise, st, busy, nowIso, mutate }: Props) 
         </div>
 
         {/* Cognitive Energy Filter Tabs */}
+        <div className="newstabs mono task-status-tabs" aria-label="Assignment status">
+          {(["open", "overdue", "completed"] as const).map(view => <button key={view} className={taskView === view ? "on" : ""} aria-pressed={taskView === view} onClick={() => { setTaskView(view); setLimit(10); setActiveEnergyTier("all"); }}>{view === "open" ? "All open" : view === "overdue" ? `Overdue (${overdue.length})` : `Completed (${doneCount})`}</button>)}
+        </div>
         <div className="energy-filter-bar mono">
           <button
             type="button"
@@ -185,19 +191,19 @@ export default function TodoPanel({ promise, st, busy, nowIso, mutate }: Props) 
             </div>
           )}
 
-          {filteredItems.slice(0, 10).map((it) => {
+          {filteredItems.slice(0, limit).map((it) => {
             const energy = getEnergyTier(it.title, it.kind, it.mine);
             const d = daysBetween(now.iso, it.due);
             const hidden = !it.mine && st.dismissed.includes(it.id);
             return (
               <div key={it.id} className={`row${it.done ? " done" : ""}`}>
                 <div className={`cd mono${d <= 7 && !it.done ? " soon" : ""}`}>
-                  {it.done ? "✓" : d}
-                  <small>{it.done ? "done" : d === 0 ? "today" : d === 1 ? "day" : "days"}</small>
+                  {it.done ? "✓" : Math.abs(d)}
+                  <small>{it.done ? "done" : d < 0 ? "late" : d === 0 ? "today" : d === 1 ? "day" : "days"}</small>
                 </div>
                 <div>
                   <input type="checkbox" id={`chk-${it.id}`} checked={it.done}
-                    aria-label={`Mark ${it.title} done`}
+                    aria-label={`Mark ${it.title} ${it.done ? "incomplete" : "done"}`}
                     onChange={(e) =>
                       mutate(it.mine
                         ? { action: "todoDone", id: it.id, done: e.target.checked }
@@ -263,6 +269,8 @@ export default function TodoPanel({ promise, st, busy, nowIso, mutate }: Props) 
           )}
 
           <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-3)", marginTop: 14 }}>
+            {filteredItems.length > limit && <button className="btn mono" onClick={() => setLimit(v => v + 10)}>Show more assignments</button>}
+            <p>Check off work you have finished. Find it again in Completed to undo. This updates Daymark, not your Canvas submission.</p>
             {doneCount} / {items.length} done · {upcoming.filter((i) => !i.done).length} ahead
           </div>
         </div>

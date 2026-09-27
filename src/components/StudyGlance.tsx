@@ -5,6 +5,7 @@ import { use, useEffect, useState } from "react";
 import type { StudyHubData } from "@/lib/study-hub-types";
 import { getDueCards, loadSRSStore, type SRSStore } from "@/lib/spaced-repetition";
 import QuickStudyModal from "@/components/QuickStudyModal";
+import { useCloudRevision } from "@/lib/use-cloud-revision";
 
 type Props = {
   promise: Promise<StudyHubData>;
@@ -12,6 +13,7 @@ type Props = {
 
 export default function StudyGlance({ promise }: Props) {
   const data = use(promise);
+  const cloudRevision = useCloudRevision();
   const { courses, weeklyReview, allCards, overallDeckStats } = data;
 
   const [srsStore, setSrsStore] = useState<SRSStore>({});
@@ -29,7 +31,7 @@ export default function StudyGlance({ promise }: Props) {
       }).format(new Date());
       setTodayIso(parts);
     } catch {}
-  }, []);
+  }, [cloudRevision]);
 
   const dueCards = getDueCards(allCards, todayIso, srsStore);
   const total = allCards.length;
@@ -50,7 +52,7 @@ export default function StudyGlance({ promise }: Props) {
         <div className="glance-top-stat mono">
           <span>Week {data.currentWeekNumber} · {courses.length} courses</span>
           <span className="pill mono live">
-            {verifiedPct}% mastered
+            {verifiedPct}% source-verified
           </span>
         </div>
 
@@ -60,11 +62,11 @@ export default function StudyGlance({ promise }: Props) {
             <div className="gdb-title mono">
               <span className="gdb-lightning">⚡</span>
               <span className="gdb-count">{dueCards.length}</span>
-              <span className="gdb-tag">DUE TODAY</span>
+              <span className="gdb-tag">TODAY'S QUEUE</span>
             </div>
             <div className="gdb-sub sub mono">
               {dueCards.length > 0
-                ? "Spaced repetition review ready"
+                ? `Due reviews + up to 10 new cards · ${allCards.filter(c => !srsStore[c.id]).length} new cards available`
                 : "All flashcard decks up to date"}
             </div>
           </div>

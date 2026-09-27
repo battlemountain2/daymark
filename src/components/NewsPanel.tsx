@@ -1,155 +1,56 @@
 "use client";
-
 import { use, useEffect, useState } from "react";
 import type { Story, Category } from "@/lib/feeds";
 import type { State } from "@/lib/db";
-
-/**
- * What's new in the things he actually follows.
- *
- * Dismissals share the existing `dismissed` table, so hiding a story on the
- * phone hides it on the laptop — the same reason this app has a server at all.
- */
-
-const TABS: Array<{ key: Category | "all" | "listen"; label: string }> = [
-  { key: "all", label: "everything" },
-  { key: "news", label: "news" },
-  { key: "music", label: "music" },
-  { key: "linux", label: "linux" },
-  { key: "tech", label: "tech" },
-  { key: "screen", label: "tv + film" },
-  { key: "listen", label: "listen" },
-];
-
-const CAT_LABEL: Record<Category, string> = {
-  linux: "linux", music: "music", tech: "tech", screen: "tv + film", news: "news",
-};
-
-/**
- * Relative age, from a clock captured on mount rather than `Date.now()` at
- * render time.
- *
- * Calling `Date.now()` during render is a hydration bug: the server stamps
- * "45m ago" into the HTML and the browser hydrates a minute later and wants
- * "46m ago", so React throws #418 and re-renders the whole tree on the client.
- * It was firing on every page load — invisible in the UI, which is exactly why
- * it survived. Served from the offline cache the gap is hours, not minutes.
- *
- * `now === null` before mount means the server and the client's first render
- * agree on rendering *no* age at all, which is what makes hydration match; the
- * effect then fills it in.
- */
-const age = (iso: string | null, now: number | null): string => {
-  if (!iso || now === null) return "";
-  const h = (now - Date.parse(iso)) / 3.6e6;
-  if (!isFinite(h)) return "";
-  if (h < 1) return `${Math.max(1, Math.round(h * 60))}m`;
-  if (h < 24) return `${Math.round(h)}h`;
-  return `${Math.round(h / 24)}d`;
-};
-
-type Props = {
-  promise: Promise<Story[]>;
-  st: State;
-  mutate: (body: Record<string, unknown>) => void;
-};
-
-export default function NewsPanel({ promise, st, mutate }: Props) {
+import { cloudStorage } from "@/lib/cloud-storage";
+import { useCloudRevision } from "@/lib/use-cloud-revision";
+type Tab = Category | "all" | "listen" | "saved";
+const tabs: { key: Tab; label: string }[] = [{key:"all",label:"For you"},{key:"news",label:"News"},{key:"music",label:"Music"},{key:"linux",label:"Linux"},{key:"tech",label:"Tech"},{key:"screen",label:"TV + film"},{key:"listen",label:"Listen later"},{key:"saved",label:"Saved"}];
+type Preferences = Record<string, boolean | Story>;
+type Digest = { day: string; provider: string; items: { id: string; summary: string; url: string; source: string }[] };
+export default function NewsPanel({ promise, st, mutate }: { promise: Promise<Story[]>; st: State; mutate: (body: Record<string, unknown>) => void }) {
   const stories = use(promise);
-  const [tab, setTab] = useState<Category | "all" | "listen">("all");
-  const [showHidden, setShowHidden] = useState(false);
-  const [nowMs, setNowMs] = useState<number | null>(null);
-
-  useEffect(() => {
-    setNowMs(Date.now());
-    const t = setInterval(() => setNowMs(Date.now()), 60000);
-    return () => clearInterval(t);
-  }, []);
-
-  // "listen" cuts across the categories rather than being one of them: an NPR
-  // Music episode is music *and* audio, and it should appear under both.
-  const inTab = stories.filter((s) =>
-    tab === "all" ? true : tab === "listen" ? s.listen : s.cat === tab
-  );
-  const hiddenCount = inTab.filter((s) => st.dismissed.includes(s.id)).length;
-  const visible = inTab.filter((s) => showHidden || !st.dismissed.includes(s.id));
-
-  return (
-    <section className="card span7">
-      <div className="card-head">
-        <h2>What&apos;s new</h2>
-        <span className={`pill mono ${stories.length ? "live" : ""}`}>
-          {stories.length ? `${stories.length} stories` : "no feeds reachable"}
-        </span>
-      </div>
-      <div className="card-body">
-        <div className="newstabs mono">
-          {TABS.map((t) => (
-            <button key={t.key} type="button" className={tab === t.key ? "on" : ""}
-              aria-pressed={tab === t.key} onClick={() => setTab(t.key)}>
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {!stories.length && (
-          <div className="sub" style={{ marginTop: 12 }}>
-            No feeds responded. They&apos;re fetched server-side and cached for 30
-            minutes, so this usually means a publisher started blocking us.
-          </div>
-        )}
-
-        <div className="newslist">
-          {visible.slice(0, 12).map((s) => {
-            const hidden = st.dismissed.includes(s.id);
-            return (
-              <div className={`newsrow${hidden ? " hid" : ""}`} key={s.id}>
-                <a href={s.url} target="_blank" rel="noopener noreferrer">
-                  {s.listen && <span className="listenmark" aria-label="Audio">▸</span>}
-                  {s.title}
-                </a>
-                <div className="mono newsmeta">
-                  {[s.source, CAT_LABEL[s.cat],
-                    s.mins ? `${s.mins} min listen` : null,
-                    s.published ? `${age(s.published, nowMs)} ago` : null]
-                    .filter(Boolean).join(" · ")}
-                </div>
-                <button className="btn quiet mono newsx"
-                  title={hidden ? "Bring this back" : "Dismiss this"}
-                  onClick={() => mutate({ action: "dismiss", key: s.id, hidden: !hidden })}>
-                  {hidden ? "↺" : "×"}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-
-        {hiddenCount > 0 && (
-          <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-3)", marginTop: 10 }}>
-            {hiddenCount} dismissed ·{" "}
-            <button className="btn quiet mono" style={{ padding: 0, textDecoration: "underline" }}
-              onClick={() => setShowHidden((v) => !v)}>
-              {showHidden ? "hide again" : "show"}
-            </button>
-          </div>
-        )}
-      </div>
-    </section>
-  );
+  const revision = useCloudRevision();
+  const [prefs, setPrefs] = useState<Preferences>({});
+  const [tab, setTab] = useState<Tab>("all");
+  const [limit, setLimit] = useState(8);
+  const [unread, setUnread] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const [digest, setDigest] = useState<Digest | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  useEffect(() => { try { setPrefs(JSON.parse(cloudStorage.getItem("daymark:news") || "{}")); } catch {} }, [revision]);
+  function update(key: string, value: boolean | Story) {
+    const next = { ...prefs, [key]: value }; setPrefs(next);
+    try { cloudStorage.setItem("daymark:news", JSON.stringify(next)); } catch { setMessage("Could not save your preference on this device."); }
+  }
+  const saved = Object.entries(prefs).filter(([k,v]) => k.startsWith("save:") && v && typeof v === "object").map(([,v]) => v as Story);
+  const pool = tab === "saved" ? saved : stories;
+  const visible = pool.filter(s => (tab === "all" || tab === "saved" || (tab === "listen" ? s.listen : s.cat === tab)) && (hidden || !st.dismissed.includes(s.id)) && (tab === "saved" || !prefs[`mute:${s.source}`]) && (!unread || !prefs[`read:${s.id}`]));
+  async function getDigest() {
+    setBusy(true); setMessage("");
+    try { const res = await fetch("/api/news-digest", { method: "POST" }); const data = await res.json(); if (!res.ok) throw new Error(data.error); setDigest(data); } catch (e) { setMessage(e instanceof Error ? e.message : "Digest unavailable"); } finally { setBusy(false); }
+  }
+  return <section className="card span7 news-briefing">
+    <div className="card-head"><h2>What&apos;s new</h2><span className="pill mono">Your daily reading room</span></div>
+    <div className="card-body">
+      <div className="news-intro"><p>A few good stories, then back to your day.</p><button className="btn mono" onClick={() => void getDigest()} disabled={busy}>{busy ? "Preparing…" : "Today's AI digest"}</button></div>
+      <p className="sub">A headline-only briefing, generated on request and shared across your devices for the day.</p>
+      {message && <p role="status">{message}</p>}
+      {digest && <div className="news-digest"><h3>Today in five headlines</h3><ol>{digest.items.map(item => <li key={item.id}>{item.summary} <a href={item.url} target="_blank" rel="noopener noreferrer">{item.source} ↗</a></li>)}</ol><small>{digest.day} · {digest.provider} · Read the sources for full context.</small></div>}
+      <div className="newstabs mono" aria-label="Story categories">{tabs.map(t => <button key={t.key} className={tab === t.key ? "on" : ""} aria-pressed={tab === t.key} onClick={() => { setTab(t.key); setLimit(8); }}>{t.label}{t.key === "saved" ? ` (${saved.length})` : ""}</button>)}</div>
+      <div className="news-controls"><label><input type="checkbox" checked={unread} onChange={e => setUnread(e.target.checked)} /> Unread only</label><label><input type="checkbox" checked={hidden} onChange={e => setHidden(e.target.checked)} /> Include dismissed</label></div>
+      <div className="newslist">{visible.slice(0,limit).map((s,i) => <article key={s.id} className={`news-story${prefs[`read:${s.id}`] ? " is-read" : ""}`}>
+        {tab === "all" && i === 0 && <p className="news-kicker mono">Start here · a mix from your sources</p>}
+        {tab === "all" && i === 3 && <p className="news-kicker mono">More to explore</p>}
+        <a className="news-story-title" href={s.url} target="_blank" rel="noopener noreferrer" onClick={() => update(`read:${s.id}`,true)}>{s.listen ? "▶ " : ""}{s.title}</a>
+        <p className="newsmeta mono">{s.source} · {s.cat}{s.mins ? ` · ${s.mins} min listen` : ""}{s.published ? ` · ${s.published.slice(0,10)}` : ""}</p>
+        <div className="news-story-actions"><button className="btn quiet mono" aria-pressed={!!prefs[`save:${s.id}`]} onClick={() => update(`save:${s.id}`,prefs[`save:${s.id}`] ? false : s)}>{prefs[`save:${s.id}`] ? "Saved ✓" : s.listen ? "Queue audio" : "Save"}</button><button className="btn quiet mono" onClick={() => update(`read:${s.id}`,!prefs[`read:${s.id}`])}>{prefs[`read:${s.id}`] ? "Mark unread" : "Mark read"}</button><button className="btn quiet mono" onClick={() => mutate({ action:"dismiss",key:s.id,hidden:!st.dismissed.includes(s.id) })}>{st.dismissed.includes(s.id) ? "Restore" : "Dismiss"}</button></div>
+      </article>)}</div>
+      {!visible.length && <p className="sub">{tab === "saved" ? "Save a story or queue an episode to keep it here." : "No stories match these filters. Try another category or include read stories."}</p>}
+      <div className="news-more mono"><span>Showing {Math.min(limit,visible.length)} of {visible.length} matching stories</span>{visible.length > limit && <button className="btn" onClick={() => setLimit(n => n + 8)}>Load more</button>}</div>
+      <details className="news-sources"><summary>Choose your sources</summary><p className="sub">Muted sources stay out of your feed. Saved stories remain available.</p>{Array.from(new Set(stories.map(s => s.source))).sort().map(source => <label key={source}><input type="checkbox" checked={!prefs[`mute:${source}`]} onChange={e => update(`mute:${source}`,!e.target.checked)} /> {source}</label>)}</details>
+    </div>
+  </section>;
 }
-
-export function NewsSkeleton() {
-  return (
-    <section className="card span7">
-      <div className="card-head"><h2>What&apos;s new</h2><span className="pill mono">loading</span></div>
-      <div className="card-body">
-        {[0, 1, 2, 3].map((i) => (
-          <div key={i} style={{ padding: "9px 0" }}>
-            <span className="bar" style={{ width: `${76 - i * 9}%` }} />
-            <span className="bar sm" style={{ width: `${26 - i * 2}%` }} />
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
+export function NewsSkeleton() { return <section className="card span7"><div className="card-head"><h2>What&apos;s new</h2><span className="pill mono">Loading your stories…</span></div></section>; }

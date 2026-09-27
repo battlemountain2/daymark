@@ -1,6 +1,9 @@
 "use client";
+import { cloudStorage } from "@/lib/cloud-storage";
+
 
 import React, { useState, useEffect, useMemo } from "react";
+import { useCloudRevision } from "@/lib/use-cloud-revision";
 import type { CourseStudyInfo } from "@/lib/study-hub-types";
 
 export type GradeCategory = {
@@ -88,16 +91,20 @@ const DEFAULT_SYLLABUS_DATA: CourseSyllabus[] = [
 const STORAGE_KEY = "hb:syllabus-weights:v1";
 
 export default function GradeSimulator({ courses }: { courses: CourseStudyInfo[] }) {
+  const cloudRevision = useCloudRevision();
   const [syllabusList, setSyllabusList] = useState<CourseSyllabus[]>(() => {
     if (typeof window === "undefined") return DEFAULT_SYLLABUS_DATA;
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = cloudStorage.getItem(STORAGE_KEY);
       if (stored) return JSON.parse(stored);
     } catch {}
     return DEFAULT_SYLLABUS_DATA;
   });
 
   const [activeCourseCode, setActiveCourseCode] = useState<string>("GEOG 1160");
+  useEffect(() => {
+    try { const saved = JSON.parse(cloudStorage.getItem(STORAGE_KEY) || "null"); if (saved?.length) setSyllabusList(saved); } catch {}
+  }, [cloudRevision]);
   const [isEditingWeights, setIsEditingWeights] = useState<boolean>(false);
 
   const activeCourse = useMemo(() => {
@@ -107,7 +114,7 @@ export default function GradeSimulator({ courses }: { courses: CourseStudyInfo[]
   const saveSyllabus = (updatedList: CourseSyllabus[]) => {
     setSyllabusList(updatedList);
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedList));
+      cloudStorage.setItem(STORAGE_KEY, JSON.stringify(updatedList));
     } catch {}
   };
 
