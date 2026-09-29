@@ -80,7 +80,7 @@ export default function WeatherView({ weather, sun, term }: {
       </section>
       <section className="card span12"><div className="card-head"><h2>The week</h2><span className="mono sub">High / low</span></div><div className="card-body wx-days">{days.map(d => <div className="wx-day-row" key={d.name}><strong>{d.name}</strong><span>{d.shortForecast}{d.precipChance != null && d.precipChance > 0 ? ` · ${d.precipChance}% rain` : ""}</span><span className="mono">{d.high == null ? "—" : `${d.high}°`} / {d.low == null ? "—" : `${d.low}°`}</span></div>)}{!days.length && <p className="sub">Daily forecast unavailable.</p>}</div></section>
       <section className="card span12"><div className="card-head"><h2>Sun &amp; night sky</h2></div><div className="card-body"><div className="wx-sun-summary"><span>Sunrise <strong>{sun.sunrise ?? "—"}</strong></span><span>Sunset <strong>{sun.sunset ?? "—"}</strong></span><span>Daylight <strong>{sun.daylight ?? "—"}</strong></span></div><button type="button" className="btn" aria-expanded={astronomy} aria-controls="sky-astronomy" onClick={() => setAstronomy(v => !v)}>{astronomy ? "Hide astronomy" : "Explore astronomy"}</button><p className="sub">Astronomy panels show today / now, independently of the forecast preview.</p></div></section>
-      {astronomy && <div className="grid span12" id="sky-astronomy"><SunPanel term={term} /><Tonight /><Orrery /></div>}
+      {astronomy && <div className="sky-astronomy" id="sky-astronomy"><SunPanel term={term} /><Tonight /><Orrery /></div>}
     </div>}
   </div>;
 }
