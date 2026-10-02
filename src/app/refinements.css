@@ -59,3 +59,17 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+
+/* Dashboard scan order and compact commute. */
+.study-semester-stack { grid-column: span 5; display: flex; flex-direction: column; gap: 34px; min-width: 0; }
+.study-semester-stack > .card { width: 100%; }
+.cls.past { opacity: .72; }
+.morelink, .stamp, .cr-sub, .cr-k, .cr-budget-meta { color: var(--ink-2); }
+.commute-radar-card { padding: 10px 12px; margin-bottom: 10px; }
+.cr-header { gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.cr-primary-row { padding: 8px 10px; gap: 10px; margin-bottom: 6px; }
+.cr-leave-time { font-size: 16px; }
+.cr-details summary { color: var(--ink-2); cursor: pointer; font-size: 12px; padding: 6px 0; }
+@media (max-width: 860px) { .study-semester-stack { grid-column: 1 / -1; } }
+
+.dashboard-page { --ink-3: var(--ink-2); }

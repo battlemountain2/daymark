@@ -31,7 +31,7 @@ export default function NewsPanel({ promise, st, mutate }: { promise: Promise<St
     setBusy(true); setMessage("");
     try { const res = await fetch("/api/news-digest", { method: "POST" }); const data = await res.json(); if (!res.ok) throw new Error(data.error); setDigest(data); } catch (e) { setMessage(e instanceof Error ? e.message : "Digest unavailable"); } finally { setBusy(false); }
   }
-  return <section className="card span7 news-briefing">
+  return <section className="card span12 news-briefing">
     <div className="card-head"><h2>What&apos;s new</h2><span className="pill mono">Your daily reading room</span></div>
     <div className="card-body">
       <div className="news-intro"><p>A few good stories, then back to your day.</p><button className="btn mono" onClick={() => void getDigest()} disabled={busy}>{busy ? "Preparing…" : "Today's AI digest"}</button></div>
@@ -53,4 +53,4 @@ export default function NewsPanel({ promise, st, mutate }: { promise: Promise<St
     </div>
   </section>;
 }
-export function NewsSkeleton() { return <section className="card span7"><div className="card-head"><h2>What&apos;s new</h2><span className="pill mono">Loading your stories…</span></div></section>; }
+export function NewsSkeleton() { return <section className="card span12"><div className="card-head"><h2>What&apos;s new</h2><span className="pill mono">Loading your stories…</span></div></section>; }

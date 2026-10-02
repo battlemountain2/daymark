@@ -9,9 +9,11 @@ type Props = {
     title: string;
     where: string;
     start: string;
+    end: string;
     ck: string;
   } | null;
   nowMinutes: number;
+  doneForToday?: boolean;
   weather?: {
     tempF: number | null;
     sky: string | null;
@@ -20,7 +22,7 @@ type Props = {
   } | null;
 };
 
-export default function CommuteRadar({ nextClass, nowMinutes, weather }: Props) {
+export default function CommuteRadar({ nextClass, nowMinutes, weather, doneForToday = false }: Props) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [advisory, setAdvisory] = useState<string | null>(null);
   const [isAdvisoryLoading, setIsAdvisoryLoading] = useState(false);
@@ -117,9 +119,9 @@ export default function CommuteRadar({ nextClass, nowMinutes, weather }: Props) 
         <div className="cr-header">
           <span className="cr-icon">🚗</span>
           <span className="cr-title">UNM Commute Radar</span>
-          <span className="cr-tag">Standby</span>
+          <span className="cr-tag">{doneForToday ? "Done for today" : "Standby"}</span>
         </div>
-        <p className="cr-desc sub">No upcoming on-campus classes scheduled today. Safe travels!</p>
+        <p className="cr-desc sub">{doneForToday ? "All classes finished. Safe travels!" : "No upcoming on-campus classes scheduled today. Safe travels!"}</p>
       </div>
     );
   }
@@ -143,7 +145,7 @@ export default function CommuteRadar({ nextClass, nowMinutes, weather }: Props) 
 
   if (minutesUntilLeave <= 0 && minutesUntilLeave >= -totalTransitMins) {
     statusTone = "transit";
-    statusText = "In Transit to South Lot / Campus";
+    statusText = "Departure time reached";
   } else if (minutesUntilLeave <= 15 && minutesUntilLeave > 0) {
     statusTone = "urgent";
     statusText = `🔥 Leave by ${fmtTime(leaveByMinutes)} (${minutesUntilLeave}m left)`;
@@ -170,18 +172,20 @@ export default function CommuteRadar({ nextClass, nowMinutes, weather }: Props) 
 
       <div className="cr-primary-row">
         <div className="cr-target-block">
-          <span className="cr-k">Next Lecture:</span>
+          <span className="cr-k">{nowMinutes >= commutePlan.classStartMins ? "Current class:" : "Next class:"}</span>
           <span className="cr-v">{nextClass.code} · {fmtTime(commutePlan.classStartMins)}</span>
           <span className="cr-hall">{nextClass.where}</span>
         </div>
 
-        <div className="cr-countdown-block">
-          <span className="cr-k">Recommended Departure:</span>
+        {nowMinutes < commutePlan.classStartMins && <div className="cr-countdown-block">
+          <span className="cr-k">Leave by:</span>
           <span className="cr-leave-time">{fmtTime(leaveByMinutes)}</span>
-          <span className="cr-budget-meta">{totalTransitMins}m total door-to-desk budget</span>
-        </div>
+          <span className="cr-budget-meta">{totalTransitMins}m estimated trip</span>
+        </div>}
       </div>
 
+      <details className="cr-details">
+        <summary>Route details &amp; advisory</summary>
       {/* Weather or Traffic Alerts */}
       {(isPeakHour || isHighWind || isRain) && (
         <div className="cr-alert-strip">
@@ -265,6 +269,7 @@ export default function CommuteRadar({ nextClass, nowMinutes, weather }: Props) 
           </div>
         </div>
       )}
+      </details>
     </div>
   );
 }

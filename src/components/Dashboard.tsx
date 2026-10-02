@@ -414,7 +414,7 @@ export default function Dashboard({
     : `No classes on ${dayName}s this term.`;
 
   return (
-    <div className="wrap">
+    <div className="wrap dashboard-page">
       <Offline renderedAt={renderedAt} pending={pending} />
 
       {/* Clean header */}
@@ -542,7 +542,8 @@ export default function Dashboard({
 
             {/* UNM South Lot Commute Radar */}
             <CommuteRadar
-              nextClass={leave ? leave.next : (todayClasses.find(c => hhmm(c.end) > now.minutes) || todayClasses[0] || null)}
+              nextClass={todayClasses.find(c => hhmm(c.end) > now.minutes) || null}
+              doneForToday={todayClasses.length > 0 && todayClasses.every(c => hhmm(c.end) <= now.minutes)}
               nowMinutes={now.minutes}
             />
 
@@ -574,9 +575,14 @@ export default function Dashboard({
         </section>
 
         {/* Compact Study Hub Glance Widget */}
-        <Suspense fallback={<StudyGlanceSkeleton />}>
-          <StudyGlance promise={studyPromise} />
-        </Suspense>
+        <div className="study-semester-stack">
+          <Suspense fallback={<StudyGlanceSkeleton />}>
+            <StudyGlance promise={studyPromise} />
+          </Suspense>
+          <Suspense fallback={<MilestonesSkeleton />}>
+            <Milestones term={term} promise={canvasPromise} st={st} />
+          </Suspense>
+        </div>
 
         {/* Today's Workout Glance Widget */}
         <FitnessGlance />
@@ -588,10 +594,6 @@ export default function Dashboard({
 
         <Suspense fallback={<MusicSkeleton />}>
           <MusicPanel promise={musicPromise} />
-        </Suspense>
-
-        <Suspense fallback={<MilestonesSkeleton />}>
-          <Milestones term={term} promise={canvasPromise} st={st} />
         </Suspense>
 
         <Suspense fallback={<NewsSkeleton />}>
