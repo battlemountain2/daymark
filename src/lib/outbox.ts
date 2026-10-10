@@ -47,9 +47,13 @@ const tx = async <T,>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRe
   return new Promise<T>((resolve, reject) => {
     const t = db.transaction(STORE, mode);
     const req = fn(t.objectStore(STORE));
-    req.onsuccess = () => resolve(req.result as T);
-    req.onerror = () => reject(req.error);
-    t.oncomplete = () => db.close();
+    let result: T;
+    req.onsuccess = () => { result = req.result as T; };
+    // Request success happens before commit. Only close a capture after its
+    // queued write has actually committed, so a quota/abort cannot lose it.
+    t.oncomplete = () => { db.close(); resolve(result); };
+    t.onabort = () => { db.close(); reject(t.error || req.error || new Error('Could not save the queued change.')); };
+    t.onerror = () => { db.close(); reject(t.error || req.error || new Error('Could not save the queued change.')); };
   });
 };
 

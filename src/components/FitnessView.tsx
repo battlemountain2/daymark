@@ -144,16 +144,10 @@ export default function FitnessView() {
           <Link href="/" className="backlink mono">
             ← dashboard
           </Link>
-          <span className="pill mono live">
-            Personal Training & Health · Fall 2026
-          </span>
         </div>
 
         <div className="fitness-hero-content">
-          <h1 className="fitness-main-title">Training &amp; Fitness Station</h1>
-          <p className="sub mono">
-            6-day lean bulk split, gym machine vs home variations, nutrition formulas &amp; anxiety guide
-          </p>
+          <h1 className="fitness-main-title">Fitness</h1>
         </div>
 
         {/* Global Nav Tabs */}

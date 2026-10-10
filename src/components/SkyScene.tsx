@@ -1,4 +1,5 @@
 "use client";
+import {frameLoop} from "@/lib/frame-loop";
 
 import { useEffect, useRef } from "react";
 import { sunPosition } from "@/lib/solar";
@@ -121,6 +122,7 @@ export default function SkyScene({
   parRef.current = parallax;
   // Held in a ref, not a dependency: re-running the effect on every drag frame
   // would rebuild the starfield and make the whole scene flicker.
+  const repaint = useRef<(()=>void)|null>(null);
   const atRef = useRef<Date | null>(at);
   atRef.current = at;
 
@@ -130,7 +132,8 @@ export default function SkyScene({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let reduce = motion.matches;
     // What's happening now beats what's forecast: a 60% chance of rain this
     // afternoon shouldn't put rain on the screen while the sky is clear.
     const live = readWeather(condition ?? "");
@@ -172,17 +175,11 @@ export default function SkyScene({
       x: r(), y: r(), len: 0.06 + r() * 0.12, v: 0.7 + r() * 0.6, drift: r(),
     }));
 
-    let raf = 0;
-    let t0 = performance.now();
-    let lastDraw = 0;
+    const t0 = performance.now();
     const targetFPS = variant === "tile" ? 24 : 30;
     const minInterval = 1000 / targetFPS;
 
     const frame = (now: number) => {
-      if (reduce) return;
-      raf = requestAnimationFrame(frame);
-      if (now - lastDraw < minInterval) return;
-      lastDraw = now;
       const elapsed = (now - t0) / 1000;
       const when = atRef.current ?? new Date();
       const sun = sunPosition(LAT, LON, when);
@@ -211,7 +208,7 @@ export default function SkyScene({
       const dark = Math.max(0, Math.min(1, (-sun.elevation - 3) / 12));
 
       ctx.clearRect(0, 0, w, h);
-      if (variant === "precip") { drawPrecip(elapsed, sun.elevation); return schedule(); }
+      if (variant === "precip") { drawPrecip(elapsed, sun.elevation); return; }
 
       // sky
       // Keyed off elevation directly: twilight is a band around the horizon,
@@ -319,10 +316,6 @@ export default function SkyScene({
       if (variant !== "backdrop") drawPrecip(elapsed, e);
     };
 
-    function schedule() {
-      if (!reduce) raf = requestAnimationFrame(frame);
-    }
-
     /** Split out so the page-level layer can draw it over the content. */
     function drawPrecip(elapsed: number, e: number) {
       if (!ctx || !wet) return;
@@ -355,19 +348,15 @@ export default function SkyScene({
         }
       }
 
-      if (!reduce) raf = requestAnimationFrame(frame);
     };
 
-    raf = requestAnimationFrame(frame);
+    const loop = frameLoop(frame,{request:(callback)=>requestAnimationFrame(callback),cancel:(id)=>cancelAnimationFrame(id),hidden:()=>document.hidden,reduced:()=>reduce,interval:minInterval});
+    repaint.current = ()=>{if(reduce)loop.redraw();};
+    const onMotion = ()=>{reduce=motion.matches;loop.redraw();};
+    motion.addEventListener("change",onMotion);
 
     // Don't animate a tab nobody is looking at.
-    const onVis = () => {
-      cancelAnimationFrame(raf);
-      if (!document.hidden && !reduce) {
-        t0 = performance.now() - 1;
-        raf = requestAnimationFrame(frame);
-      }
-    };
+    const onVis = () => loop.redraw();
     document.addEventListener("visibilitychange", onVis);
 
     // A window-resize listener alone is not enough. The canvas is sized from
@@ -376,16 +365,20 @@ export default function SkyScene({
     // ever redraw it without a window resize. ResizeObserver catches the element
     // getting its real width, whenever that happens.
     const ro = new ResizeObserver(() => {
-      if (canvas.clientWidth > 0 && canvas.clientWidth !== w) fit();
+      if (canvas.clientWidth > 0 && (canvas.clientWidth !== w || (variant !== "tile" && canvas.clientHeight !== h))) {fit();loop.redraw();}
     });
     ro.observe(canvas);
 
     return () => {
-      cancelAnimationFrame(raf);
+      loop.stop();
+      repaint.current=null;
+      motion.removeEventListener("change",onMotion);
       document.removeEventListener("visibilitychange", onVis);
       ro.disconnect();
     };
-  }, [condition, forecast, precipChance, height]);
+  }, [condition, forecast, precipChance, height, variant]);
+
+  useEffect(()=>{repaint.current?.();},[at]);
 
   // The inline height is for the tile only. Setting it on the full-screen
   // variants beat the stylesheet's height:100% and left the page-wide sky

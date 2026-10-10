@@ -204,8 +204,7 @@ export default function GradeSimulator({ courses }: { courses: CourseStudyInfo[]
       {/* Header bar */}
       <div className="grade-sim-header">
         <div>
-          <span className="deck-eyebrow">ACADEMIC FORECASTING &amp; SYLLABUS SANDBOX</span>
-          <h2 style={{ margin: "2px 0 0", fontSize: 20, color: "var(--ink)" }}>Canvas "What-If" Grade Simulator</h2>
+          <h2 style={{ margin: "2px 0 0", fontSize: 20, color: "var(--ink)" }}>Grade calculator</h2>
         </div>
         <button
           type="button"

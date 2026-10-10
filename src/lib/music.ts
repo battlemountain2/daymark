@@ -64,7 +64,7 @@ async function lfm(method: string, params: Record<string, string>, revalidate: n
   const key = process.env.LASTFM_API_KEY;
   if (!key) throw new Error("LASTFM_API_KEY is not set");
   const q = new URLSearchParams({ method, api_key: key, format: "json", ...params });
-  const res = await fetch(`${LFM}?${q}`, { headers: UA, next: { revalidate } });
+  const res = await fetch(`${LFM}?${q}`, { headers: UA, next: { revalidate }, signal: AbortSignal.timeout(10000) });
   const json = await res.json();
   // Last.fm answers 200 with an error body as often as it uses a status code.
   if (json?.error) throw new Error(json.message || `Last.fm error ${json.error}`);
@@ -82,7 +82,7 @@ const lfmArt = (images: any[]): string | null => {
 async function fromLastfm(user: string): Promise<Music> {
   const [recentRes, topRes, libraryRes] = await Promise.all([
     lfm("user.getrecenttracks", { user, limit: "12" }, 300),
-    lfm("user.gettopartists", { user, period: "1month", limit: "8" }, 60 * 60),
+    lfm("user.gettopartists", { user, period: "1month", limit: "8" }, 60 * 60).catch(() => null),
     // A separate, much longer list used only to filter suggestions. With ~4,700
     // artists scrobbled, excluding just this month's top eight would recommend
     // him things he has played hundreds of times. Cached for a day; it barely
@@ -159,7 +159,7 @@ async function fromLastfm(user: string): Promise<Music> {
 const LB = "https://api.listenbrainz.org/1";
 
 const lb = async (path: string, revalidate: number) => {
-  const res = await fetch(`${LB}${path}`, { headers: UA, next: { revalidate } });
+  const res = await fetch(`${LB}${path}`, { headers: UA, next: { revalidate }, signal: AbortSignal.timeout(10000) });
   if (!res.ok) throw new Error(`ListenBrainz ${res.status}`);
   const text = await res.text();
   // Some stats endpoints answer 200 with an empty body when nothing has been

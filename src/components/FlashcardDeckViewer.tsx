@@ -45,6 +45,23 @@ type ExamQuestion = {
 
 type SortMode = "default" | "shuffle" | "needsReview" | "unverified";
 
+function readingCitation(source: string) {
+  const marker = source.lastIndexOf(" · /?space=school&reading=");
+  if (marker < 0) return { label: source, href: null };
+  const href = source.slice(marker + 3);
+  const params = new URLSearchParams(href.slice(2));
+  if (!/^[a-f0-9]{64}$/.test(params.get("reading") || "") ||
+      !/^[1-9]\d*$/.test(params.get("page") || "") ||
+      !/^[a-f0-9-]{36}$/.test(params.get("highlight") || ""))
+    return { label: source, href: null };
+  return { label: source.slice(0, marker), href };
+}
+
+function SourcePassage({ source }: { source: string }) {
+  const citation = readingCitation(source);
+  return citation.href ? <p className="sub"><a href={citation.href}>Open source passage ↗</a></p> : null;
+}
+
 export default function FlashcardDeckViewer({
   initialCards,
   courses,
@@ -498,42 +515,12 @@ export default function FlashcardDeckViewer({
       <div className="unified-deck-bar">
         {/* Tier 1: Course Decks & Study Modes */}
         <div className="udb-top-row">
-          <div className="udb-course-chips mono">
-            <button
-              type="button"
-              className={`cf-pill ${activeCourse === "ALL" ? "active" : ""}`}
-              onClick={() => {
-                setActiveCourse("ALL");
-                setCurrentIndex(0);
-                setIsFlipped(false);
-              }}
-            >
-              All Decks
-              <span className="cf-count">{cards.length}</span>
-            </button>
-
-            {courses.map((c) => {
-              const count = courseCardCounts[c.code.toUpperCase()] || c.cards.length;
-              const ck = c.ck || getCourseColorKey(c.code);
-
-              return (
-                <button
-                  key={c.code}
-                  type="button"
-                  className={`cf-pill ${activeCourse === c.code ? "active" : ""}`}
-                  onClick={() => {
-                    setActiveCourse(c.code);
-                    setCurrentIndex(0);
-                    setIsFlipped(false);
-                  }}
-                >
-                  <span className={`tagdot ${ck}`} />
-                  {c.code}
-                  <span className="cf-count">{count}</span>
-                </button>
-              );
-            })}
-          </div>
+          <label className="practice-course">Course
+            <select value={activeCourse} onChange={e => { setActiveCourse(e.target.value); setCurrentIndex(0); setIsFlipped(false); }}>
+              <option value="ALL">All courses · {cards.length} cards</option>
+              {courses.map(c => <option key={c.code} value={c.code}>{c.code} · {courseCardCounts[c.code.toUpperCase()] || c.cards.length} cards</option>)}
+            </select>
+          </label>
 
           <div className="view-toggle mono udb-mode-toggle">
             <button
@@ -544,7 +531,7 @@ export default function FlashcardDeckViewer({
                 setQuizComplete(false);
               }}
             >
-              ✦ Flashcard Flip
+              Flashcards
             </button>
             <span className="view-toggle-sep">/</span>
             <button
@@ -555,7 +542,7 @@ export default function FlashcardDeckViewer({
                 handleRestartQuiz();
               }}
             >
-              ⚡ Rapid Quiz
+              Quiz
             </button>
             <span className="view-toggle-sep">/</span>
             <button
@@ -566,7 +553,7 @@ export default function FlashcardDeckViewer({
                 setQuizComplete(false);
               }}
             >
-              📋 All ({filteredCards.length})
+              Browse ({filteredCards.length})
             </button>
             <span className="view-toggle-sep">/</span>
             <button
@@ -580,11 +567,12 @@ export default function FlashcardDeckViewer({
                 }
               }}
             >
-              📝 Midterm Exam
+              Practice exam
             </button>
           </div>
         </div>
 
+        <details className="deck-tools"><summary>Search & deck tools</summary>
         {/* Tier 2: Search, Sort, Filters, Streak & Mastery */}
         <div className="udb-bottom-row mono">
           <div className="udb-left-controls">
@@ -598,6 +586,7 @@ export default function FlashcardDeckViewer({
 
             <select
               className="cf-tool-select"
+              aria-label="Sort cards"
               value={sortMode}
               onChange={(e) => {
                 setSortMode(e.target.value as SortMode);
@@ -612,6 +601,7 @@ export default function FlashcardDeckViewer({
 
             <select
               className="cf-tool-select"
+              aria-label="Card source status"
               value={statusFilter}
               onChange={(e) => {
                 setStatusFilter(e.target.value);
@@ -650,7 +640,7 @@ export default function FlashcardDeckViewer({
               </span>
             )}
             <span className="zen-mastery-pill">
-              <span className="live-dot" /> {progressPct}% Mastered ({verifiedCount}/{total})
+              <span className="live-dot" /> {progressPct}% source-verified ({verifiedCount}/{total})
             </span>
           </div>
         </div>
@@ -661,7 +651,7 @@ export default function FlashcardDeckViewer({
             <input
               type="text"
               className="udb-search-input mono"
-              placeholder="Search concepts, terms, question prompts, or tags..."
+              placeholder="Search cards"
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -680,6 +670,7 @@ export default function FlashcardDeckViewer({
             )}
           </div>
         )}
+        </details>
       </div>
 
       {/* MODE 1: 3D FLIP WITH DYNAMIC ANSWER CONTROLS */}
@@ -725,7 +716,7 @@ export default function FlashcardDeckViewer({
 
                     <div className="card-bottomline">
                       <span className="source-cite mono">
-                        {currentCard.source ? `Source: ${currentCard.source}` : "Active Reading"}
+                        {currentCard.source ? `Source: ${readingCitation(currentCard.source).label}` : "No source"}
                       </span>
                       <span className="flip-hint mono">
                         [Space] Reveal Answer ↷
@@ -766,6 +757,7 @@ export default function FlashcardDeckViewer({
                 </div>
               </div>
 
+              <SourcePassage source={currentCard.source} />
               {/* DYNAMIC ACTION BAR */}
               <div className="zen-action-bar">
                 {!isFlipped ? (
@@ -830,7 +822,7 @@ export default function FlashcardDeckViewer({
                   onClick={handleTriggerTutor}
                   disabled={isTutorLoading}
                 >
-                  {isTutorLoading ? "⚡ Analyzing with Copilot..." : "💡 Socratic Tutor: Plain-English & Mnemonic"}
+                  {isTutorLoading ? "Thinking…" : "Explain this idea"}
                 </button>
 
                 {tutorExplanation && (
@@ -846,15 +838,15 @@ export default function FlashcardDeckViewer({
                       </button>
                     </div>
                     <div className="stc-section">
-                      <strong>🧠 Plain-English Intuition:</strong>
+                      <strong>Explanation</strong>
                       <p>{tutorExplanation.intuition}</p>
                     </div>
                     <div className="stc-section">
-                      <strong>⚡ Memory Mnemonic:</strong>
+                      <strong>Memory aid</strong>
                       <p>{tutorExplanation.mnemonic}</p>
                     </div>
                     <div className="stc-section">
-                      <strong>📍 New Mexico / Albuquerque Anchor:</strong>
+                      <strong>Local example</strong>
                       <p>{tutorExplanation.localAnchor}</p>
                     </div>
                   </div>
@@ -879,12 +871,11 @@ export default function FlashcardDeckViewer({
             /* End-of-Sprint Scorecard */
             <div className="quiz-card-box quiz-scorecard">
               <div className="qsc-header mono">
-                <span className="pill mono live">🏆 Sprint Finished</span>
                 <span className="qsc-score-badge">{quizScore} PTS</span>
               </div>
               <div className="qsc-body">
                 <div className="qsc-trophy">⚡</div>
-                <h2>Sprint Completed!</h2>
+                <h2>Quiz complete</h2>
                 <p className="sub mono">
                   Accuracy: <b>{quizCorrectCount}</b> of <b>{quizAnsweredCount}</b> correct ({quizAnsweredCount > 0 ? Math.round((quizCorrectCount / quizAnsweredCount) * 100) : 0}%)
                 </p>
@@ -959,8 +950,8 @@ export default function FlashcardDeckViewer({
                     else stateClass = "dimmed";
                   }
 
-                  const icons = ["▲", "◆", "●", "■"];
-                  const shapeNames = ["Red Triangle", "Blue Diamond", "Gold Circle", "Green Square"];
+                  const icons = ["A", "B", "C", "D"];
+                  const shapeNames = ["Choice A", "Choice B", "Choice C", "Choice D"];
 
                   return (
                     <button
@@ -982,8 +973,9 @@ export default function FlashcardDeckViewer({
               {selectedChoiceIdx !== null && (
                 <div className="qc-explanation-reveal mono">
                   <span className="qc-exp-source">
-                    📖 Source: {currentCard.source || currentCard.courseCode}
+                    Source: {readingCitation(currentCard.source).label || currentCard.courseCode}
                   </span>
+                  <SourcePassage source={currentCard.source} />
                   <span className="qc-exp-next">Advancing in 1.4s...</span>
                 </div>
               )}
@@ -1005,20 +997,16 @@ export default function FlashcardDeckViewer({
       {viewMode === "exam" && (
         <div className="midterm-exam-container mono">
           <div className="exam-hero-card">
-            <span className="pill mono live">📝 Midterm Simulator</span>
             <h2 style={{ margin: 0, fontSize: 18 }}>
               {activeCourse === "ALL" ? "GEOG 1160" : activeCourse} Practice Exam
             </h2>
-            <p className="sub mono" style={{ maxWidth: 500, margin: 0 }}>
-              Synthesized from UNM Fall 2026 course cribs, regional geography/history theses, and active midterm objectives.
-            </p>
             <button
               type="button"
               className="deck-btn primary sm-btn"
               onClick={handleGenerateExam}
               disabled={isExamLoading}
             >
-              {isExamLoading ? "⚡ Generating Exam via AI..." : "🔄 Generate Fresh Exam"}
+              {isExamLoading ? "Generating exam…" : "Generate exam"}
             </button>
           </div>
 
@@ -1040,9 +1028,6 @@ export default function FlashcardDeckViewer({
                 )}
                 %)
               </h3>
-              <p className="sub mono" style={{ margin: 0 }}>
-                Review detailed explanations and distractor analyses below.
-              </p>
             </div>
           )}
 

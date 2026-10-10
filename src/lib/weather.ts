@@ -50,6 +50,7 @@ const UA = () => process.env.NWS_USER_AGENT || "daymark (set NWS_USER_AGENT)";
 async function nws<T>(url: string, revalidate: number): Promise<T> {
   const res = await fetch(url, {
     headers: { "User-Agent": UA(), Accept: "application/geo+json" },
+    signal: AbortSignal.timeout(10000),
     next: { revalidate },
   });
   if (!res.ok) throw new Error(`NWS ${res.status} for ${url}`);

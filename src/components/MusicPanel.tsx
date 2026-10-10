@@ -1,8 +1,7 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useEffect, useCallback, useRef } from "react";
 import type { Music, Track } from "@/lib/music";
-import AlbumAccent from "@/components/AlbumAccent";
 import LofiDeck from "@/components/LofiDeck";
 
 /**
@@ -14,9 +13,10 @@ import LofiDeck from "@/components/LofiDeck";
  * he plays something.
  */
 
-const ago = (iso: string | null): string => {
+const ago = (iso: string | null, now:number|null): string => {
   if (!iso) return "";
-  const m = (Date.now() - Date.parse(iso)) / 60000;
+  if(now===null)return '';
+  const m = (now - Date.parse(iso)) / 60000;
   if (!isFinite(m)) return "";
   if (m < 60) return `${Math.max(1, Math.round(m))}m ago`;
   if (m < 1440) return `${Math.round(m / 60)}h ago`;
@@ -28,49 +28,61 @@ function Sleeve({ track }: { track: Track }) {
   // Archive — and either can 404 for an obscure release. A broken-image icon
   // next to the biggest text on the page is worse than no image at all.
   const [failed, setFailed] = useState(false);
-  if (!track.art || failed) return <div className="sleeve blank" aria-hidden="true" />;
+  useEffect(() => setFailed(false), [track.art]);
+  if (!track.art || failed) return <div className="sleeve blank music-art-type" aria-hidden="true"><span>{track.artist}</span></div>;
   return (
     <img className="sleeve" src={track.art} alt={`${track.album ?? track.title} cover`}
       loading="lazy" decoding="async" onError={() => setFailed(true)} />
   );
 }
 
-export default function MusicPanel({ promise }: { promise: Promise<Music> }) {
-  const m = use(promise);
+export default function MusicPanel({ promise,compact=false }: { promise: Promise<Music>;compact?:boolean }) {
+  const initial = use(promise);
+  const [updated, setUpdated] = useState<Music | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState("");
+  const request = useRef<AbortController | null>(null);
+  const m = updated ?? initial;
+  const refresh = useCallback(async () => {
+    if (request.current) return;
+    const controller = new AbortController();
+    request.current = controller;
+    setRefreshing(true);
+    setRefreshError("");
+    try {
+      const response = await fetch("/api/music", { signal: controller.signal });
+      if (!response.ok) throw Error();
+      const next: Music = await response.json();
+      if (next.error && m.recent.length) setRefreshError(next.error);
+      else setUpdated(next);
+    } catch {
+      if (!controller.signal.aborted)
+        setRefreshError("Could not refresh listening. Your last tracks are still here.");
+    } finally {
+      if (request.current === controller) request.current = null;
+      if (!controller.signal.aborted) setRefreshing(false);
+    }
+  }, [m.recent.length]);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") void refresh();
+    }, 5 * 60 * 1000);
+    return () => { clearInterval(timer); request.current?.abort(); };
+  }, [refresh]);
   const [deckMode, setDeckMode] = useState<"stream" | "lofi">("stream");
   const lead = m.recent[0] ?? null;
-  const rest = m.recent.slice(1, 6);
+  const [clock,setClock]=useState<number|null>(null);
+  useEffect(()=>{setClock(Date.now());const t=setInterval(()=>setClock(Date.now()),60000);return()=>clearInterval(t);},[]);
+  const rest = m.recent.slice(1, compact ? 3 : 6);
 
   return (
-    <section className="card span12 musiccard">
+    <section className={`card span12 musiccard${compact?' music-compact':''}`}>
       <div className="card-head" id="listening">
-        <h2>Listening</h2>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {deckMode === "stream" && (
-            <span className={`pill mono ${lead?.nowPlaying ? "live" : ""}`}>
-              {m.error ? "unavailable"
-                : lead?.nowPlaying ? "playing now"
-                : m.totalScrobbles ? `${m.totalScrobbles.toLocaleString()} scrobbles`
-                : m.source ?? ""}
-            </span>
-          )}
-          <div className="view-toggle mono">
-            <button
-              type="button"
-              className={`view-toggle-btn ${deckMode === "stream" ? "active" : ""}`}
-              onClick={() => setDeckMode("stream")}
-            >
-              Stream
-            </button>
-            <span className="view-toggle-sep">/</span>
-            <button
-              type="button"
-              className={`view-toggle-btn ${deckMode === "lofi" ? "active" : ""}`}
-              onClick={() => setDeckMode("lofi")}
-            >
-              🎧 Lo-Fi Deck
-            </button>
-          </div>
+        <h2>Listening Corner</h2>
+        <div className="personal-tabs" aria-label="Listening view">
+          <button aria-pressed={deckMode === "stream"} onClick={() => setDeckMode("stream")}>Recent</button>
+          <button aria-pressed={deckMode === "lofi"} onClick={() => setDeckMode("lofi")}>Lo-fi</button>
+          <button disabled={refreshing} onClick={() => void refresh()} aria-label="Refresh listening">{refreshing ? "Refreshing…" : "↻"}</button>
         </div>
       </div>
       <div className="card-body">
@@ -78,13 +90,13 @@ export default function MusicPanel({ promise }: { promise: Promise<Music> }) {
           <LofiDeck />
         ) : (
           <>
-            {m.error && <div className="sub">{m.error}</div>}
+            {refreshError && <p className="sub" role="status">{refreshError}</p>}
+            {m.error && <div className="sub">{m.error.startsWith("Set ")?"Connect Last.fm or ListenBrainz to bring your listening history here.":m.error}</div>}
         {/* A working fallback still says which source it fell back from. */}
         {m.note && !m.error && <div className="sub musicnote">{m.note}</div>}
 
         {lead && (
           <>
-            {lead.art && <AlbumAccent src={lead.art} />}
             <div className="nowrow">
               <Sleeve track={lead} />
               <div className="nowmeta">
@@ -92,7 +104,7 @@ export default function MusicPanel({ promise }: { promise: Promise<Music> }) {
                 <div className="now-artist">{lead.artist}</div>
                 {lead.album && <div className="sub now-album">{lead.album}</div>}
                 <div className="sub mono now-when">
-                  {lead.nowPlaying ? "playing now" : ago(lead.playedAt)}
+                  {lead.nowPlaying ? "Playing now" : `Last played ${ago(lead.playedAt,clock)}`}
                 </div>
               </div>
             </div>
@@ -105,13 +117,14 @@ export default function MusicPanel({ promise }: { promise: Promise<Music> }) {
               <div className="trackrow" key={`${t.artist}-${t.title}-${i}`}>
                 <span className="tr-title">{t.title}</span>
                 <span className="tr-artist">{t.artist}</span>
-                <span className="tr-when mono">{ago(t.playedAt)}</span>
+                <span className="tr-when mono">{ago(t.playedAt,clock)}</span>
               </div>
             ))}
           </div>
         )}
 
-        {m.top.length > 0 && (
+        {!compact && m.source && <p className="sub listening-source">From {m.source === "lastfm" ? "Last.fm" : "ListenBrainz"}{m.user ? ` · ${m.user}` : ""}</p>}
+        {!compact && m.top.length > 0 && (
           <div className="musicsplit">
             <div>
               <div className="minihead mono">This month</div>

@@ -15,6 +15,7 @@ export type Flashcard = {
   front: string;
   back: string;
   source: string;
+  sourceNote?: string;
   tags: string;
   status: CardStatus;
   parsedTag: ParsedTag;

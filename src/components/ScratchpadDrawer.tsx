@@ -2,10 +2,14 @@
 import { cloudStorage, getCloudStatus } from "@/lib/cloud-storage";
 
 
+import {NOTEBOOK_KEY,editNotebookNote,noteTitle,type NotebookNote} from "@/lib/notebook";
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import {usePersonalRecords} from "@/lib/use-personal-records";
 import { useCloudRevision } from "@/lib/use-cloud-revision";
+import {inlineNoteParts} from '@/lib/note-links';
 import type { Flashcard } from "@/lib/study-hub-types";
 import type { EvidenceItem } from "@/components/EvidenceBank";
+import {renderObsidianPreview,renderWithWikiLinks} from "./NotebookPreview";
 import type { VaultNote } from "@/lib/vault";
 
 interface ScratchpadDrawerProps {
@@ -30,6 +34,11 @@ const DEFAULT_DRAWER_WIDTH = 600;
 
 export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "General" }: ScratchpadDrawerProps) {
   const cloudRevision = useCloudRevision();
+  const notebook = usePersonalRecords<NotebookNote>(NOTEBOOK_KEY);
+  const [editingContent,setEditingContent] = useState<string|null>(null);
+  const connectedCards=usePersonalRecords<Flashcard>("hb:custom-anki-cards");
+  const noteLinks=usePersonalRecords<{from:string;to:string;highlight?:string}>("daymark:note-links");
+  const passages=usePersonalRecords<{file:string;page:number;quote?:string;comment?:string}>("daymark:highlights");
   const dialogRef = useRef<HTMLDivElement>(null);
   const [activeTag, setActiveTag] = useState<string>(defaultTag);
   const [viewMode, setViewMode] = useState<"edit" | "split" | "preview">("edit");
@@ -55,9 +64,9 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
 
   // Sidebar State
   const [showSidebar, setShowSidebar] = useState<boolean>(() => {
-    if (typeof window === "undefined") return true;
+    if (typeof window === "undefined") return false;
     const saved = cloudStorage.getItem(SIDEBAR_STORAGE_KEY);
-    return saved !== null ? saved === "true" : true;
+    return saved !== null ? saved === "true" : false;
   });
   const [sidebarSearch, setSidebarSearch] = useState("");
   const [allVaultNotes, setAllVaultNotes] = useState<VaultNote[]>([]);
@@ -66,7 +75,6 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
 
   // Notifications & State Feedback
   const [copied, setCopied] = useState(false);
-  const [savedPing, setSavedPing] = useState(false);
   const [bannerMsg, setBannerMsg] = useState<string | null>(null);
   const [isHandoffRunning, setIsHandoffRunning] = useState(false);
   const [isSavingVault, setIsSavingVault] = useState(false);
@@ -117,8 +125,10 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
 
   // Sync defaultTag if provided
   useEffect(() => {
-    if (defaultTag && DEFAULT_TAGS.some(t => t.id === defaultTag)) {
+    if (defaultTag) {
       setActiveTag(defaultTag);
+      setSelectedNoteId("draft");
+      setEditingContent(null);
     }
   }, [defaultTag]);
 
@@ -214,7 +224,37 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose, showAnkiModal, isFullscreen]);
 
-  const currentContent = notes[activeTag] || "";
+  const currentContent = editingContent ?? notebook.records[selectedNoteId]?.content ?? notes[activeTag] ?? "";
+  const noteIdentity = notebook.records[selectedNoteId] ? selectedNoteId : activeTag;
+  const courses = Array.from(new Set([...DEFAULT_TAGS.map(t=>t.id),...Object.keys(notes),...Object.values(notebook.records).map(n=>n.course),...allVaultNotes.map(n=>n.course),activeTag]));
+  function persistDraft(course:string,content:string) {
+    const latest = JSON.parse(cloudStorage.getItem(STORAGE_KEY)||"{}");
+    const next = {...latest,[course]:content};
+    cloudStorage.setItem(STORAGE_KEY,JSON.stringify(next));
+    setNotes(next);
+  }
+  function commitContent(content:string) {
+    setEditingContent(content);
+    if (selectedNoteId === "draft" && !content.trim()) {
+      try { persistDraft(activeTag,content); return true; } catch { setBannerMsg("Could not save on this device. Copy your text before leaving."); return false; }
+    }
+    const id = notebook.records[selectedNoteId] ? selectedNoteId : `note-${crypto.randomUUID()}`;
+    const saved = notebook.write(id,editNotebookNote(id,activeTag,content,notebook.records[id]));
+    if (saved) {
+      setSelectedNoteId(id);
+      setEditingContent(null);
+      // Keep an empty capture inbox above the saved entry. Save the entry first.
+      if(selectedNoteId === "draft") try { persistDraft(activeTag,""); } catch { setBannerMsg("Note saved; the old draft is also retained on this device."); }
+    }
+    return saved;
+  }
+  const latestContent = useRef(currentContent);
+  latestContent.current = currentContent;
+  const latestCommit = useRef(commitContent);
+  latestCommit.current = commitContent;
+  function saveNote() {
+    if(currentContent.trim()&&commitContent(currentContent)) { setBannerMsg("Note saved. Changes continue to autosave."); }
+  }
   const saveCopyToVault = async () => {
     setIsSavingVault(true);
     saveId.current ||= crypto.randomUUID();
@@ -229,16 +269,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
     finally { setIsSavingVault(false); }
   };
 
-  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const val = e.target.value;
-    const updated = { ...notes, [activeTag]: val };
-    setNotes(updated);
-    try {
-      cloudStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      setSavedPing(true);
-      setTimeout(() => setSavedPing(false), 800);
-    } catch {}
-  };
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => { commitContent(e.target.value); };
 
   // 🎙️ Web Speech API Dictation
   const toggleListening = () => {
@@ -277,12 +308,10 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
           }
         }
         if (transcript.trim()) {
-          const updatedText = currentContent
-            ? `${currentContent.trim()}\n- ${transcript.trim()}`
+          const updatedText = latestContent.current
+            ? `${latestContent.current.trim()}\n- ${transcript.trim()}`
             : `- ${transcript.trim()}`;
-          const updated = { ...notes, [activeTag]: updatedText };
-          setNotes(updated);
-          cloudStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+          latestCommit.current(updatedText);
           setBannerMsg(`🎙️ Dictated: "${transcript.trim().slice(0, 45)}..."`);
           setTimeout(() => setBannerMsg(null), 3000);
         }
@@ -342,9 +371,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
   const handleInsertCopilotAnswer = () => {
     if (!copilotAnswer) return;
     const snippet = `\n\n> [!TIP] Copilot Q&A: ${copilotQuery.trim()}\n> ${copilotAnswer}\n`;
-    const updated = { ...notes, [activeTag]: (currentContent + snippet).trim() };
-    setNotes(updated);
-    cloudStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    commitContent((currentContent + snippet).trim());
     setCopilotAnswer(null);
     setCopilotQuery("");
     setBannerMsg("✓ Inserted Copilot answer into note!");
@@ -355,22 +382,19 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
   const handleSelectNote = (course: string, noteId: string, noteContent?: string) => {
     setActiveTag(course);
     setSelectedNoteId(noteId);
-    if (noteContent !== undefined) {
-      const updated = { ...notes, [course]: noteContent };
-      setNotes(updated);
-      cloudStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    }
+    setEditingContent(noteContent ?? null);
+    if (window.innerWidth < 600) setShowSidebar(false);
   };
 
   const handleNewNoteDraft = (targetCourse?: string) => {
+    // A legacy capture draft must be preserved before starting another note.
+    if(selectedNoteId === "draft" && currentContent.trim() && !commitContent(currentContent)) return;
     const course = targetCourse || activeTag;
     setActiveTag(course);
     setSelectedNoteId("draft");
-    const updated = { ...notes, [course]: "" };
-    setNotes(updated);
-    cloudStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    setBannerMsg(`✦ Started fresh draft for ${course}`);
-    setTimeout(() => setBannerMsg(null), 2500);
+    setEditingContent(null);
+    setBannerMsg(null);
+    if (window.innerWidth < 600) setShowSidebar(false);
     textareaRef.current?.focus();
   };
 
@@ -398,7 +422,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
     if (!exportText.startsWith("---")) {
       const fm = [
         `---`,
-        `title: "${activeTag} Lecture Notes"`,
+        `title: "${activeTag}"`,
         `course: "${activeTag}"`,
         `date: "${dateStr}"`,
         `tags: ["lecture", "${activeTag.toLowerCase().replace(/\s+/g, "-")}"]`,
@@ -426,11 +450,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
   const handleClear = () => {
     if (!currentContent) return;
     if (window.confirm(`Clear scratchpad for ${activeTag}?`)) {
-      const updated = { ...notes, [activeTag]: "" };
-      setNotes(updated);
-      try {
-        cloudStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      } catch {}
+      commitContent("");
     }
   };
 
@@ -458,7 +478,8 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
       id: `custom-${Date.now()}`,
       front: ankiFront.trim(),
       back: ankiBack.trim(),
-      source: ankiSource.trim() || `${activeTag} Lecture Notes`,
+      sourceNote: noteIdentity,
+      source: ankiSource.trim() || `${activeTag}`,
       tags: `${activeTag.replace(/\s+/g, "")}::Custom::QuickNote`,
       status: "Verified",
       parsedTag: {
@@ -545,9 +566,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
       const data = await res.json();
 
       if (data.enrichedMarkdown) {
-        const updated = { ...notes, [activeTag]: data.enrichedMarkdown };
-        setNotes(updated);
-        cloudStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        commitContent(data.enrichedMarkdown);
 
         // Inject mined Anki cards into active deck
         if (data.generatedCards && data.generatedCards.length > 0) {
@@ -573,77 +592,6 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
     }
   };
 
-  // Helper to render Obsidian Markdown preview
-  const renderObsidianPreview = (content: string) => {
-    if (!content.trim()) {
-      return (
-        <div className="sub mono" style={{ padding: 24, textAlign: "center" }}>
-          No notes to preview yet. Switch to Editor to write.
-        </div>
-      );
-    }
-
-    const lines = content.split("\n");
-    return (
-      <div className="obsidian-preview-content">
-        {lines.map((line, idx) => {
-          const trimmed = line.trim();
-          if (trimmed.startsWith("# ")) {
-            return <h1 key={idx} className="obs-h1">{trimmed.slice(2)}</h1>;
-          }
-          if (trimmed.startsWith("## ")) {
-            return <h2 key={idx} className="obs-h2">{trimmed.slice(3)}</h2>;
-          }
-          if (trimmed.startsWith("### ")) {
-            return <h3 key={idx} className="obs-h3">{trimmed.slice(4)}</h3>;
-          }
-          if (trimmed.startsWith("> [!NOTE]")) {
-            return <div key={idx} className="obs-callout note mono">💡 {trimmed.replace("> [!NOTE]", "").trim()}</div>;
-          }
-          if (trimmed.startsWith("> [!WARNING]")) {
-            return <div key={idx} className="obs-callout warn mono">⚠️ {trimmed.replace("> [!WARNING]", "").trim()}</div>;
-          }
-          if (trimmed.startsWith("> [!TIP]")) {
-            return <div key={idx} className="obs-callout tip mono">✦ {trimmed.replace("> [!TIP]", "").trim()}</div>;
-          }
-          if (trimmed.startsWith("> ")) {
-            return <blockquote key={idx} className="obs-quote">{trimmed.slice(2)}</blockquote>;
-          }
-          if (trimmed === "---") {
-            return <hr key={idx} className="obs-divider" />;
-          }
-          if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
-            const text = trimmed.slice(2);
-            return (
-              <li key={idx} className="obs-li">
-                {renderWithWikiLinks(text)}
-              </li>
-            );
-          }
-          if (!trimmed) {
-            return <div key={idx} style={{ height: 8 }} />;
-          }
-          return <p key={idx} className="obs-p">{renderWithWikiLinks(line)}</p>;
-        })}
-      </div>
-    );
-  };
-
-  const renderWithWikiLinks = (str: string) => {
-    const parts = str.split(/(\[\[.*?\]\])/g);
-    return parts.map((part, i) => {
-      if (part.startsWith("[[") && part.endsWith("]]")) {
-        const link = part.slice(2, -2);
-        return (
-          <span key={i} className="obs-wikilink mono" title={`Concept Link: ${link}`}>
-            [[{link}]]
-          </span>
-        );
-      }
-      return part;
-    });
-  };
-
   // Metrics
   const words = currentContent.trim() ? currentContent.trim().split(/\s+/).length : 0;
   const chars = currentContent.length;
@@ -651,9 +599,9 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
   if (!isOpen) return null;
 
   return (
-    <div ref={dialogRef} className="scratchpad-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label="Academic Vault and scratchpad">
+    <div ref={dialogRef} className="scratchpad-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label="Notebook">
       <div
-        className={`scratchpad-drawer ${isFullscreen ? "fullscreen" : ""}`}
+        className={`scratchpad-drawer ${isFullscreen ? "fullscreen" : ""} ${isResizing ? "resizing" : ""}`}
         style={!isFullscreen ? { width: `min(${drawerWidth}px, 100vw)` } : undefined}
         onClick={(e) => e.stopPropagation()}
       >
@@ -678,15 +626,16 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
                 onClick={handleToggleSidebar}
                 title={showSidebar ? "Hide Vault Sidebar" : "Show Vault Sidebar"}
               >
-                🗂️ {showSidebar ? "Hide Vault" : `Vault (${allVaultNotes.length})`}
+                {showSidebar ? "Hide notes" : "Notes"}
               </button>
-              <span className="scratchpad-badge mono">⌘J Academic Vault</span>
+              <span className="scratchpad-badge mono">Notebook</span>
             </div>
-            <h3 className="scratchpad-title">{activeTag} Lecture Notes</h3>
+            <label className="notebook-selector">Course<select aria-label="Notebook course" value={activeTag} onChange={e=>handleSelectNote(e.target.value,"draft")}>{courses.map(key=><option key={key} value={key}>{key}</option>)}</select></label>
           </div>
 
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            {/* View Mode Toggle: Edit vs Split vs Obsidian Preview */}
+            <button type="button" className="scratchpad-save-note" disabled={!currentContent.trim()} onClick={saveNote}>Save note</button>
+            {/* View Mode Toggle: Edit vs Split vs Preview */}
             <div className="obs-mode-toggle mono">
               <button
                 type="button"
@@ -694,7 +643,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
                 onClick={() => setViewMode("edit")}
                 title="Editor Mode"
               >
-                ✎ Edit
+                Write
               </button>
               <button
                 type="button"
@@ -702,7 +651,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
                 onClick={() => setViewMode("split")}
                 title="Split Side-by-Side Mode"
               >
-                🗗 Split
+                Split
               </button>
               <button
                 type="button"
@@ -710,7 +659,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
                 onClick={() => setViewMode("preview")}
                 title="Rendered Obsidian View"
               >
-                ✦ Obsidian
+                Read
               </button>
             </div>
 
@@ -721,7 +670,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
               onClick={() => setIsFullscreen(!isFullscreen)}
               title={isFullscreen ? "Restore normal size" : "Zen Fullscreen Mode"}
             >
-              {isFullscreen ? "🗗 Restore" : "⛶ Full"}
+              {isFullscreen ? "Restore" : "Full screen"}
             </button>
 
             <button
@@ -748,7 +697,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
           {showSidebar && (
             <aside className="scratchpad-sidebar mono">
               <div className="sidebar-head">
-                <span className="sidebar-head-title">Vault Explorer</span>
+                <span className="sidebar-head-title">Saved notes</span>
                 <button
                   type="button"
                   className="scratchpad-tag-btn mono"
@@ -772,67 +721,22 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
 
               {/* Folder Navigation */}
               <div className="sidebar-nav-scroll">
-                {DEFAULT_TAGS.map((t) => {
-                  const courseNotes = allVaultNotes.filter(
-                    (n) => n.course.replace(/\s+/g, "").toUpperCase() === t.id.replace(/\s+/g, "").toUpperCase()
-                  );
-                  const isCollapsed = collapsedFolders[t.id];
-                  const hasDraft = Boolean(notes[t.id]?.trim());
-
-                  // Filter by search query if any
-                  const filteredCourseNotes = courseNotes.filter((n) =>
-                    !sidebarSearch || n.title.toLowerCase().includes(sidebarSearch.toLowerCase()) || n.filename.toLowerCase().includes(sidebarSearch.toLowerCase())
-                  );
-
-                  return (
-                    <div key={t.id} className="sidebar-folder">
-                      <div
-                        className="sidebar-folder-title"
-                        onClick={() => toggleFolder(t.id)}
-                      >
-                        <span>{isCollapsed ? "▸" : "▾"} 📁 {t.label}</span>
-                        <span style={{ opacity: 0.6 }}>{courseNotes.length + (hasDraft ? 1 : 0)}</span>
-                      </div>
-
-                      {!isCollapsed && (
-                        <div style={{ paddingLeft: 10 }}>
-                          {/* Active Draft Item */}
-                          <button
-                            type="button"
-                            className={`sidebar-note-item ${activeTag === t.id && selectedNoteId === "draft" ? "active" : ""}`}
-                            onClick={() => handleSelectNote(t.id, "draft")}
-                          >
-                            <span className="sidebar-note-status-dot draft" />
-                            <span className="sidebar-note-label">
-                              ● Current Draft {hasDraft ? `(${notes[t.id].trim().split(/\s+/).length}w)` : "(empty)"}
-                            </span>
-                          </button>
-
-                          {/* Saved Vault Notes */}
-                          {filteredCourseNotes.map((vn) => {
-                            const isSelected = activeTag === t.id && selectedNoteId === vn.id;
-                            return (
-                              <button
-                                key={vn.id}
-                                type="button"
-                                className={`sidebar-note-item ${isSelected ? "active" : ""}`}
-                                onClick={() => handleSelectNote(t.id, vn.id, vn.rawBody || vn.content)}
-                                title={`${vn.filename} (${vn.date})`}
-                              >
-                                <span
-                                  className={`sidebar-note-status-dot ${vn.agentStatus === "enriched" ? "enriched" : "raw"}`}
-                                  title={`Status: ${vn.agentStatus}`}
-                                />
-                                <span className="sidebar-note-label">
-                                  {vn.title.replace(new RegExp(`^${vn.date}-?`), "")}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
+                <button type="button" className={`sidebar-note-item notebook-new-draft ${selectedNoteId==='draft'?'active':''}`} onClick={()=>handleNewNoteDraft()}>New draft · {activeTag}</button>
+                {courses.map(course => {
+                  const match = (value:string) => value.replace(/\s+/g,"").toUpperCase() === course.replace(/\s+/g,"").toUpperCase();
+                  const query = sidebarSearch.trim().toLowerCase();
+                  const entries = Object.values(notebook.records).filter(n=>match(n.course)).sort((a,b)=>b.updatedAt-a.updatedAt);
+                  const vault = allVaultNotes.filter(n=>match(n.course));
+                  const hasDraft = Boolean(notes[course]?.trim());
+                  if(!entries.length&&!vault.length&&!hasDraft) return null;
+                  return <div key={course} className="sidebar-folder">
+                    <button type="button" className="sidebar-folder-title" aria-expanded={!collapsedFolders[course]} onClick={()=>toggleFolder(course)}><span>{course}</span><span>{entries.length+vault.length+(hasDraft?1:0)}</span></button>
+                    {!collapsedFolders[course]&&<div>
+                      {hasDraft&&(!query||notes[course].toLowerCase().includes(query))&&<button type="button" className={`sidebar-note-item ${activeTag===course&&selectedNoteId==='draft'?'active':''}`} onClick={()=>handleSelectNote(course,'draft')}>{noteTitle(notes[course])}<small>Captured</small></button>}
+                      {entries.filter(n=>!query||`${n.title} ${n.content}`.toLowerCase().includes(query)).map(n=><button key={n.id} type="button" className={`sidebar-note-item ${selectedNoteId===n.id?'active':''}`} onClick={()=>handleSelectNote(course,n.id)}><span className="sidebar-note-label">{n.title}</span></button>)}
+                      {vault.filter(n=>!query||`${n.title} ${n.content}`.toLowerCase().includes(query)).map(n=><button key={n.id} type="button" className={`sidebar-note-item ${selectedNoteId===n.id?'active':''}`} onClick={()=>handleSelectNote(course,n.id,n.rawBody||n.content)}><span className="sidebar-note-label">{n.title.replace(new RegExp(`^${n.date}-?`),"")}</span><small>Study vault</small></button>)}
+                    </div>}
+                  </div>;
                 })}
               </div>
             </aside>
@@ -840,28 +744,6 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
 
           {/* MAIN EDITOR & ACTION PANE */}
           <div className="scratchpad-main-pane">
-            {/* Course Tag Selector Chips */}
-            <div className="scratchpad-tags-bar">
-              <span className="scratchpad-tags-label mono">Course:</span>
-              <div className="scratchpad-tags-scroll">
-                {DEFAULT_TAGS.map((t) => {
-                  const hasNotes = Boolean(notes[t.id]?.trim());
-                  const isActive = activeTag === t.id;
-                  return (
-                    <button
-                      key={t.id}
-                      type="button"
-                      className={`scratchpad-tag-btn mono ${isActive ? "active" : ""} ${t.ck}`}
-                      onClick={() => handleSelectNote(t.id, "draft")}
-                    >
-                      {t.label}
-                      {hasNotes && <span className="scratchpad-tag-dot" />}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
             {/* Note Canvas / Preview / Split View */}
             <div className={`scratchpad-editor-wrap ${viewMode === "split" ? "split-view" : ""}`}>
               {viewMode === "edit" ? (
@@ -870,7 +752,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
                   className="scratchpad-textarea mono"
                   value={currentContent}
                   onChange={handleTextChange}
-                  placeholder={`Jot lecture notes, lab findings, or quotes for ${activeTag}...\n\nDrafts save on this device and sync to your account. Save a copy to the Vault when ready, or ask an agent to help review it.`}
+                  placeholder={`Write ${activeTag} notes…`}
                   spellCheck={false}
                 />
               ) : viewMode === "split" ? (
@@ -880,7 +762,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
                     className="scratchpad-textarea mono"
                     value={currentContent}
                     onChange={handleTextChange}
-                    placeholder={`Writing live in Split Mode for ${activeTag}...`}
+                    placeholder={`Write ${activeTag} notes…`}
                     spellCheck={false}
                   />
                   <div className="obsidian-preview-pane">
@@ -895,7 +777,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
             </div>
 
             {/* Inline Ask Copilot Bar */}
-            <div className="scratchpad-copilot-bar mono">
+            <details className="notebook-tools notebook-copilot"><summary>Ask about this note</summary><div className="scratchpad-copilot-bar mono">
               {copilotAnswer && (
                 <div className="scratchpad-copilot-answer-card">
                   <div className="scratchpad-copilot-answer-head">
@@ -925,7 +807,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
                 <input
                   type="text"
                   className="scratchpad-copilot-input mono"
-                  placeholder={`Ask Copilot quick question about ${activeTag}...`}
+                  placeholder={`Ask about ${activeTag}…`}
                   value={copilotQuery}
                   onChange={(e) => setCopilotQuery(e.target.value)}
                 />
@@ -939,6 +821,8 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
               </form>
             </div>
 
+            </details>
+            <details className="notebook-tools notebook-connections"><summary>Connected notes & passages</summary><label className="desk-field">Link a note<select aria-label="Link a notebook note" defaultValue="" onChange={e=>{if(e.target.value)noteLinks.write(crypto.randomUUID(),{from:noteIdentity,to:e.target.value});e.target.value='';}}><option value="">Choose a note…</option>{Object.values(notebook.records).filter(n=>n.id!==noteIdentity).map(n=><option key={n.id} value={n.id}>{n.title}</option>)}{Object.keys(notes).filter(key=>key!==noteIdentity&&notes[key]?.trim()).map(key=><option key={key}>{key}</option>)}</select></label>{Object.entries(noteLinks.records).filter(([,l])=>l.from===noteIdentity||l.to===noteIdentity).map(([id,l])=>{const passage=l.highlight?passages.records[l.highlight]:null;const target=l.from===noteIdentity?l.to:l.from;return <p key={id}>{passage?<a href={`/?space=school&reading=${passage.file}&page=${passage.page}&highlight=${l.highlight}`}>Page {passage.page} · source passage ↗</a>:<button onClick={()=>handleSelectNote(notebook.records[target]?.course||target,notebook.records[target]?target:'draft')}>{l.from===noteIdentity?(notebook.records[target]?.title||target):`Linked from ${notebook.records[target]?.title||target}`}</button>} <button onClick={()=>noteLinks.write(id,null)} aria-label="Remove note connection">×</button>{passage?.quote&&<span className="notebook-source-excerpt" style={{display:"block"}}>{passage.quote.length>220?passage.quote.slice(0,220)+"…":passage.quote}</span>}</p>;})}{Object.values(connectedCards.records).filter(c=>c.sourceNote===noteIdentity||Object.values(noteLinks.records).some(l=>l.from===noteIdentity&&l.highlight&&c.id===`highlight-${l.highlight}`)).map(c=><details key={c.id} className="connected-card"><summary>Card · {c.front}</summary><p>{c.back}</p><div className="sub">{inlineNoteParts(c.source.replace(/.*? · (?=\/)/,"Source: ")).map((part,i)=>part.kind==='link'?<a key={i} href={part.url}>{part.text}</a>:<span key={i}>{part.text}</span>)}</div><a href="/study">Cards & review</a></details>)}{noteLinks.error&&<p role="status">{noteLinks.error}</p>}</details>
             {/* Footer & Metrics */}
             <div className="scratchpad-footer">
               <div className="scratchpad-metrics mono">
@@ -946,13 +830,11 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
                 <span className="dot-sep">·</span>
                 <span>{chars} chars</span>
                 <span className="dot-sep">·</span>
-                <span className={`save-indicator ${savedPing ? "saving" : ""}`}>
-                  {savedPing ? "Saving draft…" : cloudMessage}
-                </span>
+                <span className="save-indicator" role="status">{notebook.error || cloudMessage}</span>
               </div>
 
-              <div className="scratchpad-actions mono">
-                <button type="button" className="scratchpad-act-btn" disabled={!currentContent.trim() || isSavingVault} onClick={() => void saveCopyToVault()}>{isSavingVault ? "Saving…" : "Save copy to Vault"}</button>
+              <details className="notebook-tools"><summary>Study & export tools</summary><div className="scratchpad-actions mono">
+                <button type="button" className="scratchpad-act-btn" disabled={!currentContent.trim() || isSavingVault} onClick={() => void saveCopyToVault()}>{isSavingVault ? "Saving…" : "Copy to study vault"}</button>
                 {/* 🎙️ Voice Dictation Button */}
                 <button
                   type="button"
@@ -988,9 +870,9 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
                   className="scratchpad-act-btn star"
                   onClick={handleSendToSynthesis}
                   disabled={!currentContent.trim()}
-                  title="Send note to Friday 8:00 PM Synthesis Evidence Bank"
+                  title="Add note to weekly review"
                 >
-                  ★ To Synthesis
+                  Add to review
                 </button>
                 <button
                   type="button"
@@ -1019,7 +901,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
                 >
                   🗑 Clear
                 </button>
-              </div>
+              </div></details>
             </div>
           </div>
         </div>
@@ -1049,7 +931,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
                     rows={3}
                     value={ankiFront}
                     onChange={(e) => setAnkiFront(e.target.value)}
-                    placeholder="Enter question or concept to test..."
+                    placeholder="Question or concept"
                     required
                   />
                 </div>
@@ -1062,7 +944,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
                     rows={4}
                     value={ankiBack}
                     onChange={(e) => setAnkiBack(e.target.value)}
-                    placeholder="Enter the concise verified answer..."
+                    placeholder="Answer"
                     required
                   />
                 </div>

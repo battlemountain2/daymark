@@ -48,65 +48,10 @@ export default function StudyGlance({ promise }: Props) {
       </div>
 
       <div className="card-body">
-        {/* Term & Deck Progress Banner */}
-        <div className="glance-top-stat mono">
-          <span>Week {data.currentWeekNumber} · {courses.length} courses</span>
-          <span className="pill mono live">
-            {verifiedPct}% source-verified
-          </span>
-        </div>
+        <div className="study-preview"><div><span className="mono sub">WEEK {data.currentWeekNumber} · {courses.length} COURSES</span><h3>Review queue</h3></div><div className="study-queue"><strong>{dueCards.length}</strong><span>{dueCards.length ? "cards ready to review" : "Nothing due today"}</span><small className="sub">{verifiedPct}% source-verified</small></div></div>
+        <div className="study-preview-actions">{dueCards.length > 0 ? <button type="button" onClick={() => setIsQuickReviewOpen(true)}>Start a short review →</button> : <Link href="/study">Open practice →</Link>}<Link href="/study?mode=quiz">Try a quiz</Link></div>
+        {topWeak && <details className="personal-setup"><summary>Worth another look · {topWeak.course}</summary><h3>{topWeak.topic}</h3><p className="sub">{topWeak.reason}</p></details>}
 
-        {/* Actionable Due Queue Banner */}
-        <div className="glance-due-banner">
-          <div className="gdb-left">
-            <div className="gdb-title mono">
-              <span className="gdb-lightning">⚡</span>
-              <span className="gdb-count">{dueCards.length}</span>
-              <span className="gdb-tag">TODAY'S QUEUE</span>
-            </div>
-            <div className="gdb-sub sub mono">
-              {dueCards.length > 0
-                ? `Due reviews + up to 10 new cards · ${allCards.filter(c => !srsStore[c.id]).length} new cards available`
-                : "All flashcard decks up to date"}
-            </div>
-          </div>
-        </div>
-
-        {/* Highlighted Weak Area Alert */}
-        {topWeak && (
-          <div className="glance-alert-box">
-            <div className="gab-top mono">
-              <span className="gab-k">⚠️ Focus: {topWeak.course}</span>
-              <span className="gab-pill mono">needs review</span>
-            </div>
-            <div className="gab-topic">{topWeak.topic}</div>
-            <div className="gab-reason">{topWeak.reason}</div>
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="glance-action-row">
-          {dueCards.length > 0 ? (
-            <button
-              type="button"
-              className="glance-btn primary mono"
-              onClick={() => setIsQuickReviewOpen(true)}
-            >
-              ⚡ Start 5-Min Review ({dueCards.length} cards) →
-            </button>
-          ) : (
-            <Link href="/study" className="glance-btn primary mono">
-              Practice Active Recall ({allCards.length} cards) →
-            </Link>
-          )}
-
-          <Link
-            href="/study?mode=quiz"
-            className="glance-btn secondary mono"
-          >
-            ⚡ Launch 10-Question Random Quiz →
-          </Link>
-        </div>
       </div>
 
       {/* Quick Study Modal */}

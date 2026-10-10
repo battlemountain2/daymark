@@ -31,7 +31,7 @@ export default function StudyHubPanel({ promise }: Props) {
     <section className="card span12 study-card">
       <div className="card-head">
         <div className="study-head-left">
-          <h2>Academic Study Hub</h2>
+          <h2>Study Hub</h2>
           <span className="pill mono term-pill">{data.activeTerm} · Week {data.currentWeekNumber}</span>
         </div>
         <div className="study-tabs mono">
@@ -40,7 +40,7 @@ export default function StudyHubPanel({ promise }: Props) {
             className={`study-tab ${activeTab === "overview" ? "on" : ""}`}
             onClick={() => setActiveTab("overview")}
           >
-            Course Matrix
+            Courses
           </button>
           <button
             type="button"
@@ -57,7 +57,7 @@ export default function StudyHubPanel({ promise }: Props) {
             className={`study-tab ${activeTab === "review" ? "on" : ""}`}
             onClick={() => setActiveTab("review")}
           >
-            Weekly Review & Takeaways
+            Weekly review
           </button>
           <button
             type="button"
@@ -196,9 +196,6 @@ export default function StudyHubPanel({ promise }: Props) {
             <div className="wr-header">
               <div>
                 <h3 className="wr-title">{weeklyReview.weekTitle}</h3>
-                <p className="sub mono">
-                  Automated synthesis co-managed with Gemini Spark & ChatGPT · Friday 8:00 PM review cadence
-                </p>
               </div>
             </div>
 
@@ -260,7 +257,7 @@ export function StudyHubSkeleton() {
   return (
     <section className="card span12 study-card">
       <div className="card-head">
-        <h2>Academic Study Hub</h2>
+        <h2>Study Hub</h2>
         <span className="pill mono">loading</span>
       </div>
       <div className="card-body">

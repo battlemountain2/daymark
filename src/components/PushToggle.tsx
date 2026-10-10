@@ -99,12 +99,12 @@ export default function PushToggle() {
 
   const message: Record<Status, string> = {
     loading: "",
-    on: "Notifications on — morning, before your first class, and at night.",
-    off: "Get a morning brief, an hour's warning before your first class, and tomorrow's shape at night.",
+    on: "Notifications on.",
+    off: "Class and daily reminders.",
     denied: "Notifications are blocked in your browser settings for this site.",
     unsupported: "This browser doesn't support push notifications.",
     "needs-install": "Add this to your home screen first — iOS only allows notifications for installed apps.",
-    unconfigured: "Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY to enable notifications.",
+    unconfigured: "Notifications aren’t configured yet.",
   };
 
   return (

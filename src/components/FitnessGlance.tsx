@@ -34,9 +34,6 @@ export default function FitnessGlance() {
           <span style={{ color: todayWorkout.color, fontWeight: 700 }}>
             {todayWorkout.day.toUpperCase()}
           </span>
-          <span className="pill mono" style={{ borderColor: todayWorkout.color, color: todayWorkout.color }}>
-            {todayWorkout.label}
-          </span>
         </div>
 
         <div className="fg-hero-box">
@@ -44,13 +41,8 @@ export default function FitnessGlance() {
           <div className="fg-sub sub">
             {todayWorkout.isRest
               ? "Active recovery: 20m light walk, full body stretching, and high protein."
-              : `${exerciseCount} exercises scheduled (Gym machines or Home bands).`}
+              : `${exerciseCount} exercises`}
           </div>
-          {!todayWorkout.isRest && (
-            <div className="fg-tip-pill mono">
-              🕐 Best gym window: <b>1:00 PM – 3:00 PM</b> (low crowds)
-            </div>
-          )}
         </div>
 
         <div className="fg-action-row">

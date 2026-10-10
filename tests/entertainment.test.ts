@@ -1,0 +1,14 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {getEntertainment} from '../src/lib/entertainment';
+test('Letterboxd suggestions disclose rewatches and providers disclose missing configuration',async()=>{const steam=process.env.STEAM_API_KEY,trakt=process.env.TRAKT_CLIENT_ID;delete process.env.STEAM_API_KEY;delete process.env.TRAKT_CLIENT_ID;try{const data=await getEntertainment();assert.ok(data.films.length);assert.ok(data.films.every(f=>f.detail.startsWith('Rewatch')));assert.equal(data.games.length,0);assert.ok(data.notes.some(n=>n.includes('Trakt is not connected')));}finally{if(steam)process.env.STEAM_API_KEY=steam;if(trakt)process.env.TRAKT_CLIENT_ID=trakt;}});
+test('Steam maps owned/recent games and Trakt deduplicates shows without inventing resume progress',async()=>{const fetchOriginal=globalThis.fetch,steam=process.env.STEAM_API_KEY,trakt=process.env.TRAKT_CLIENT_ID;process.env.STEAM_API_KEY='fixture';process.env.TRAKT_CLIENT_ID='fixture';globalThis.fetch=async (url,init)=>{const u=String(url);if(u.includes('api.trakt.tv')){const headers=new Headers(init?.headers);assert.equal(headers.get('Content-Type'),'application/json');assert.equal(headers.get('User-Agent'),'Daymark/0.1.0');assert.equal(headers.get('trakt-api-version'),'2');assert.equal(headers.get('trakt-api-key'),'fixture');}return Response.json(u.includes('steam')?{response:{games:[{appid:42,name:'Fixture game',playtime_forever:0}]}}:[{show:{title:'Fixture show',ids:{slug:'fixture-show'}},episode:{season:1,number:2,title:'Episode two'},watched_at:'2026-10-02'}]);};try{const data=await getEntertainment();assert.equal(data.games[0].detail,'Unplayed in your library');assert.equal(data.recent[0].title,'Fixture game');assert.equal(data.watching[0].detail,'Last watched S1 E2 · Episode two');assert.deepEqual(data.notes,[]);}finally{globalThis.fetch=fetchOriginal;if(steam)process.env.STEAM_API_KEY=steam;else delete process.env.STEAM_API_KEY;if(trakt)process.env.TRAKT_CLIENT_ID=trakt;else delete process.env.TRAKT_CLIENT_ID;}});
+
+test('Trakt configuration errors explain the blocked connection',async()=>{
+  const original=globalThis.fetch,steam=process.env.STEAM_API_KEY,trakt=process.env.TRAKT_CLIENT_ID,user=process.env.TRAKT_USER;
+  delete process.env.STEAM_API_KEY;process.env.TRAKT_CLIENT_ID='fixture';process.env.TRAKT_USER='fixture-user';
+  try{for(const [status,message] of [[401,'client ID'],[403,'privacy'],[404,'TRAKT_USER'],[429,'request limit']] as const){
+    globalThis.fetch=async(url)=>{assert.ok(String(url).includes('/users/fixture-user/'));return new Response(null,{status});};
+    const data=await getEntertainment();assert.equal(data.watching.length,0);assert.ok(data.notes.some(n=>n.includes(message)));
+  }}finally{globalThis.fetch=original;for(const [key,value] of [['STEAM_API_KEY',steam],['TRAKT_CLIENT_ID',trakt],['TRAKT_USER',user]] as const){if(value)process.env[key]=value;else delete process.env[key];}}
+});

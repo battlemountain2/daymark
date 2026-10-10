@@ -46,20 +46,21 @@ export default function PreClassBriefModal({ brief, onClose }: Props) {
       ...brief.keyTakeaways.map((t) => `- ${t}`),
     ].join("\n");
 
-    navigator.clipboard.writeText(md);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2200);
+    void navigator.clipboard.writeText(md).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2200);
+    }).catch(() => setCopied(false));
   };
 
   return (
-    <div className="brief-modal-scrim" onClick={onClose} role="dialog" aria-modal="true">
+    <div className="brief-modal-scrim" onClick={onClose} role="dialog" aria-modal="true" aria-label={`${brief.title} class brief`}>
       <div className={`brief-modal-box ${brief.ck}`} onClick={(e) => e.stopPropagation()}>
         {/* Modal Top Header */}
         <div className="brief-header">
           <div className="brief-header-left">
             <span className="brief-badge mono">{brief.code}</span>
             <span className="brief-title">{brief.title}</span>
-            <span className="brief-where mono">📍 {brief.where}</span>
+            <span className="brief-where mono">{brief.where}</span>
           </div>
           <button
             type="button"
@@ -74,33 +75,33 @@ export default function PreClassBriefModal({ brief, onClose }: Props) {
         {/* Modal Scrollable Body */}
         <div className="brief-body">
           {/* Reading banner */}
-          <div className="brief-reading-box mono">
-            <span className="br-label">📖 REQUIRED READING:</span>
+          <div className="brief-reading-box">
+            <span className="br-label">Reading</span>
             <div className="br-source">{brief.reading}</div>
           </div>
 
           {/* Section 1: Core Thesis */}
           <div className="brief-section">
-            <div className="brief-sec-head mono">✦ 1-Sentence Core Thesis</div>
+            <div className="brief-sec-head mono">The central idea</div>
             <div className="brief-thesis-text">{brief.thesis}</div>
           </div>
 
           {/* Section 2: Key Author Debate */}
           <div className="brief-section">
-            <div className="brief-sec-head mono">⚖️ Key Author &amp; Theoretical Debate</div>
+            <div className="brief-sec-head mono">Authors in conversation</div>
             <div className="brief-debate-text">{brief.authorDebate}</div>
           </div>
 
           {/* Section 3: Ready Discussion Questions */}
           <div className="brief-section">
-            <div className="brief-sec-head mono">💬 2 Ready Seminar Discussion Questions</div>
+            <div className="brief-sec-head mono">Questions to take to class</div>
             <div className="brief-questions-list">
               {brief.questions.map((item, idx) => (
                 <div key={idx} className="brief-q-item">
                   <div className="bq-num mono">Q{idx + 1}</div>
                   <div className="bq-content">
                     <p className="bq-text">&ldquo;{item.q}&rdquo;</p>
-                    <span className="bq-cite mono">🏷️ Reference: {item.cite}</span>
+                    <span className="bq-cite mono">Source: {item.cite}</span>
                   </div>
                 </div>
               ))}
@@ -109,7 +110,7 @@ export default function PreClassBriefModal({ brief, onClose }: Props) {
 
           {/* Section 4: Key Takeaways */}
           <div className="brief-section">
-            <div className="brief-sec-head mono">🎯 3 Core Takeaways</div>
+            <div className="brief-sec-head mono">Takeaways</div>
             <ul className="brief-takeaways-list">
               {brief.keyTakeaways.map((t, idx) => (
                 <li key={idx}>{t}</li>
@@ -121,7 +122,7 @@ export default function PreClassBriefModal({ brief, onClose }: Props) {
         {/* Modal Footer Actions */}
         <div className="brief-footer">
           <button type="button" className="brief-copy-btn mono" onClick={copyAsMarkdown}>
-            {copied ? "✓ Copied Brief to Clipboard!" : "📋 Copy as Markdown Notes"}
+            {copied ? "Copied" : "Copy to notes"}
           </button>
           <span className="brief-esc-hint mono">Press [Esc] or click outside to dismiss</span>
         </div>

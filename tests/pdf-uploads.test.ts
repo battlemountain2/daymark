@@ -1,0 +1,22 @@
+import {test,after} from 'node:test';import assert from 'node:assert/strict';import {mkdtemp} from 'node:fs/promises';import {tmpdir} from 'node:os';import {join} from 'node:path';
+import {beginPdfUpload,putPdfPart,finishPdfUpload,PDF_PART_BYTES} from '../src/lib/pdf-uploads';import {readFile,listFiles} from '../src/lib/private-files';import {db} from '../src/lib/db';
+test('large PDFs assemble exact private originals, permit part retries, and remain invisible until complete',async()=>{
+ process.env.TURSO_DATABASE_URL=`file:${join(await mkdtemp(join(tmpdir(),'daymark-upload-test-')),'files.db')}`;
+ const bytes=Buffer.alloc(5*1024*1024+31,17);bytes.write('%PDF-1.7');
+ const upload=await beginPdfUpload('Reading.pdf','HIST 300',bytes.length);
+ await putPdfPart(upload,0,bytes.subarray(0,PDF_PART_BYTES));
+ await putPdfPart(upload,0,bytes.subarray(0,PDF_PART_BYTES));
+ assert.equal((await listFiles()).length,0);
+ await assert.rejects(finishPdfUpload(upload));
+ for(let at=PDF_PART_BYTES,part=1;at<bytes.length;at+=PDF_PART_BYTES,part++)await putPdfPart(upload,part,bytes.subarray(at,at+PDF_PART_BYTES));
+ const id=await finishPdfUpload(upload);
+ assert.deepEqual((await readFile(id))?.bytes,bytes);
+ assert.equal((await listFiles())[0].course,'HIST 300');
+ assert.equal((await db().execute('SELECT COUNT(*) AS count FROM pdf_upload_parts')).rows[0].count,0);
+ await assert.rejects(putPdfPart(upload,0,bytes.subarray(0,PDF_PART_BYTES)));
+ await assert.rejects(beginPdfUpload('Too large.pdf','HIST 300',26*1024*1024));
+ const invalid=await beginPdfUpload('Invalid.pdf','HIST 300',100);
+ await assert.rejects(putPdfPart(invalid,0,Buffer.alloc(100)));
+ await assert.rejects(putPdfPart(invalid,1,Buffer.alloc(100)));
+});
+after(()=>db().close());

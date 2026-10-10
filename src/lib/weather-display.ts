@@ -21,3 +21,12 @@ export function parseWindMph(value: unknown): number | null {
   const speeds = value.match(/\d+(?:\.\d+)?/g)?.map(Number);
   return speeds?.length ? Math.max(...speeds) : /calm/i.test(value) ? 0 : null;
 }
+
+/** Positions within the shared weekly temperature scale, including flat/missing data. */
+export function temperatureRange(low:number|null,high:number|null,min:number,max:number) {
+  if(low==null||high==null||!Number.isFinite(min)||!Number.isFinite(max))return null;
+  const span=Math.max(1,max-min);
+  const left=Math.max(0,Math.min(100,(low-min)/span*100));
+  const right=Math.max(left,Math.min(100,(high-min)/span*100));
+  return {left,width:Math.max(3,right-left)};
+}

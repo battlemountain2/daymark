@@ -1,6 +1,6 @@
 # Daymark
 
-A one-page dashboard: what's due, what's next, what matters.
+A personal dashboard with Main, School, and Media spaces: what's next, what matters, and room to focus.
 
 Created by Brayan Quinonez with implementation assistance from Claude by
 Anthropic. See [CONTRIBUTORS.md](CONTRIBUTORS.md).
@@ -10,7 +10,9 @@ general-purpose. It reads assignments from Canvas, weather from the National
 Weather Service, and keeps your ticks and to-dos in a database so checking
 something off on your phone shows up on your laptop.
 
-Runs free on Vercel. No scheduled jobs, no machine of yours has to stay awake.
+Runs on Vercel, with a protected daily Release Radar refresh. No machine of yours has to stay awake.
+
+The personal workspace includes Gmail with Daymark-only dismissals, live listening and media collections, private photos and PDF readings, persistent highlights, autosaved notes, and a Zen focus timer. Layouts are customizable per space, with one shared palette. See [PERSONAL_FEATURES.md](PERSONAL_FEATURES.md) for integration setup and the [refinement review](docs/DAYMARK_REFINEMENT_REVIEW.md) for verification details.
 
 ---
 
@@ -277,10 +279,7 @@ things — several of them cost real debugging time to find.
 
 ## Not done yet
 
-**Mail.** `mail-score.ts` is complete and typechecks: it ranks by what a message
-costs you to ignore rather than by keywords in the subject line. What's missing
-is a Microsoft Graph app registration and an OAuth flow — the one integration
-with genuine setup friction, which is why it's not in v1.
+**Microsoft mail.** Gmail is connected through read-only Google OAuth. The older Microsoft Graph integration remains unconfigured.
 
 **Grades.** `fetchSubmissions()` already returns scores and workflow state when a
 Canvas token is set. Nothing surfaces it in the UI yet.

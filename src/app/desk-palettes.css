@@ -1,0 +1,181 @@
+/* Original Daymark palettes, scoped to each space. */
+/* Three palettes, each with a hand-built light and dark set.
+   Every colour is defined on bare .personal-dashboard first — a colour whose only definition
+   lives inside a media query or [data-theme] block never applies in the
+   un-stamped "system" state, which renders one theme's text on the other's
+   ground. That bug is easy to ship and hard to see. */
+.personal-dashboard{
+  --ground:#EAEFEA;--surface:#FFFFFF;--surface-2:#F2F7F3;
+  --ink:#16211A;--ink-2:#495C4F;--ink-3:#75887C;
+  --line:#D2DCD5;--line-strong:#B2C2B7;
+  --accent:#2E6144;--accent-soft:#E1EDE5;
+  --heat:#B9701B;--heat-soft:#F7E9D6;--good:#3B7350;
+  --storm:#4C5FA8;--storm-soft:#E4E8F6;
+  --geo:#6B8F3D;--pol:#A8672B;--his:#46639B;--fit:#8C4668;--adm:#5A6B78;
+}
+.personal-dashboard[data-palette="dusk"]{
+  --ground:#EFEBF0;--surface:#FFFFFF;--surface-2:#F6F2F7;
+  --ink:#1E1826;--ink-2:#574D61;--ink-3:#837A8C;
+  --line:#DCD4E0;--line-strong:#C0B5C6;
+  --accent:#6A4A7C;--accent-soft:#EDE4F2;
+}
+.personal-dashboard[data-palette="ash"]{
+  --ground:#EDEDEC;--surface:#FFFFFF;--surface-2:#F5F5F4;
+  --ink:#17181A;--ink-2:#4E5052;--ink-3:#7B7D80;
+  --line:#D8D8D6;--line-strong:#B9B9B6;
+  --accent:#35566B;--accent-soft:#E3EBF0;
+}
+.personal-dashboard[data-palette="sandia"]{
+  --ground:#F6EFEA;--surface:#FFFFFF;--surface-2:#EFE5DE;
+  --ink:#2B1914;--ink-2:#6B5349;--ink-3:#988177;
+  --line:#E2D5CC;--line-strong:#C5B3A5;
+  --accent:#C45832;--accent-soft:#FCEEE7;
+  --heat:#D8622A;--heat-soft:#FBE9E0;--good:#487B57;
+  --storm:#5364A3;--storm-soft:#E6E9F5;
+  --geo:#688C3A;--pol:#B35E25;--his:#466299;--fit:#8E4466;--adm:#5C6975;
+}
+.personal-dashboard[data-palette="paper"]{
+  --ground:#F8F5EE;--surface:#FFFFFF;--surface-2:#F1ECE2;
+  --ink:#171513;--ink-2:#48443E;--ink-3:#767168;
+  --line:#DCD6C9;--line-strong:#BBB4A3;
+  --accent:#1E3B56;--accent-soft:#E7EEF5;
+  --heat:#B7551C;--heat-soft:#F7EAE1;--good:#2C6B3E;
+  --storm:#3E5596;--storm-soft:#E2E7F4;
+  --geo:#5F8535;--pol:#9E5E22;--his:#3E5B8E;--fit:#843E5E;--adm:#505F6A;
+}
+.personal-dashboard[data-palette="yharnam"]{
+  --ground:#0C0A0E;--surface:#151219;--surface-2:#1D1923;
+  --ink:#E5E0EC;--ink-2:#AFA5B9;--ink-3:#837790;
+  --line:#2C2534;--line-strong:#443851;
+  --accent:#C22D3E;--accent-soft:#2C1318;
+  --heat:#E07A5F;--heat-soft:#331C16;--good:#6EAC86;
+  --storm:#7E6B9E;--storm-soft:#21192C;
+  --geo:#6A9E75;--pol:#C22D3E;--his:#6B7FB5;--fit:#C22D3E;--adm:#8C8296;
+}
+@media (prefers-color-scheme: dark){
+  .personal-dashboard:not([data-appearance="light"]){
+    --ground:#0C1410;--surface:#141F18;--surface-2:#1A2720;
+    --ink:#E3EBE5;--ink-2:#A2B4A8;--ink-3:#7B8E82;
+    --line:#25332B;--line-strong:#394A40;
+    --accent:#7FC29A;--accent-soft:#153025;
+    --heat:#E0A055;--heat-soft:#33261A;--good:#71B287;
+    --storm:#8B9BDD;--storm-soft:#1D2440;
+    --geo:#9CBE6B;--pol:#D2A46A;--his:#8B9BDD;--fit:#D089A8;--adm:#93A5B0;
+  }
+  .personal-dashboard:not([data-appearance="light"])[data-palette="dusk"]{
+    --ground:#120E17;--surface:#1B1622;--surface-2:#221C2A;
+    --ink:#E9E3EE;--ink-2:#B0A6B9;--ink-3:#8A7F94;
+    --line:#2E2738;--line-strong:#443B50;
+    --accent:#B792CE;--accent-soft:#2A1F35;
+  }
+  .personal-dashboard:not([data-appearance="light"])[data-palette="ash"]{
+    --ground:#0F1011;--surface:#17181A;--surface-2:#1E2022;
+    --ink:#E9EAEB;--ink-2:#A9ABAD;--ink-3:#808285;
+    --line:#2A2C2E;--line-strong:#3E4144;
+    --accent:#86B2CC;--accent-soft:#16242D;
+  }
+  .personal-dashboard:not([data-appearance="light"])[data-palette="sandia"]{
+    --ground:#150F0D;--surface:#1F1614;--surface-2:#2A1E1B;
+    --ink:#F3EDE8;--ink-2:#C2B0A7;--ink-3:#917E75;
+    --line:#372824;--line-strong:#4E3A34;
+    --accent:#E07A5F;--accent-soft:#331C16;
+    --heat:#E2965A;--heat-soft:#321F17;--good:#6EAC86;
+    --storm:#8B9BDD;--storm-soft:#1D2440;
+    --geo:#9CBE6B;--pol:#E08A52;--his:#8B9BDD;--fit:#D089A8;--adm:#93A5B0;
+  }
+  .personal-dashboard:not([data-appearance="light"])[data-palette="paper"]{
+    --ground:#131312;--surface:#1B1B19;--surface-2:#232320;
+    --ink:#EFECE3;--ink-2:#B0ABA0;--ink-3:#827E74;
+    --line:#2C2B27;--line-strong:#43413B;
+    --accent:#7FA8C9;--accent-soft:#1B2733;
+    --heat:#DDA15E;--heat-soft:#2E2218;--good:#6EAC86;
+    --storm:#8B9BDD;--storm-soft:#1D2440;
+    --geo:#9CBE6B;--pol:#D49E63;--his:#8B9BDD;--fit:#D089A8;--adm:#93A5B0;
+  }
+  .personal-dashboard:not([data-appearance="light"])[data-palette="yharnam"]{
+    --ground:#0C0A0E;--surface:#151219;--surface-2:#1D1923;
+    --ink:#E5E0EC;--ink-2:#AFA5B9;--ink-3:#837790;
+    --line:#2C2534;--line-strong:#443851;
+    --accent:#C22D3E;--accent-soft:#2C1318;
+    --heat:#E07A5F;--heat-soft:#331C16;--good:#6EAC86;
+    --storm:#7E6B9E;--storm-soft:#21192C;
+    --geo:#6A9E75;--pol:#C22D3E;--his:#6B7FB5;--fit:#C22D3E;--adm:#8C8296;
+  }
+}
+.personal-dashboard[data-appearance="dark"]{
+  --ground:#0C1410;--surface:#141F18;--surface-2:#1A2720;
+  --ink:#E3EBE5;--ink-2:#A2B4A8;--ink-3:#7B8E82;
+  --line:#25332B;--line-strong:#394A40;
+  --accent:#7FC29A;--accent-soft:#153025;
+  --heat:#E0A055;--heat-soft:#33261A;--good:#71B287;
+  --storm:#8B9BDD;--storm-soft:#1D2440;
+  --geo:#9CBE6B;--pol:#D2A46A;--his:#8B9BDD;--fit:#D089A8;--adm:#93A5B0;
+}
+.personal-dashboard[data-appearance="dark"][data-palette="dusk"]{
+  --ground:#120E17;--surface:#1B1622;--surface-2:#221C2A;
+  --ink:#E9E3EE;--ink-2:#B0A6B9;--ink-3:#8A7F94;
+  --line:#2E2738;--line-strong:#443B50;
+  --accent:#B792CE;--accent-soft:#2A1F35;
+}
+.personal-dashboard[data-appearance="dark"][data-palette="ash"]{
+  --ground:#0F1011;--surface:#17181A;--surface-2:#1E2022;
+  --ink:#E9EAEB;--ink-2:#A9ABAD;--ink-3:#808285;
+  --line:#2A2C2E;--line-strong:#3E4144;
+  --accent:#86B2CC;--accent-soft:#16242D;
+}
+.personal-dashboard[data-appearance="dark"][data-palette="sandia"]{
+  --ground:#150F0D;--surface:#1F1614;--surface-2:#2A1E1B;
+  --ink:#F3EDE8;--ink-2:#C2B0A7;--ink-3:#917E75;
+  --line:#372824;--line-strong:#4E3A34;
+  --accent:#E07A5F;--accent-soft:#331C16;
+  --heat:#E2965A;--heat-soft:#321F17;--good:#6EAC86;
+  --storm:#8B9BDD;--storm-soft:#1D2440;
+  --geo:#9CBE6B;--pol:#E08A52;--his:#8B9BDD;--fit:#D089A8;--adm:#93A5B0;
+}
+.personal-dashboard[data-appearance="dark"][data-palette="paper"]{
+  --ground:#131312;--surface:#1B1B19;--surface-2:#232320;
+  --ink:#EFECE3;--ink-2:#B0ABA0;--ink-3:#827E74;
+  --line:#2C2B27;--line-strong:#43413B;
+  --accent:#7FA8C9;--accent-soft:#1B2733;
+  --heat:#DDA15E;--heat-soft:#2E2218;--good:#6EAC86;
+  --storm:#8B9BDD;--storm-soft:#1D2440;
+  --geo:#9CBE6B;--pol:#D49E63;--his:#8B9BDD;--fit:#D089A8;--adm:#93A5B0;
+}
+.personal-dashboard[data-appearance="dark"][data-palette="yharnam"]{
+  --ground:#0C0A0E;--surface:#151219;--surface-2:#1D1923;
+  --ink:#E5E0EC;--ink-2:#AFA5B9;--ink-3:#837790;
+  --line:#2C2534;--line-strong:#443851;
+  --accent:#C22D3E;--accent-soft:#2C1318;
+  --heat:#E07A5F;--heat-soft:#331C16;--good:#6EAC86;
+  --storm:#7E6B9E;--storm-soft:#21192C;
+  --geo:#6A9E75;--pol:#C22D3E;--his:#6B7FB5;--fit:#C22D3E;--adm:#8C8296;
+}
+
+/* Optional shared accent never changes the palette's surfaces or text. */
+:is(:root,.personal-dashboard)[data-accent="sage"] { --accent:#4C6540; --accent-soft:#E6ECDD; }
+:is(:root,.personal-dashboard)[data-accent="terracotta"] { --accent:#984D35; --accent-soft:#F5E5DD; }
+:is(:root,.personal-dashboard)[data-accent="dusk"] { --accent:#685482; --accent-soft:#EDE6F3; }
+@media(prefers-color-scheme:dark) {
+ :is(:root,.personal-dashboard):not([data-theme="light"]):not([data-appearance="light"])[data-accent="sage"] { --accent:#A3BF8E; --accent-soft:#25321F; }
+ :is(:root,.personal-dashboard):not([data-theme="light"]):not([data-appearance="light"])[data-accent="terracotta"] { --accent:#E3A58B; --accent-soft:#38241D; }
+ :is(:root,.personal-dashboard):not([data-theme="light"]):not([data-appearance="light"])[data-accent="dusk"] { --accent:#B8A6D2; --accent-soft:#2D2539; }
+}
+:is(:root[data-theme="dark"],.personal-dashboard[data-appearance="dark"])[data-accent="sage"] { --accent:#A3BF8E; --accent-soft:#25321F; }
+:is(:root[data-theme="dark"],.personal-dashboard[data-appearance="dark"])[data-accent="terracotta"] { --accent:#E3A58B; --accent-soft:#38241D; }
+:is(:root[data-theme="dark"],.personal-dashboard[data-appearance="dark"])[data-accent="dusk"] { --accent:#B8A6D2; --accent-soft:#2D2539; }
+/* Yharnam is dark even when following a light device. */
+.personal-dashboard[data-palette="yharnam"]:not([data-appearance="light"])[data-accent="sage"] { --accent:#A3BF8E; --accent-soft:#25321F; }
+.personal-dashboard[data-palette="yharnam"]:not([data-appearance="light"])[data-accent="terracotta"] { --accent:#E3A58B; --accent-soft:#38241D; }
+.personal-dashboard[data-palette="yharnam"]:not([data-appearance="light"])[data-accent="dusk"] { --accent:#B8A6D2; --accent-soft:#2D2539; }
+/* Before client preferences hydrate, inherit the palette stamped by the head script. */
+:root .personal-dashboard:not([data-palette]) {
+ --ground:inherit;--surface:inherit;--surface-2:inherit;--ink:inherit;--ink-2:inherit;--ink-3:inherit;
+ --line:inherit;--line-strong:inherit;--accent:inherit;--accent-soft:inherit;
+ --heat:inherit;--heat-soft:inherit;--good:inherit;--storm:inherit;--storm-soft:inherit;
+ --geo:inherit;--pol:inherit;--his:inherit;--fit:inherit;--adm:inherit;
+}
+.connected-card { border-top:1px solid var(--line); margin:12px 0; padding:10px 0; }
+.connected-card summary { cursor:pointer; }
+:is(:root,.personal-dashboard):is([data-theme="light"],[data-appearance="light"])[data-accent="sage"] { --accent:#4C6540;--accent-soft:#E6ECDD; }
+:is(:root,.personal-dashboard):is([data-theme="light"],[data-appearance="light"])[data-accent="terracotta"] { --accent:#984D35;--accent-soft:#F5E5DD; }
+:is(:root,.personal-dashboard):is([data-theme="light"],[data-appearance="light"])[data-accent="dusk"] { --accent:#685482;--accent-soft:#EDE6F3; }

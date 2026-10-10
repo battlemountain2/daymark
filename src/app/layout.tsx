@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./refinements.css";
+import "./personal-desk.css";
+import "./desk-palettes.css";
 import CloudSync from "@/components/CloudSync";
 
 export const metadata: Metadata = {
@@ -33,13 +35,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@400;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500&display=swap"
         />
         {/* Apply the saved palette before first paint */}
         <script
           dangerouslySetInnerHTML={{
             __html:
-              `try{var p=localStorage.getItem("hb:pal")||localStorage.getItem("palette");` +
+              `try{var l=JSON.parse(localStorage.getItem("daymark:layout")||"{}");var p=l.palette||localStorage.getItem("hb:pal")||localStorage.getItem("palette");` +
+              `if(l.appearance==="light"||l.appearance==="dark")document.documentElement.setAttribute("data-theme",l.appearance);` +
+              `if(["sage","terracotta","dusk"].includes(l.accent))document.documentElement.setAttribute("data-accent",l.accent);` +
               `if(p&&p!=="forest")document.documentElement.setAttribute("data-palette",p);` +
               `if(location.pathname.indexOf("/sky")===0){` +
               `var h=new Date().toLocaleString("en-US",{timeZone:"America/Denver",hour:"numeric",hour12:false});` +

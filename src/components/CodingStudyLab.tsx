@@ -109,68 +109,7 @@ export default function CodingStudyLab() {
 
   return (
     <div className="coding-lab-container" style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-      {/* Top Banner / Progress Summary */}
-      <div
-        className="card-body"
-        style={{
-          background: "var(--surface)",
-          border: "1px solid var(--line)",
-          borderRadius: "8px",
-          padding: "1rem 1.25rem",
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "1rem",
-        }}
-      >
-        <div>
-          <div className="mono" style={{ fontSize: "0.75rem", color: "var(--geo)", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" }}>
-            🐍 Python &amp; Spatial Data Science Lab
-          </div>
-          <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--ink)", marginTop: "0.2rem" }}>
-            Automate the Boring Stuff with Python (3rd Edition)
-          </div>
-          <div className="mono" style={{ fontSize: "0.8rem", color: "var(--ink-2)", marginTop: "0.2rem" }}>
-            Mastering core Python automation for Geography &amp; GIS applications
-          </div>
-        </div>
-
-        <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-          <div
-            className="mono"
-            style={{
-              padding: "0.4rem 0.8rem",
-              background: "var(--surface-2)",
-              border: "1px solid var(--line)",
-              borderRadius: "6px",
-              fontSize: "0.75rem",
-              color: "var(--ink)",
-            }}
-          >
-            Progress: <strong style={{ color: "var(--accent)" }}>{completedChaptersCount} / {totalChapters}</strong> Chapters Mastered
-          </div>
-          <a
-            href={currentChapter.bookUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mono"
-            style={{
-              padding: "0.4rem 0.8rem",
-              background: "var(--accent-soft)",
-              border: "1px solid var(--line-strong)",
-              borderRadius: "6px",
-              fontSize: "0.75rem",
-              color: "var(--accent)",
-              textDecoration: "none",
-              fontWeight: 600,
-            }}
-          >
-            Read Chapter Online ↗
-          </a>
-        </div>
-      </div>
-
+      <div className="coding-overview"><div><h2>Python &amp; GIS</h2><p className="sub">Automate the Boring Stuff with Python · third edition</p></div><div><p className="sub">{completedChaptersCount} of {totalChapters} chapters completed</p><a href={currentChapter.bookUrl} target="_blank" rel="noopener noreferrer">Read this chapter ↗</a></div></div>
       {/* Chapter Selection Bar */}
       <div
         style={{
@@ -221,30 +160,6 @@ export default function CodingStudyLab() {
           );
         })}
 
-        {/* Future Chapter Placeholders */}
-        {[3, 4, 5, 6].map((num) => (
-          <div
-            key={num}
-            className="mono"
-            style={{
-              padding: "0.6rem 1rem",
-              borderRadius: "6px",
-              border: "1px dashed var(--line)",
-              background: "transparent",
-              color: "var(--ink-3)",
-              minWidth: "150px",
-              opacity: 0.6,
-            }}
-          >
-            <div style={{ fontWeight: 600 }}>Chapter {num}</div>
-            <div style={{ fontSize: "0.75rem", marginTop: "0.15rem" }}>
-              {num === 3 ? "Functions" : num === 4 ? "Lists" : num === 5 ? "Dictionaries" : "Strings"}
-            </div>
-            <div style={{ fontSize: "0.68rem", marginTop: "0.2rem", fontStyle: "italic" }}>
-              Queued
-            </div>
-          </div>
-        ))}
       </div>
 
       {/* Main Chapter Content Card */}
@@ -266,7 +181,7 @@ export default function CodingStudyLab() {
             <h2 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 700 }}>
               Chapter {currentChapter.number}: {currentChapter.title}
             </h2>
-            <p className="mono" style={{ margin: "0.2rem 0 0", fontSize: "0.8rem", color: "var(--ink-2)" }}>
+            <p className="sub" style={{ margin: "0.2rem 0 0", fontSize: "0.8rem", color: "var(--ink-2)" }}>
               {currentChapter.subtitle}
             </p>
           </div>
@@ -278,7 +193,7 @@ export default function CodingStudyLab() {
               className={`view-toggle-btn ${activeSection === "quiz" ? "active" : ""}`}
               onClick={() => setActiveSection("quiz")}
             >
-              🎯 Practice Quiz ({questions.length})
+              Practice quiz ({questions.length})
             </button>
             <span className="view-toggle-sep">/</span>
             <button
@@ -286,7 +201,7 @@ export default function CodingStudyLab() {
               className={`view-toggle-btn ${activeSection === "gis" ? "active" : ""}`}
               onClick={() => setActiveSection("gis")}
             >
-              🌍 GIS In Practice
+              GIS in practice
             </button>
             <span className="view-toggle-sep">/</span>
             <button
@@ -294,7 +209,7 @@ export default function CodingStudyLab() {
               className={`view-toggle-btn ${activeSection === "zed" ? "active" : ""}`}
               onClick={() => setActiveSection("zed")}
             >
-              💻 Zed Challenge
+              Coding challenge
             </button>
             <span className="view-toggle-sep">/</span>
             <button
@@ -302,7 +217,7 @@ export default function CodingStudyLab() {
               className={`view-toggle-btn ${activeSection === "cheatsheet" ? "active" : ""}`}
               onClick={() => setActiveSection("cheatsheet")}
             >
-              📖 Cheat Sheet
+              Reference
             </button>
           </div>
         </div>

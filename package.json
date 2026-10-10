@@ -13,12 +13,16 @@
     "gen-vapid": "node scripts/gen-vapid.mjs",
     "prune": "node scripts/prune.mjs"
   },
-  "overrides": { "postcss": "^8.5.23" },
+  "overrides": {
+    "postcss": "^8.5.23"
+  },
   "dependencies": {
     "@libsql/client": "^0.14.0",
     "next": "^15.5.26",
+    "pdfjs-dist": "^6.3.289",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "sharp": "0.35.4",
     "web-push": "^3.6.7"
   },
   "devDependencies": {

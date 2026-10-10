@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import SkyScene from "@/components/SkyScene";
 import { rainWindow } from "@/components/HourStrip";
 
@@ -37,15 +38,21 @@ type Props = {
 };
 
 export default function Weather({ weather, sun }: Props) {
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => { const tick = () => setNow(Date.now()); tick(); const timer = setInterval(tick, 60000); return () => clearInterval(timer); }, []);
   const err = weather?.error;
   const days = (weather?.days ?? []).filter((d) => d.isDaytime);
-  const today = days[0];
+  const today = weather?.days?.[0]?.isDaytime ? weather.days[0] : null;
+  const tomorrow = today ? days[1] : days[0];
   const tonight = (weather?.days ?? []).find((d) => !d.isDaytime);
   const cur = weather?.current;
   const hours = weather?.hours ?? [];
   const rain = hours.length ? rainWindow(hours) : null;
 
-  const bigTemp = cur?.tempF ?? today?.tempF ?? null;
+  const currentHour = hours.find(h => now == null || Date.parse(h.time) + 3600000 > now);
+  const walk = now == null ? null : hours.find(h => Date.parse(h.time) >= now && Date.parse(h.time) < now+6*3600000 && h.isDaytime && h.tempF>=45 && h.tempF<=85 && h.precipChance<25 && h.windMph !== null && h.windMph<15 && !/storm|thunder|snow/i.test(h.shortForecast));
+  const bigTemp = cur?.tempF ?? currentHour?.tempF ?? null;
+  const range = [today ? `H ${today.tempF}°` : null, tonight ? `L ${tonight.tempF}°` : null, sun.sunset ? `sunset ${sun.sunset}` : null].filter(Boolean).join(" · ");
 
   return (
     <section className="card span5 wxcard">
@@ -60,25 +67,24 @@ export default function Weather({ weather, sun }: Props) {
           <>
             <div className="wxglance">
               <div className="wxthumb">
-                <SkyScene condition={cur?.sky} forecast={today?.shortForecast}
-                  precipChance={today?.precipChance ?? null} height={92} />
+                <SkyScene condition={cur?.sky} forecast={currentHour?.shortForecast}
+                  precipChance={currentHour?.precipChance ?? null} height={92} />
               </div>
               <div className="wxnow">
                 <div className="wxnow-t">
                   {bigTemp ?? "—"}<sup>°</sup>
                 </div>
-                <div className="wxnow-s">{cur?.sky ?? today?.shortForecast ?? "—"}</div>
+                <div className="wxnow-s">{cur?.sky ?? currentHour?.shortForecast ?? "—"}</div>
                 <div className="sub mono wxnow-r">
-                  {today ? `H ${today.tempF}°` : ""}
-                  {tonight ? ` · L ${tonight.tempF}°` : ""}
-                  {sun.sunset ? ` · sets ${sun.sunset}` : ""}
+                  {range}
                 </div>
               </div>
             </div>
 
+            {walk && <p className="walk-advice sub">Walk at {new Date(walk.time).toLocaleTimeString('en-US',{timeZone:'America/Denver',hour:'numeric'})} · {walk.tempF}° · {walk.precipChance}% rain</p>}
             {/* The one forecast fact that changes what he does today. */}
             <div className={`wxline${rain ? " wet" : ""}`}>
-              {rain ?? `${days[1]?.name ?? "Tomorrow"}: ${days[1]?.shortForecast?.toLowerCase() ?? "—"}.`}
+              {rain ?? `${tomorrow?.name ?? "Tomorrow"}: ${tomorrow?.shortForecast?.toLowerCase() ?? "—"}.`}
             </div>
           </>
         )}

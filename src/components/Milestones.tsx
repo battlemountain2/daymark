@@ -148,7 +148,6 @@ export default function Milestones({
                 <>
                   Heaviest ahead: <b>week of {longDate(weekStart(term, worst.i)).replace(/^\w+, /, "")}</b>
                   {" — "}{worst.count} due{worst.exams ? `, ${worst.exams} of them graded` : ""}.
-                  {worst.i > thisWeek + 1 && " Worth starting early."}
                 </>
               ) : worst ? (
                 <>Nothing stacked up ahead — heaviest week has {worst.count}.</>
@@ -194,7 +193,7 @@ export default function Milestones({
               </div>
             </div>
           ))}
-          {!ahead.length && <div className="sub">Term&apos;s over. Go outside.</div>}
+          {!ahead.length && <div className="sub">Term complete.</div>}
         </div>
       </div>
     </section>

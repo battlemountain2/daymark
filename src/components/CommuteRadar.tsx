@@ -121,7 +121,7 @@ export default function CommuteRadar({ nextClass, nowMinutes, weather, doneForTo
           <span className="cr-title">UNM Commute Radar</span>
           <span className="cr-tag">{doneForToday ? "Done for today" : "Standby"}</span>
         </div>
-        <p className="cr-desc sub">{doneForToday ? "All classes finished. Safe travels!" : "No upcoming on-campus classes scheduled today. Safe travels!"}</p>
+        <p className="cr-desc sub">{doneForToday ? "All classes finished." : "No campus commute today."}</p>
       </div>
     );
   }

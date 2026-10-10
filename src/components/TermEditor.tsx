@@ -97,8 +97,7 @@ export default function TermEditor({ initial }: { initial: Term }) {
 
             <div className="minihead mono" style={{ marginTop: 20 }}>Days off</div>
             <div className="sub" style={{ marginBottom: 8 }}>
-              Breaks and holidays. No classes show on these days, and the
-              countdowns skip them.
+              Classes and countdowns skip these dates.
             </div>
             {term.breaks.map((b) => (
               <div className="breakrow" key={b}>
@@ -164,10 +163,7 @@ export default function TermEditor({ initial }: { initial: Term }) {
               );
             })}
             <div className="sub" style={{ marginTop: 14, fontSize: 12 }}>
-              The building name matters: a tight gap between two different
-              buildings is what triggers the leave-early nudge. Room numbers are
-              stripped automatically, so &ldquo;Mitchell Hall 101&rdquo; and
-              &ldquo;Mitchell Hall 120&rdquo; count as the same place.
+              Commute advice uses building names; rooms in the same building count as one location.
             </div>
           </div>
         </section>

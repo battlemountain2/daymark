@@ -1,5 +1,5 @@
+import "../weather-room.css";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { isSignedIn } from "@/lib/auth";
 import { getForecast, sunTimes } from "@/lib/weather";
 import WeatherView from "@/components/WeatherView";

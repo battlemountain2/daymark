@@ -58,6 +58,7 @@ export default function SkyBackdrop({ weatherPromise, weather = null, at = null,
   // that makes the page feel like one object instead of cards on a picture.
   // Scrubbing to midnight flips it too, so the preview is honest.
   useEffect(() => {
+    const previous = document.documentElement.getAttribute("data-theme");
     const apply = () => {
       const el = sunPosition(35.1064, -106.632, at ?? new Date()).elevation;
       document.documentElement.setAttribute("data-theme", el > -2 ? "light" : "dark");
@@ -70,7 +71,8 @@ export default function SkyBackdrop({ weatherPromise, weather = null, at = null,
       // is a client-side transition, so without this the dashboard inherits
       // whatever the sky page last decided and stays stuck there until a full
       // reload.
-      document.documentElement.removeAttribute("data-theme");
+      if(previous) document.documentElement.setAttribute("data-theme",previous);
+      else document.documentElement.removeAttribute("data-theme");
     };
   }, [at]);
 

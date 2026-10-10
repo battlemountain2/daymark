@@ -1,0 +1,11 @@
+.env*
+*.swp
+*.swo
+*.db
+*.db-*
+*.sqlite*
+*.tsbuildinfo
+.DS_Store
+tests/
+docs/
+PERSONAL_FEATURES.md

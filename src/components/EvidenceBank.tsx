@@ -151,17 +151,14 @@ export default function EvidenceBank() {
     <div className="evidence-bank-container">
       <div className="eb-header">
         <div className="eb-title-block">
-          <h3>Academic Evidence &amp; Citation Bank</h3>
-          <p className="sub mono">
-            Primary source arguments, direct quotations, and Chicago Notes-Bibliography citations for essays and discussion briefs.
-          </p>
+          <h3>Evidence & connections</h3>
         </div>
 
         <div className="eb-search-toolbar">
           <input
             type="text"
             className="eb-search-input mono"
-            placeholder="Search authors, theses, keywords (e.g. Lutgens, hydraulic, urbanization)..."
+            placeholder="Search sources or quotations"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             aria-label="Search the evidence bank"

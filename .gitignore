@@ -12,3 +12,12 @@ local.db
 *.db-wal
 *.tar.gz
 .env*
+
+# Private local storage, editor files, and personal verification captures
+*.db
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*.swp
+*.swo
+docs/screenshots/
