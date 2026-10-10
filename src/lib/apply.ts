@@ -25,6 +25,11 @@ export const TEMP_PREFIX = "local-";
 
 export const isTemp = (id: string): boolean => id.startsWith(TEMP_PREFIX);
 
+/** Keep unacknowledged edits visible when the server returns an older snapshot. */
+export function applyQueued(state: State, queued: Array<{ body: Record<string, unknown> }>): State {
+  return queued.reduce((next, pending) => applyLocal(next, pending.body), state);
+}
+
 export function applyLocal(state: State, body: Record<string, unknown>): State {
   const action = String(body.action ?? "");
 

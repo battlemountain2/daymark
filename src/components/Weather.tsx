@@ -3,92 +3,66 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import SkyScene from "@/components/SkyScene";
+import WeatherSymbol from "@/components/WeatherSymbol";
+import { WindCompass, HumidityGauge } from "@/components/WeatherMetrics";
 import { rainWindow } from "@/components/HourStrip";
+import { forecastTime, weatherSnapshot } from "@/lib/weather-display";
+import { TZ } from "@/lib/localtime";
+import type { WeatherResult } from "@/app/page";
 
-/**
- * Weather, compacted.
- *
- * This used to be the largest thing on the dashboard — a sky, a facts grid, a
- * four-day curve, four day rows and a time scrubber, which is more space than
- * the class schedule gets. All of that still exists, on /sky, where it isn't
- * competing with what he has to do today.
- *
- * What survives here is the glance: what it's doing now, what it'll do, and
- * whether it's going to rain on him. Everything else is one click away.
- */
+const hourLabel = (iso: string) => new Intl.DateTimeFormat("en-US", { timeZone: TZ, hour: "numeric" }).format(new Date(iso));
 
 type Props = {
-  weather: {
-    place?: string;
-    error?: string | null;
-    current?: {
-      tempF: number | null; sky: string | null; humidity: number | null;
-      windMph: number | null; windDir: string | null; observedAt: string | null;
-    };
-    days?: Array<{
-      name: string; isDaytime: boolean; tempF: number;
-      shortForecast: string; detailed: string; precipChance: number | null;
-    }>;
-    hours?: Array<{
-      time: string; tempF: number; precipChance: number; humidity: number | null;
-      windMph: number | null; windDir: string | null; shortForecast: string; isDaytime: boolean;
-    }>;
-  };
+  weather: WeatherResult;
   sun: { sunrise: string | null; sunset: string | null; daylight: string | null };
+  renderedAt: string;
 };
 
-export default function Weather({ weather, sun }: Props) {
-  const [now, setNow] = useState<number | null>(null);
-  useEffect(() => { const tick = () => setNow(Date.now()); tick(); const timer = setInterval(tick, 60000); return () => clearInterval(timer); }, []);
-  const err = weather?.error;
-  const days = (weather?.days ?? []).filter((d) => d.isDaytime);
-  const today = weather?.days?.[0]?.isDaytime ? weather.days[0] : null;
-  const tomorrow = today ? days[1] : days[0];
-  const tonight = (weather?.days ?? []).find((d) => !d.isDaytime);
-  const cur = weather?.current;
-  const hours = weather?.hours ?? [];
-  const rain = hours.length ? rainWindow(hours) : null;
+export default function Weather({ weather, sun, renderedAt }: Props) {
+  const [now, setNow] = useState(() => Date.parse(renderedAt));
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    tick();
+    const timer = setInterval(tick, 60000);
+    return () => clearInterval(timer);
+  }, []);
+  const snapshot = weatherSnapshot(weather, now);
+  const { hours, currentHour, period } = snapshot;
+  const today = weather.days?.[0]?.isDaytime ? weather.days[0] : null;
+  const tonight = weather.days?.find(d => !d.isDaytime);
+  const rain = rainWindow(hours);
 
-  const currentHour = hours.find(h => now == null || Date.parse(h.time) + 3600000 > now);
-  const walk = now == null ? null : hours.find(h => Date.parse(h.time) >= now && Date.parse(h.time) < now+6*3600000 && h.isDaytime && h.tempF>=45 && h.tempF<=85 && h.precipChance<25 && h.windMph !== null && h.windMph<15 && !/storm|thunder|snow/i.test(h.shortForecast));
-  const bigTemp = cur?.tempF ?? currentHour?.tempF ?? null;
-  const range = [today ? `H ${today.tempF}°` : null, tonight ? `L ${tonight.tempF}°` : null, sun.sunset ? `sunset ${sun.sunset}` : null].filter(Boolean).join(" · ");
-
-  return (
-    <section className="card span5 wxcard">
-      <div className="card-head">
-        <h2>Weather</h2>
-        <Link href="/sky" className="morelink mono">hourly, sun &amp; sky →</Link>
-      </div>
-      <div className="card-body">
-        {err ? (
-          <div className="sub">{err}</div>
-        ) : (
-          <>
-            <div className="wxglance">
-              <div className="wxthumb">
-                <SkyScene condition={cur?.sky} forecast={currentHour?.shortForecast}
-                  precipChance={currentHour?.precipChance ?? null} height={92} />
-              </div>
-              <div className="wxnow">
-                <div className="wxnow-t">
-                  {bigTemp ?? "—"}<sup>°</sup>
-                </div>
-                <div className="wxnow-s">{cur?.sky ?? currentHour?.shortForecast ?? "—"}</div>
-                <div className="sub mono wxnow-r">
-                  {range}
-                </div>
-              </div>
-            </div>
-
-            {walk && <p className="walk-advice sub">Walk at {new Date(walk.time).toLocaleTimeString('en-US',{timeZone:'America/Denver',hour:'numeric'})} · {walk.tempF}° · {walk.precipChance}% rain</p>}
-            {/* The one forecast fact that changes what he does today. */}
-            <div className={`wxline${rain ? " wet" : ""}`}>
-              {rain ?? `${tomorrow?.name ?? "Tomorrow"}: ${tomorrow?.shortForecast?.toLowerCase() ?? "—"}.`}
-            </div>
-          </>
-        )}
-      </div>
-    </section>
-  );
+  return <section className="card span5 wxcard">
+    <div className="card-head">
+      <h2>Weather</h2>
+      <Link href="/sky" className="morelink mono">Full forecast ↗</Link>
+    </div>
+    <div className="card-body weather-glance-body">
+      {snapshot.temperature == null ? <p className="sub weather-empty">Weather is taking a moment. <Link href="/sky">Open sun &amp; sky details →</Link></p> : <>
+        <div className="weather-glance-hero">
+          <div className="weather-glance-sky" aria-hidden="true"><SkyScene condition={snapshot.sky} forecast={currentHour?.shortForecast} precipChance={currentHour?.precipChance ?? null} height={220}/></div>
+          <div className="weather-glance-content">
+            <div className="weather-glance-place">{weather.place ?? "Albuquerque, NM"}</div>
+            <div className="weather-glance-temperature">{snapshot.temperature}<span>°</span></div>
+            <div className="weather-glance-condition"><WeatherSymbol condition={snapshot.sky} day={currentHour?.isDaytime ?? period?.isDaytime}/><span>{snapshot.sky ?? "Conditions unavailable"}</span></div>
+            <div className="weather-glance-range">{today && <span>H: {today.tempF}°</span>}{tonight && <span>L: {tonight.tempF}°</span>}<span>{snapshot.source === "observation" ? "Current conditions" : "Forecast"}</span></div>
+          </div>
+        </div>
+        <p className="weather-glance-summary">{rain ?? period?.detailed ?? "Hourly forecast below. Times are local to Albuquerque."}</p>
+        {hours.length > 0 && <div className="weather-glance-hours" role="region" aria-label="Next eight hours, temperature and precipitation chance" tabIndex={0}>
+          {hours.slice(0, 8).map((h, i) => <div className="weather-glance-hour" key={h.time} role="group" aria-label={`${forecastTime(h.time)} · ${h.shortForecast}`} title={`${forecastTime(h.time)} · ${h.shortForecast}`}>
+            <span>{i === 0 && Date.parse(h.time) <= now ? "Now" : hourLabel(h.time)}</span>
+            <WeatherSymbol condition={h.shortForecast} day={h.isDaytime}/>
+            <strong>{h.tempF}°</strong><small aria-label={h.precipChance == null ? "Precipitation chance unavailable" : `${h.precipChance}% precipitation chance`}>{h.precipChance == null ? "—" : `${h.precipChance}%`}</small>
+          </div>)}
+        </div>}
+        <div className="weather-glance-facts">
+          <div><span className="weather-fact-label">Wind</span><div className="weather-fact-reading"><WindCompass direction={snapshot.direction} calm={snapshot.wind === 0}/><strong>{snapshot.wind == null ? "—" : Math.round(snapshot.wind)}<small>{snapshot.wind != null && " mph"}</small></strong></div><small>{snapshot.wind === 0 ? "Calm" : snapshot.direction ? `From ${snapshot.direction}` : "Unavailable"}</small></div>
+          <div><span className="weather-fact-label">Humidity</span><div className="weather-fact-reading"><HumidityGauge value={snapshot.humidity}/><strong>{snapshot.humidity == null ? "—" : Math.round(snapshot.humidity)}<small>{snapshot.humidity != null && "%"}</small></strong></div><small>Relative humidity</small></div>
+          <div><span className="weather-fact-label">Sunset</span><div className="weather-fact-sun" aria-hidden="true">☀</div><strong className="weather-fact-time">{sun.sunset ?? "—"}</strong><small>Sunrise {sun.sunrise ?? "—"}</small></div>
+        </div>
+        <div className="weather-glance-source">{snapshot.observedAt ? `Observed ${forecastTime(snapshot.observedAt)}` : snapshot.observationStale ? `Observation is older · ${currentHour ? `forecast for ${forecastTime(currentHour.time)}` : "showing daily forecast"}` : currentHour ? `Forecast for ${forecastTime(currentHour.time)}` : "Showing daily forecast · observation unavailable"}<span>NWS · °F · Mountain Time</span></div>
+      </>}
+    </div>
+  </section>;
 }

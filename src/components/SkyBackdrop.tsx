@@ -27,9 +27,11 @@ type Props = {
   /** Scrub time, so the sky and the controls move together. */
   at?: Date | null;
   forecastHour?: Forecast["hours"][number];
+  /** Display conditions already selected for observation freshness. */
+  currentCondition?: string | null;
 };
 
-export default function SkyBackdrop({ weatherPromise, weather = null, at = null, forecastHour }: Props) {
+export default function SkyBackdrop({ weatherPromise, weather = null, at = null, forecastHour, currentCondition }: Props) {
   const [wx, setWx] = useState<WeatherResult | null>(weather);
   const [par, setPar] = useState(0);
 
@@ -96,7 +98,7 @@ export default function SkyBackdrop({ weatherPromise, weather = null, at = null,
 
   const today = wx?.days?.find((d) => d.isDaytime) ?? wx?.days?.[0];
   const shared = {
-    condition: forecastHour?.shortForecast ?? wx?.current?.sky ?? null,
+    condition: forecastHour?.shortForecast ?? (currentCondition !== undefined ? currentCondition : wx?.current?.sky) ?? null,
     forecast: forecastHour?.shortForecast ?? today?.shortForecast ?? null,
     precipChance: forecastHour?.precipChance ?? today?.precipChance ?? null,
     at,

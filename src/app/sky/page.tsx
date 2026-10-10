@@ -15,7 +15,7 @@ export default async function WeatherPage() {
   const term = await getTerm();
   const weather = await getForecast(lat, lon)
     .then((f) => ({ ...f, error: null as string | null }))
-    .catch((e) => ({ error: String(e) } as any));
+    .catch((e) => ({ error: String(e) }));
 
-  return <WeatherView weather={weather} sun={sunTimes(Number(lat), Number(lon))} term={term} />;
+  return <WeatherView weather={weather} sun={sunTimes(Number(lat), Number(lon))} term={term} renderedAt={new Date().toISOString()} />;
 }

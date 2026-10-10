@@ -1478,7 +1478,7 @@ body:has(.desk-focus-layer) { overflow:hidden; }
 .notebook-source-excerpt { margin:8px 0 12px; padding:10px 14px; border-left:2px solid var(--accent); color:var(--ink-2); font:400 15px/1.6 var(--font-body); }
 @media(max-width:900px) { .panel-span6 { grid-column:span 12; } }
 @media(max-width:600px) { .personal-dashboard .panel-tools h2 { font-size:21px; }.dashboard-panel:not(.is-collapsed) > .panel-tools { gap:2px; }.personal-dashboard .space-main .gmail-card .personal-item > .sub { max-width:calc(100vw - 72px); } }
-.desk-overview-columns { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--desk-gap); grid-column:span 12; align-items:start; }
+.desk-overview-columns { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--desk-gap); grid-column:1 / -1; align-items:start; }
 .desk-overview-column { display:flex; flex-direction:column; gap:var(--desk-gap); min-width:0; }
 .personal-dashboard .space-main .desk-overview-column .dashboard-panel { align-self:stretch; }
 .personal-dashboard .music-art-type { position:relative; overflow:hidden; background:repeating-radial-gradient(circle at 50% 42%,var(--surface-2) 0 8px,var(--line) 9px 10px); display:flex; align-items:flex-end; padding:12px; }
@@ -1531,3 +1531,47 @@ body:has(.desk-focus-layer) { overflow:hidden; }
 @media(max-width:600px) { .personal-dashboard .scratchpad-header { padding:12px; }.personal-dashboard .scratchpad-header > div:last-child { flex-wrap:wrap; }.personal-dashboard .scratchpad-actions { grid-template-columns:repeat(2,minmax(0,1fr)); }.personal-dashboard .shuffle-feature { grid-template-columns:1fr; gap:22px; }.personal-dashboard .shuffle-feature .shuffle-art { max-width:240px; margin:auto; }.zen-timer-setup[open] { padding:10px 12px; }.zen-return { flex-wrap:wrap; }.zen-artwork-controls { flex-direction:column; } }
 .personal-dashboard[data-desk='true'] .desk-pins,.personal-dashboard[data-desk='true'] .desk-topbar { display:none; }
 .personal-dashboard[data-desk='true'] .zen-desk { min-height:calc(100svh - 80px); padding:clamp(24px,8vh,80px) 0 24px; }
+
+
+/* Main page: a useful daily brief and a calm, readable entry point. */
+.personal-dashboard .main-heading {
+  align-items:center;
+  padding:clamp(22px,3vw,38px);
+  border:1px solid var(--line);
+  border-radius:20px;
+  background:linear-gradient(115deg,var(--surface),color-mix(in srgb,var(--accent-soft) 38%,var(--surface)));
+  gap:24px;
+}
+.personal-dashboard .desk-eyebrow { display:block; color:var(--ink-2); text-transform:uppercase; letter-spacing:.12em; font-size:11px; }
+.personal-dashboard .main-heading h1 { font-size:clamp(32px,3.8vw,52px); margin:12px 0 18px; text-wrap:balance; }
+.personal-dashboard .daily-brief-lead { font:500 clamp(18px,2vw,24px)/1.35 var(--font-display); color:var(--ink); margin:0; }
+.personal-dashboard .daily-brief-detail { color:var(--ink-2); font:400 15px/1.65 "Source Sans 3",sans-serif; margin:8px 0 0; max-width:62ch; }
+.personal-dashboard .daily-brief-availability { color:var(--ink-2); margin:12px 0 0; font-size:11px; }
+.daily-brief-copy[data-tone="due"] .daily-brief-lead,.daily-brief-copy[data-tone="go"] .daily-brief-lead { color:var(--heat); }
+.main-actions { display:flex; flex-direction:column; gap:8px; flex:none; min-width:150px; }
+.personal-dashboard .main-actions button { min-height:44px; text-align:left; padding:10px 16px; }
+.personal-dashboard .main-actions .main-focus-action { background:var(--accent-soft); border-color:var(--line-strong); color:var(--ink); }
+.main-focus-action span { float:right; margin-left:18px; }
+.personal-dashboard .space-main .dashboard-panel:not(.is-collapsed) { border:1px solid var(--line); }
+.personal-dashboard .space-main .gmail-card .personal-item { font-family:"Source Sans 3",sans-serif; gap:6px; padding:14px 0 8px; }
+.personal-dashboard .space-main .gmail-card .personal-item strong { font:500 17px/1.4 var(--font-display); }
+.personal-dashboard .space-main .mail-unread .personal-item strong { color:var(--ink); }
+.personal-dashboard .space-main .mail-unread .personal-item strong::before { content:""; display:inline-block; width:6px; height:6px; margin:0 8px 2px 0; border-radius:50%; background:var(--accent); }
+.personal-dashboard .space-main .gmail-message-actions button { min-height:36px; font-size:11px; }
+.personal-dashboard .space-main .mail-account { font-size:12px; }
+@media(max-width:900px) {
+  .desk-overview-columns .desk-overview-column { display:contents; }
+  .personal-dashboard .main-heading { align-items:stretch; flex-direction:column; }
+  .main-actions { flex-direction:row; flex-wrap:wrap; }
+  .personal-dashboard .main-actions button { flex:1; text-align:center; white-space:nowrap; }
+}
+@media(max-width:600px) {
+  .personal-dashboard .main-heading { padding:22px 18px; gap:18px; }
+  .personal-dashboard .main-heading h1 { letter-spacing:-.6px; }
+  .personal-dashboard .main-actions button { padding:10px; font-size:11px; }
+  .main-focus-action span { margin-left:5px; }
+  .personal-dashboard .space-main .gmail-message-actions button { min-height:44px; padding:8px 12px; }
+}
+@media(max-width:760px) {
+  .desk-grid > .dashboard-panel { grid-column:1 / -1; }
+}

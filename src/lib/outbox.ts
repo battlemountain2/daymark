@@ -127,6 +127,7 @@ async function doFlush(): Promise<FlushResult> {
     try {
       const res = await fetch("/api/state", {
         method: "POST",
+        signal: AbortSignal.timeout(15000),
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(p.body),
       });

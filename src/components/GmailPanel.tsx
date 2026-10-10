@@ -1,5 +1,6 @@
 "use client";
 import {useEffect,useRef,useState} from 'react';
+import {mailPreview,mailSender} from '@/lib/mail-display';
 import {gmailConnectionMessage} from '@/lib/gmail-settings';
 import {usePersonalRecords} from '@/lib/use-personal-records';
 import {GMAIL_DISMISSED_KEY,gmailMessageKey,visibleGmailMessages,dismissedGmailMessage,gmailMessageUrl,type DismissedMail} from '@/lib/gmail-dismissals';
@@ -38,16 +39,16 @@ export default function GmailPanel({onCapture}:{onCapture?:(seed:{title:string;u
    {dismissed.error&&<p role="alert">Could not load or save dismissed emails on this device. Please try again.</p>}
    {actionFeedback&&<div role="status" className="gmail-feedback"><span>{actionFeedback}</span>{lastDismissed&&dismissed.records[lastDismissed]&&<button ref={undoButton} type="button" aria-label="Undo email dismissal" onClick={()=>restore(lastDismissed)}>Undo</button>}</div>}
    <div className="inbox-accounts">{inbox?.accounts.map(account=>{
-    const visible=visibleGmailMessages(account.email,account.messages,dismissed.records).slice(0,expanded?12:3);
+    const visible=visibleGmailMessages(account.email,account.messages,dismissed.records).slice(0,expanded?12:2);
     return <div className="inbox-account" key={account.email}>
      <div className="mail-account"><span className="mono sub">{account.email}</span></div>
-     {account.error?<p className="sub">{account.error}</p>:visible.length?visible.map(m=><article key={m.id}>
-      <a className="personal-item" href={m.url} target="_blank" rel="noreferrer"><span className="sub">{m.starred?'★ ':''}{m.from}</span><strong>{m.subject}</strong><span className="sub">{m.snippet}</span><span className="mono sub">{new Date(m.date).toLocaleDateString()} · open in Gmail ↗</span></a>
-      <div className="gmail-message-actions">{onCapture&&<button type="button" onClick={()=>onCapture({title:`${m.subject}\n${m.snippet}`,url:m.url})}>Capture</button>}<button type="button" aria-label={`Dismiss ${m.subject} from Daymark`} onClick={()=>dismiss(account.email,m)}>Dismiss</button></div>
+     {account.error?<p className="sub">{account.error}</p>:visible.length?visible.map(m=><article key={m.id} className={m.unread ? "mail-unread" : undefined}>
+      <a className="personal-item" href={m.url} target="_blank" rel="noreferrer"><span className="sub">{m.starred?'★ ':''}{mailSender(m.from)}</span><strong>{m.subject}</strong><span className="sub">{mailPreview(m.snippet)}</span><span className="mono sub">{new Date(m.date).toLocaleDateString()} · open in Gmail ↗</span></a>
+      <div className="gmail-message-actions">{onCapture&&<button type="button" onClick={()=>onCapture({title:`${m.subject}\n${mailPreview(m.snippet)}`,url:m.url})}>Capture</button>}<button type="button" aria-label={`Dismiss ${m.subject} from Daymark`} onClick={()=>dismiss(account.email,m)}>Dismiss</button></div>
      </article>):<p className="sub">No emails to show.</p>}
     </div>;
    })}</div>
-   {inbox?.accounts.some(a=>visibleGmailMessages(a.email,a.messages,dismissed.records).length>3)&&<button type="button" aria-expanded={expanded} onClick={()=>setExpanded(!expanded)}>{expanded?"Show less":"More emails"}</button>}
+   {inbox?.accounts.some(a=>visibleGmailMessages(a.email,a.messages,dismissed.records).length>2)&&<button type="button" aria-expanded={expanded} onClick={()=>setExpanded(!expanded)}>{expanded?"Show less":"More emails"}</button>}
    {hidden.length>0&&<details className="personal-setup gmail-dismissed">
     <summary>Dismissed emails ({hidden.length})</summary>
     <p className="sub">Hidden only in Daymark.</p>

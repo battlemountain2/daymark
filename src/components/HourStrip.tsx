@@ -29,7 +29,7 @@ export function rainWindow(hours: Hour[], threshold = 30): string | null {
   const next24 = hours.slice(0, 24);
   let start = -1;
   for (let i = 0; i < next24.length; i++) {
-    const wet = next24[i].precipChance >= threshold;
+    const wet = (next24[i].precipChance ?? 0) >= threshold;
     if (wet && start < 0) start = i;
     if ((!wet || i === next24.length - 1) && start >= 0) {
       const end = wet ? i : i - 1;
@@ -37,8 +37,10 @@ export function rainWindow(hours: Hour[], threshold = 30): string | null {
       const endTime = new Date(Date.parse(next24[end].time) + 3600000).toISOString();
       const localDate = (iso: string) => new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date(iso));
       const b = hourLabel(endTime) + (localDate(endTime) !== localDate(next24[start].time) ? " tomorrow" : "");
-      const peak = Math.max(...next24.slice(start, end + 1).map((h) => h.precipChance));
-      const word = peak >= 60 ? "Rain likely" : peak >= 40 ? "Showers possible" : "A chance of rain";
+      const peak = Math.max(...next24.slice(start, end + 1).map((h) => h.precipChance ?? 0));
+      const conditions = next24.slice(start, end + 1).map(h => h.shortForecast).join(" ");
+      const event = /snow|flurr|sleet|wintry/i.test(conditions) ? "Snow" : /thunder|t-storm|tstm/i.test(conditions) ? "Thunderstorms" : "Rain";
+      const word = peak >= 60 ? `${event} likely` : peak >= 40 ? `${event} possible` : `A chance of ${event.toLowerCase()}`;
       return start === end ? `${word} around ${a}.` : `${word} ${a}–${b}.`;
     }
   }
@@ -66,7 +68,7 @@ export default function HourStrip({ hours }: { hours: Hour[] }) {
         role="img" aria-label={`Hourly forecast, ${lo} to ${hi} degrees`}>
         {/* Precipitation as bars from the baseline — the thing you scan for. */}
         {show.map((h, i) =>
-          h.precipChance > 0 ? (
+          h.precipChance != null && h.precipChance > 0 ? (
             <rect key={`p${i}`} x={x(i) - 13} y={H - 34 - (h.precipChance / 100) * 26}
               width={26} height={(h.precipChance / 100) * 26} rx={2} className="hour-precip" />
           ) : null
@@ -83,7 +85,7 @@ export default function HourStrip({ hours }: { hours: Hour[] }) {
               className={`hour-dot${h.isDaytime ? "" : " night"}`} />
             <text x={x(i)} y={y(h.tempF) - 9} className="hour-t mono">{h.tempF}°</text>
             <text x={x(i)} y={H - 6} className="hour-h mono">{hourLabel(h.time)}</text>
-            {h.precipChance >= 15 && (
+            {h.precipChance != null && h.precipChance >= 15 && (
               <text x={x(i)} y={H - 38 - (h.precipChance / 100) * 26} className="hour-p mono">
                 {h.precipChance}%
               </text>

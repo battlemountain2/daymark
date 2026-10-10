@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { checkPassphrase, startSession, endSession } from "@/lib/auth";
 
 export async function POST(req: Request) {
-  const { passphrase } = await req.json().catch(() => ({ passphrase: "" }));
+  const body = await req.json().catch(() => null);
+  const passphrase = body && !Array.isArray(body) && typeof body === 'object' ? body.passphrase : undefined;
   if (typeof passphrase !== "string" || !checkPassphrase(passphrase)) {
     // Deliberately vague, and slow enough to discourage guessing.
     await new Promise((r) => setTimeout(r, 400));

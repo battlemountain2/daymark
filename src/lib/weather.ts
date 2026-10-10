@@ -36,7 +36,7 @@ export type Forecast = {
   hours: Array<{
     time: string;
     tempF: number;
-    precipChance: number;
+    precipChance: number | null;
     humidity: number | null;
     windMph: number | null;
     windDir: string | null;
@@ -104,7 +104,7 @@ export async function getForecast(lat: string, lon: string): Promise<Forecast> {
   const hours = (hourly?.properties?.periods ?? []).slice(0, 96).map((p: any) => ({
     time: p.startTime,
     tempF: p.temperature,
-    precipChance: p.probabilityOfPrecipitation?.value ?? 0,
+    precipChance: p.probabilityOfPrecipitation?.value ?? null,
     humidity: p.relativeHumidity?.value ?? null,
     windMph: parseWindMph(p.windSpeed),
     windDir: p.windDirection ?? null,

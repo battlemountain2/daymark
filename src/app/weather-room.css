@@ -1,11 +1,11 @@
 /* Weather has its own sky-following surface; dashboard palettes remain independent. */
-.weather-room { max-width:880px; margin:0 auto; padding:28px 24px 40px; color:#f3f7fb; --font-body:'Source Serif 4',Georgia,serif; --font-display:'Source Serif 4',Georgia,serif; --font-mono:'JetBrains Mono',monospace; }
+.weather-room { max-width:880px; margin:0 auto; padding:28px 24px 40px; color:#f3f7fb; --font-body:'Source Sans 3',system-ui,sans-serif; --font-display:system-ui,sans-serif; --font-mono:'JetBrains Mono',monospace; }
 .weather-room-nav { display:flex; justify-content:space-between; align-items:center; position:relative; z-index:4; }
 .weather-room-nav a { font:400 26px/1.3 var(--font-display); color:inherit; text-decoration:none; }
 .weather-room-nav .mono { font-size:10px; opacity:.75; }
 .weather-room .wxhero { background:none; padding:40px 0 28px; margin:0; text-align:center; min-height:0; border-radius:0; }
 .weather-room .wxhero h1 { color:inherit; font:400 30px/1.3 var(--font-display); margin:0 0 8px; }
-.weather-room .wxbig { font:400 112px/1.05 var(--font-display); letter-spacing:-5px; }
+.weather-room .wxbig { font:200 112px/1.05 var(--font-display); letter-spacing:-5px; }
 .weather-room .wxbig sup { vertical-align:baseline; font:inherit; margin:0; }
 .weather-room .wxsky { font:400 22px/1.4 var(--font-body); }
 .weather-high-low { margin:8px 0; font:400 16px/1.4 var(--font-body); }
@@ -38,7 +38,7 @@
 .weather-low { opacity:.6; text-align:right; }
 .weather-temperature-bar { position:relative; height:5px; border-radius:10px; background:#ffffff12; overflow:hidden; }
 .weather-temperature-bar > span { position:absolute; height:100%; border-radius:10px; background:linear-gradient(90deg,#a8d9cb,#e5cc92); }
-.weather-metric { display:block; font:400 37px/1.25 var(--font-display); margin:10px 0; }
+.weather-metric { display:block; font:300 37px/1.25 var(--font-display); margin:10px 0; }
 .weather-metric small { font-size:16px; margin-left:4px; }
 .weather-glass > p { margin:9px 0; font:400 14px/1.4 var(--font-body); }
 .weather-glass > small { font-size:10px; opacity:.65; }
@@ -48,7 +48,23 @@
 .weather-astronomy h2 { margin:0 0 8px; }
 .weather-astronomy p { font:400 16px/1.5 var(--font-body); margin:0; }
 .weather-room .sky-astronomy { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; }
-.weather-data { position:relative; z-index:2; display:flex; flex-direction:column; gap:6px; text-align:center; font:400 10px/1.5 var(--font-mono); opacity:.65; padding-top:26px; }
+.weather-data { position:relative; z-index:2; display:flex; flex-direction:column; gap:6px; text-align:center; font:400 11px/1.5 var(--font-mono); opacity:.85; color:#f3f7fb; border:0; width:100%; max-width:none; margin:0; padding-top:26px; }
 .weather-notice { position:relative; z-index:2; background:rgba(12,25,39,.8); padding:18px; border-radius:14px; }
 @media(max-width:600px) { .weather-room { padding:20px 16px; }.weather-room .wxhero { padding:32px 0 24px; }.weather-room .wxhero h1 { font-size:26px; }.weather-room .wxbig { font-size:92px; }.weather-card-grid { gap:12px; }.weather-glass { padding:18px 16px; }.weather-day { grid-template-columns:68px 26px 26px 28px minmax(30px,1fr) 28px; gap:7px; font-size:14px; }.weather-day .weather-symbol { width:26px; height:26px; }.weather-astronomy { flex-wrap:wrap; }.weather-room .sky-astronomy { display:block; }.weather-metric { font-size:27px; } }
 @media(prefers-reduced-transparency:reduce) { .weather-glass { background:#13283b; backdrop-filter:none; } }
+
+.weather-wind-visual { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:106px; }
+.weather-wind-visual p { margin:8px 0; font:400 15px/1.4 var(--font-body); }
+.weather-wind-visual .weather-humidity-gauge { width:82px; height:82px; }
+.weather-precipitation-bar { height:7px; border-radius:8px; overflow:hidden; background:#ffffff18; margin:18px 0; }
+.weather-precipitation-bar > span { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#90b6ef,#b7e1f2); }
+
+body:has(.weather-room) { background:#46739b; }
+html[data-theme="dark"] body:has(.weather-room) { background:#102235; }
+@media(max-width:600px) {
+  .weather-wind-visual { gap:6px; flex-wrap:wrap; }
+  .weather-wind-visual .weather-compass { width:56px; height:56px; }
+  .weather-wind-visual .weather-metric { white-space:nowrap; }
+  .weather-wind-visual .weather-metric small { font-size:13px; margin-left:2px; }
+  .weather-wind-visual p { white-space:nowrap; }
+}

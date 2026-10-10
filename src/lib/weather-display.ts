@@ -30,3 +30,30 @@ export function temperatureRange(low:number|null,high:number|null,min:number,max
   const right=Math.max(left,Math.min(100,(high-min)/span*100));
   return {left,width:Math.max(3,right-left)};
 }
+
+/** A cached station reading is current for 90 minutes; otherwise show a labeled forecast. */
+export function weatherSnapshot(weather: Partial<Forecast>, now: number) {
+  const hours = (weather.hours ?? []).filter(h => Date.parse(h.time) + 3600000 > now);
+  const currentHour = hours[0], period = weather.days?.[0], observation = weather.current;
+  const timestamp = observation?.observedAt ? Date.parse(observation.observedAt) : NaN;
+  const age = now - timestamp;
+  const observed = observation?.tempF != null && Number.isFinite(age) && age >= -10 * 60000 && age <= 90 * 60000;
+  return {
+    hours, currentHour, period,
+    source: observed ? "observation" as const : currentHour || period ? "forecast" as const : "unavailable" as const,
+    temperature: observed ? observation.tempF : currentHour?.tempF ?? period?.tempF ?? null,
+    sky: observed ? observation.sky ?? currentHour?.shortForecast ?? null : currentHour?.shortForecast ?? period?.shortForecast ?? null,
+    wind: observed ? observation.windMph : currentHour?.windMph ?? null,
+    direction: observed ? observation.windDir : currentHour?.windDir ?? null,
+    humidity: observed ? observation.humidity : currentHour?.humidity ?? null,
+    observationStale: observation?.tempF != null && (!Number.isFinite(age) || age > 90 * 60000),
+    observedAt: observed ? observation.observedAt : null,
+  };
+}
+
+/** Meteorological bearing: the direction the wind comes from. */
+export function windBearing(direction?: string | null): number | null {
+  const points = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+  const index = points.indexOf((direction ?? "").toUpperCase());
+  return index < 0 ? null : index * 22.5;
+}

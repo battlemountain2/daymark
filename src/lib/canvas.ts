@@ -1,3 +1,5 @@
+import { TZ, zoneOffsetMs } from './localtime';
+
 /**
  * Canvas.
  *
@@ -61,6 +63,27 @@ function kindOf(title: string): 0 | 1 | 2 {
   return 0;
 }
 
+function calendarDay(value: string, parameters: string): string | null {
+  const match = /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?$/.exec(value);
+  if (!match) return null;
+  const [, y, m, d, h, min, sec, utc] = match;
+  const day = `${y}-${m}-${d}`;
+  const timestamp = Date.parse(`${day}T${h ?? '00'}:${min ?? '00'}:${sec ?? '00'}Z`);
+  if (!Number.isFinite(timestamp) || new Date(timestamp).toISOString().slice(0, 10) !== day) return null;
+  // A DATE or floating local time names a calendar day, rather than an instant.
+  const sourceZone = /(?:^|;)TZID="?([^;"\r\n]+)/i.exec(parameters)?.[1];
+  if (!h || (!utc && (!sourceZone || sourceZone === TZ))) return day;
+  try {
+    let instant = timestamp;
+    if (!utc && sourceZone) {
+      // Ask the source zone at the resulting instant as well, for DST changes.
+      instant = timestamp + zoneOffsetMs(timestamp, sourceZone);
+      instant = timestamp + zoneOffsetMs(instant, sourceZone);
+    }
+    return new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(instant));
+  } catch { return null; }
+}
+
 /**
  * Minimal iCalendar parser — enough for Canvas's feed, not a general one.
  * Handles RFC 5545 line folding (continuation lines start with a space).
@@ -73,19 +96,23 @@ export function parseIcs(ics: string): Assignment[] {
   for (const block of unfolded.split("BEGIN:VEVENT").slice(1)) {
     const body = block.split("END:VEVENT")[0];
     const summary = /^SUMMARY(?:;[^:]*)?:(.*)$/m.exec(body)?.[1]?.trim();
-    const dtstart = /^DTSTART(?:;[^:]*)?:(.*)$/m.exec(body)?.[1]?.trim();
+    const start = /^DTSTART((?:;[^:]*)?):(.*)$/m.exec(body);
+    const dtstart = start?.[2]?.trim();
     if (!summary || !dtstart) continue;
 
-    const digits = dtstart.replace(/[^0-9]/g, "");
-    if (digits.length < 8) continue;
-    const due = `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
+    const due = calendarDay(dtstart, start?.[1] ?? '');
+    if (!due) continue;
+    // Preserve IDs from the old parser, which used the date written in the feed.
+    // Correcting the displayed local deadline must not erase ticks, dismissals,
+    // or reading links that already refer to that legacy ID.
+    const legacyDue = `${dtstart.slice(0, 4)}-${dtstart.slice(4, 6)}-${dtstart.slice(6, 8)}`;
 
     const { title, code, ck } = courseFromSummary(
       summary.replace(/\\,/g, ",").replace(/\\;/g, ";").replace(/\\n/g, " ")
     );
     if (!title) continue;
 
-    const id = assignmentKey(due, title);
+    const id = assignmentKey(legacyDue, title);
     if (seen.has(id)) continue;
     seen.add(id);
     out.push({ due, code, ck, title, kind: kindOf(title), id });
@@ -97,6 +124,7 @@ export function parseIcs(ics: string): Assignment[] {
 
 export async function fetchAssignments(icsUrl: string): Promise<Assignment[]> {
   const res = await fetch(icsUrl, {
+    signal: AbortSignal.timeout(10000),
     headers: { "User-Agent": "daymark" },
     // Canvas regenerates this feed slowly; an hour of cache is plenty.
     next: { revalidate: 3600 },
@@ -131,7 +159,7 @@ export async function fetchSubmissions(
   const url = `${baseUrl}/api/v1/users/self/courses?enrollment_state=active&per_page=50`;
   const auth = { Authorization: `Bearer ${token}` };
 
-  const courses: Array<{ id: number }> = await fetch(url, { headers: auth, cache: "no-store" })
+  const courses: Array<{ id: number }> = await fetch(url, { headers: auth, cache: "no-store", signal: AbortSignal.timeout(10000) })
     .then((r) => (r.ok ? r.json() : []))
     .catch(() => []);
 
@@ -139,7 +167,7 @@ export async function fetchSubmissions(
   for (const c of courses) {
     const subs = await fetch(
       `${baseUrl}/api/v1/courses/${c.id}/students/submissions?student_ids[]=self&per_page=100`,
-      { headers: auth, cache: "no-store" }
+      { headers: auth, cache: "no-store", signal: AbortSignal.timeout(10000) }
     )
       .then((r) => (r.ok ? r.json() : []))
       .catch(() => []);

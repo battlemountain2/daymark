@@ -1,4 +1,5 @@
 "use client";
+import DailyBrief from "@/components/DailyBrief";
 import DailyShuffle from "@/components/DailyShuffle";
 import EntertainmentPanel from "@/components/EntertainmentPanel";
 import GmailPanel from "@/components/GmailPanel";
@@ -43,8 +44,8 @@ import Weather from "@/components/Weather";
 import TodoPanel, { TodoSkeleton, buildItems } from "@/components/TodoPanel";
 import Offline from "@/components/Offline";
 import PushToggle from "@/components/PushToggle";
-import { applyLocal, TEMP_PREFIX } from "@/lib/apply";
-import { enqueue, flush, cancelQueuedAdd } from "@/lib/outbox";
+import { applyLocal, applyQueued, TEMP_PREFIX } from "@/lib/apply";
+import { enqueue, flush, all as queuedChanges } from "@/lib/outbox";
 import NewsPanel, { NewsSkeleton } from "@/components/NewsPanel";
 import Milestones, { MilestonesSkeleton } from "@/components/Milestones";
 import type { Story } from "@/lib/feeds";
@@ -73,13 +74,6 @@ import {
 } from "@/lib/schedule";
 import type { Term } from "@/lib/term";
 import { daysBetween, longDate } from "@/lib/localtime";
-import {
-  lede,
-  type Lede,
-  type LedeInputs,
-  type LedeItem,
-  type Tone,
-} from "@/lib/lede";
 import CommandPalette, { type Command } from "@/components/CommandPalette";
 
 type Props = {
@@ -98,104 +92,16 @@ type Props = {
   renderedAt: string;
 };
 
-const KICKER: Record<Tone, string> = {
-  go: "Time to go",
-  class: "In class",
-  due: "Due today",
-  soon: "Coming up",
-  clear: "Clear",
-};
-
-function LedeView({ l, greeting }: { l: Lede; greeting: string }) {
-  return (
-    <div className="ledeblock" data-tone={l.tone}>
-      <div className="kicker mono">
-        <span className="kdot" aria-hidden="true" />
-        {KICKER[l.tone]}
-        <span className="kgreet">{greeting}, Brayan</span>
-      </div>
-      <h1 className="lede">{l.lead}</h1>
-      {l.sub && <p className="ledesub">{l.sub}</p>}
-    </div>
-  );
-}
-
-type LedeBase = Omit<LedeInputs, "items" | "weather">;
-
-function LedeWithWeather({
-  base,
-  items,
-  promise,
-  greeting,
-}: {
-  base: LedeBase;
-  items: LedeItem[];
-  promise: Promise<WeatherResult>;
-  greeting: string;
-}) {
-  const w = use(promise);
-  const today = w?.days?.find((d) => d.isDaytime) ?? w?.days?.[0];
-  const weather =
-    w?.current?.tempF != null
-      ? {
-          tempF: w.current.tempF,
-          sky: w.current.sky ?? null,
-          precipChance: today?.precipChance ?? null,
-        }
-      : today
-        ? {
-            tempF: today.tempF,
-            sky: today.shortForecast ?? null,
-            precipChance: today.precipChance ?? null,
-          }
-        : null;
-  return <LedeView greeting={greeting} l={lede({ ...base, items, weather })} />;
-}
-
-function LedeWithCanvas({
-  base,
-  st,
-  canvasPromise,
-  weatherPromise,
-  greeting,
-}: {
-  base: LedeBase;
-  st: State;
-  canvasPromise: Promise<CanvasResult>;
-  weatherPromise: Promise<WeatherResult>;
-  greeting: string;
-}) {
-  const c = use(canvasPromise);
-  const items = buildItems(c.assignments, st).filter(
-    (i) => !st.dismissed.includes(i.id),
-  );
-  return (
-    <Suspense
-      fallback={
-        <LedeView
-          greeting={greeting}
-          l={lede({ ...base, items, weather: null })}
-        />
-      }
-    >
-      <LedeWithWeather
-        base={base}
-        items={items}
-        promise={weatherPromise}
-        greeting={greeting}
-      />
-    </Suspense>
-  );
-}
-
 function WeatherSlot({
   promise,
   sun,
+  renderedAt,
 }: {
   promise: Promise<WeatherResult>;
   sun: Props["sun"];
+  renderedAt: string;
 }) {
-  return <Weather weather={use(promise)} sun={sun} />;
+  return <Weather weather={use(promise)} sun={sun} renderedAt={renderedAt} />;
 }
 
 function LiveClock() {
@@ -244,14 +150,9 @@ function WeatherSkeleton() {
         <span className="pill mono">loading</span>
       </div>
       <div className="card-body">
-        <div className="wxglance">
-          <div className="wxthumb skel-sky" style={{ height: 92 }} />
-          <div className="wxnow">
-            <span className="bar" style={{ width: 92, height: 30 }} />
-            <span className="bar" style={{ width: 118 }} />
-            <span className="bar sm" style={{ width: 150 }} />
-          </div>
-        </div>
+        <div className="skel-sky" style={{height:220,borderRadius:16}}/>
+        <span className="bar" style={{width:"90%",marginTop:18}}/>
+        <div className="skel-sky" style={{height:140,marginTop:16,borderRadius:12}}/>
       </div>
     </section>
   );
@@ -437,48 +338,29 @@ export default function Dashboard({
           }
         : body;
 
-    setSt((prev) => applyLocal(prev, withId));
-
-    if (
-      body.action === "deleteTodo" &&
-      String(body.id ?? "").startsWith(TEMP_PREFIX)
-    ) {
-      try {
-        if (await cancelQueuedAdd(String(body.id))) {
-          setPending((n) => Math.max(0, n - 1));
-          return true;
-        }
-      } catch {
-        // Fall through
-      }
-    }
-
     setBusy(true);
     try {
-      const res = await fetch("/api/state", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(withId),
-      });
-      if (!res.ok) throw new Error(String(res.status));
-      const json = await res.json();
-      if (json?.state) setSt(json.state);
-      return true;
+      // Every write enters the durable queue before it is shown as saved.
+      // Sending a newer write directly can overtake an older offline edit.
+      await enqueue(withId);
+      setSt(previous => applyLocal(previous, withId));
+      setPending((n) => n + 1);
     } catch {
-      try {
-        await enqueue(withId);
-        setPending((n) => n + 1);
-        return true;
-      } catch {
-        if (body.action === 'addTodo') {
-          setSt(previous => ({...previous, todos: previous.todos.filter(item => item.id !== withId.id)}));
-        }
-        setLayoutError('Could not save this change on your device. Please try again.');
-        return false;
-      }
+      setBusy(false);
+      setLayoutError('Could not save this change on your device. Please try again.');
+      return false;
+    }
+    try {
+      const result = await flush();
+      const remaining = await queuedChanges();
+      if (result.state) setSt(applyQueued(result.state as State, remaining));
+      setPending(remaining.length);
+    } catch {
+      // The write has committed locally; the regular replay will retry it.
     } finally {
       setBusy(false);
     }
+    return true;
   }
 
   useEffect(() => {
@@ -487,8 +369,10 @@ export default function Dashboard({
       try {
         const r = await flush();
         if (!alive) return;
-        if (r.state) setSt(r.state as State);
-        setPending(r.left);
+        const remaining = await queuedChanges();
+        if (!alive) return;
+        if (r.state) setSt(applyQueued(r.state as State, remaining));
+        setPending(remaining.length);
       } catch {
         // IndexedDB unavailable
       }
@@ -849,7 +733,7 @@ export default function Dashboard({
     gmail: <GmailPanel onCapture={setCapture} />,
     weather: (
       <Suspense fallback={<WeatherSkeleton />}>
-        <WeatherSlot promise={weatherPromise} sun={sun} />
+        <WeatherSlot promise={weatherPromise} sun={sun} renderedAt={renderedAt} />
       </Suspense>
     ),
     music: (
@@ -905,7 +789,7 @@ export default function Dashboard({
       </Suspense>
     ),
   };
-  const orderedPanels = PANELS.filter(p=>p.tabs.includes(tab)).sort((a,b)=>(panelPreference(layout,tab,a.id).order??PANELS.indexOf(a))-(panelPreference(layout,tab,b.id).order??PANELS.indexOf(b)));
+  const orderedPanels = PANELS.filter(p=>p.tabs.includes(tab) && !panelPreference(layout,tab,p.id).hidden).sort((a,b)=>(panelPreference(layout,tab,a.id).order??PANELS.indexOf(a))-(panelPreference(layout,tab,b.id).order??PANELS.indexOf(b)));
   const renderPanel = (p: typeof PANELS[number]) => {
                 const pref = panelPreference(layout, tab, p.id);
                 return (
@@ -919,6 +803,7 @@ export default function Dashboard({
                         ? 6
                         : 12
                     }
+                    displayOrder={orderedPanels.indexOf(p)}
                     preference={{
                       ...pref,
                       order: pref.order ?? PANELS.indexOf(p),
@@ -972,8 +857,9 @@ export default function Dashboard({
           />
         ) : (
           <>
-            <header className="desk-heading">
+            <header className={`desk-heading${tab === "main" ? " main-heading" : ""}`}>
               <div>
+                {tab === "main" && <span className="desk-eyebrow mono">Your day, at a glance</span>}
                 <h1>
                   {tab === "main"
                     ? `${greeting}, Brayan.`
@@ -981,13 +867,18 @@ export default function Dashboard({
                       ? "This week."
                       : "Media room."}
                 </h1>
-                {tab === "main" && <p className="sub">{lede({ ...ledeBase, items: [], weather: null }).lead}</p>}
+                {tab === "main" && <DailyBrief promise={canvasPromise} state={st} base={ledeBase} />}
               </div>
+              {tab === "main" && <div className="main-actions" aria-label="Daily actions">
+                <button type="button" className="main-focus-action" onClick={() => startDeskFocus()}>Start focus <span aria-hidden="true">↗</span></button>
+                <button type="button" onClick={() => jumpPanel("todo", "school")}>View tasks</button>
+                <button type="button" onClick={() => setScratchpadOpen(true)}>Notebook</button>
+              </div>}
               {tab === "school" && <Link href="/study">Cards & review ↗</Link>}
             </header>
             {panelUndo && <p className="panel-undo" role="status">{panelUndo.title} hidden <button type="button" onClick={()=>{changeLayout(panelUndo.key,panelUndo.value);setPanelUndo(null);}}>Undo</button></p>}
             <div className={`desk-grid space-${tab}`}>
-              {panelGroups.map(group=>compactPanel(group[0]) ? <div key={group[0].id} className="desk-overview-columns" style={{order:panelPreference(layout,tab,group[0].id).order??PANELS.indexOf(group[0])}}>
+              {panelGroups.map(group=>compactPanel(group[0]) ? <div key={group[0].id} className="desk-overview-columns" style={{order:orderedPanels.indexOf(group[0])}}>
                 {[0,1].map(column=><div key={column} className="desk-overview-column">{group.filter((_,i)=>i%2===column).map(renderPanel)}</div>)}
               </div> : renderPanel(group[0]))}
             </div>

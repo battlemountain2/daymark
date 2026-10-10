@@ -3,6 +3,7 @@ import "./globals.css";
 import "./refinements.css";
 import "./personal-desk.css";
 import "./desk-palettes.css";
+import "./weather-glance.css";
 import CloudSync from "@/components/CloudSync";
 
 export const metadata: Metadata = {

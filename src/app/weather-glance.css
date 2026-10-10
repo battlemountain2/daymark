@@ -1,0 +1,38 @@
+/* A sky-led weather glance, with readable facts below the atmospheric surface. */
+.personal-dashboard .wxcard .weather-glance-body { padding-top:8px; font-family:'Source Sans 3',system-ui,sans-serif; }
+.weather-glance-hero { position:relative; isolation:isolate; min-height:220px; overflow:hidden; border-radius:16px; background:#172b49; color:#fff; }
+.weather-glance-sky { position:absolute; inset:0; z-index:-2; }
+.weather-glance-sky .skyscene { width:100%; height:100%; border:0; border-radius:0; }
+.weather-glance-hero::after { content:""; position:absolute; inset:0; z-index:-1; background:linear-gradient(100deg,rgba(7,18,35,.65),rgba(7,18,35,.12) 80%); }
+.weather-glance-content { padding:20px 24px; text-shadow:0 1px 10px #07122366; }
+.weather-glance-place { font-size:16px; line-height:1.4; font-weight:500; }
+.weather-glance-temperature { font:300 80px/1.05 system-ui,sans-serif; letter-spacing:-4px; margin:4px 0; }
+.weather-glance-temperature > span { font-weight:200; }
+.weather-glance-condition { display:flex; align-items:center; gap:6px; font-size:17px; line-height:1.4; }
+.weather-glance-condition .weather-symbol { width:28px; height:28px; }
+.weather-glance-range { display:flex; flex-wrap:wrap; gap:12px; font-size:13px; margin-top:7px; opacity:.88; }
+.weather-glance-range > span:last-child { margin-left:auto; font-size:11px; align-self:center; }
+.weather-glance-summary { font-size:14px; line-height:1.5; margin:14px 0 0; color:var(--ink-2); }
+.weather-glance-hours { display:flex; gap:8px; overflow-x:auto; padding:16px 0 12px; border-bottom:1px solid var(--line); scrollbar-width:thin; scroll-snap-type:x proximity; }
+.weather-glance-hours:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+.weather-glance-hour { flex:0 0 52px; display:flex; flex-direction:column; align-items:center; gap:7px; font-size:12px; line-height:1.4; scroll-snap-align:start; }
+.weather-glance-hour .weather-symbol { width:30px; height:30px; }
+.weather-glance-hour strong { font-size:19px; font-weight:500; }
+.weather-glance-hour small { font-size:11px; color:var(--ink-2); }
+.weather-glance-facts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:16px 0; }
+.weather-glance-facts > div { min-width:0; padding-right:8px; }
+.weather-glance-facts > div + div { border-left:1px solid var(--line); padding-left:12px; }
+.weather-fact-label { display:block; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-2); }
+.weather-fact-reading { display:flex; align-items:center; gap:8px; min-height:56px; }
+.weather-fact-reading strong { font-size:22px; line-height:1.2; font-weight:500; white-space:nowrap; }
+.weather-fact-reading strong small { font-size:11px; font-weight:400; }
+.weather-compass { width:100px; height:100px; flex-shrink:0; color:#9ebfde; }
+.weather-fact-reading .weather-compass { width:38px; height:38px; color:var(--accent); }
+.weather-humidity-gauge { width:44px; height:44px; flex-shrink:0; color:#8fbfe2; }
+.weather-fact-reading .weather-humidity-gauge { width:32px; height:32px; color:var(--accent); }
+.weather-glance-facts > div > small { display:block; font-size:11px; color:var(--ink-2); line-height:1.4; }
+.weather-fact-sun { font-size:25px; line-height:1; color:var(--accent); margin-top:7px; }
+.weather-fact-time { display:block; font-weight:500; font-size:16px; line-height:1.4; margin:3px 0; }
+.weather-glance-source { display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 12px; font-size:11px; line-height:1.4; color:var(--ink-2); }
+.weather-symbol { width:36px; height:36px; flex-shrink:0; }
+@media(max-width:600px) { .weather-glance-content { padding:18px; }.weather-fact-reading { flex-wrap:wrap; gap:4px; min-height:66px; align-content:center; }.weather-fact-reading strong { font-size:21px; }.weather-glance-facts { gap:8px; }.weather-glance-facts > div + div { padding-left:8px; }.weather-glance-range > span:last-child { margin-left:0; }.weather-glance-hero { min-height:220px; } }

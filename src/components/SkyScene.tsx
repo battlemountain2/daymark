@@ -4,6 +4,7 @@ import {frameLoop} from "@/lib/frame-loop";
 import { useEffect, useRef } from "react";
 import { sunPosition } from "@/lib/solar";
 import { moonPhase, moonPosition } from "@/lib/moon";
+import { skyConditions } from "@/lib/sky-conditions";
 
 /**
  * A sky that matches the sky.
@@ -39,26 +40,6 @@ type Props = {
   /** 0..1 scroll progress, for parallax on the backdrop. */
   parallax?: number;
 };
-
-type Kind = "rain" | "snow" | "storm" | "none";
-
-function readWeather(text: string): { kind: Kind; cloud: number } {
-  const t = (text || "").toLowerCase();
-  const kind: Kind = /thunder|t-storm|tstm/.test(t)
-    ? "storm"
-    : /snow|flurr|sleet|wintry/.test(t)
-    ? "snow"
-    : /rain|shower|drizzle/.test(t)
-    ? "rain"
-    : "none";
-  const cloud = /overcast/.test(t) ? 1
-    : /mostly cloudy/.test(t) ? 0.8
-    : /partly (cloudy|sunny)|scattered/.test(t) ? 0.45
-    : /few clouds|mostly (clear|sunny)/.test(t) ? 0.2
-    : /clear|sunny|fair/.test(t) ? 0.05
-    : 0.35;
-  return { kind, cloud };
-}
 
 /** Deterministic pseudo-random so the stars don't reshuffle on every frame. */
 function rng(seed: number) {
@@ -136,16 +117,8 @@ export default function SkyScene({
     let reduce = motion.matches;
     // What's happening now beats what's forecast: a 60% chance of rain this
     // afternoon shouldn't put rain on the screen while the sky is clear.
-    const live = readWeather(condition ?? "");
-    const ahead = readWeather(forecast ?? "");
-    const cloud = condition ? live.cloud : ahead.cloud;
-    const kind = live.kind !== "none" ? live.kind
-      : ahead.kind !== "none" && (precipChance ?? 0) >= 40 ? ahead.kind
-      : "none";
+    const { kind, cover } = skyConditions(condition, forecast, precipChance);
     const wet = kind !== "none";
-    // It is not raining out of a clear sky. Precipitation implies cover, which
-    // is what dims the stars and the moon.
-    const cover = wet ? Math.max(cloud, kind === "storm" ? 0.95 : 0.85) : cloud;
 
     let w = 0, h = 0, dpr = 1;
     const fit = () => {
