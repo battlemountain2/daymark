@@ -1,10 +1,11 @@
 "use client";
+import { restRemaining } from "@/lib/workout-timer";
 import { cloudStorage } from "@/lib/cloud-storage";
 
 
 import Link from "next/link";
 import { useCloudRevision } from "@/lib/use-cloud-revision";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   WORKOUT_DAYS,
   NUTRITION_GUIDE,
@@ -53,35 +54,38 @@ export default function FitnessView() {
     } catch {}
   }, [cloudRevision]);
 
-  // Rest timer countdown
+  const restDeadline = useRef(0);
+  const [saveError, setSaveError] = useState("");
+  // Use elapsed wall time so background tabs cannot stretch a one-minute rest.
   useEffect(() => {
-    let t: any = null;
-    if (isResting && restSeconds > 0) {
-      t = setInterval(() => {
-        setRestSeconds((s) => s - 1);
-      }, 1000);
-    } else if (isResting && restSeconds === 0) {
+    if (!isResting) return;
+    let completed = false;
+    const update = () => {
+      if(completed) return;
+      const remaining = restRemaining(restDeadline.current);
+      setRestSeconds(remaining);
+      if (remaining) return;
+      completed = true;
       setIsResting(false);
-      // Play soft completion chime using Web Audio
       try {
-        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-        const ctx = new AudioCtx();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
-        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.3); // A5
-        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.3);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.4);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.onended = () => { void ctx.close(); };
+        osc.start(); osc.stop(ctx.currentTime + 0.4);
       } catch {}
-    }
-    return () => clearInterval(t);
-  }, [isResting, restSeconds]);
+    };
+    const timer = window.setInterval(update, 250);
+    document.addEventListener("visibilitychange", update);
+    return () => { clearInterval(timer); document.removeEventListener("visibilitychange", update); };
+  }, [isResting]);
 
   const startRestTimer = (secs: number) => {
+    restDeadline.current = Date.now() + secs * 1000;
     setRestInitial(secs);
     setRestSeconds(secs);
     setIsResting(true);
@@ -94,13 +98,16 @@ export default function FitnessView() {
 
   const toggleSet = (key: string) => {
     const next = { ...checkedSets, [key]: !checkedSets[key] };
-    setCheckedSets(next);
     try {
       cloudStorage.setItem("daymark:workout:sets", JSON.stringify(next));
+      setCheckedSets(next);
+      setSaveError("");
+    } catch { setSaveError("Could not save your set. Please try again."); return; }
+    try {
       const history = JSON.parse(cloudStorage.getItem("daymark:workout:history") || "{}");
       history[crypto.randomUUID()] = { at: new Date().toISOString(), set: key, completed: next[key] };
       cloudStorage.setItem("daymark:workout:history", JSON.stringify(history));
-    } catch {}
+    } catch { setSaveError("Set saved. Activity history could not update on this device."); }
   };
 
   const clearTodaySets = () => {
@@ -110,10 +117,11 @@ export default function FitnessView() {
     for (const k of Object.keys(next)) {
       if (k.startsWith(prefix)) delete next[k];
     }
-    setCheckedSets(next);
     try {
       cloudStorage.setItem("daymark:workout:sets", JSON.stringify(next));
-    } catch {}
+      setCheckedSets(next);
+      setSaveError("");
+    } catch { setSaveError("Could not reset your sets. Please try again."); }
   };
 
   const current: WorkoutDay = WORKOUT_DAYS[activeDayIdx];
@@ -147,7 +155,8 @@ export default function FitnessView() {
         </div>
 
         <div className="fitness-hero-content">
-          <h1 className="fitness-main-title">Fitness</h1>
+          <p className="fitness-eyebrow">A little stronger, one session at a time.</p>
+          <h1 className="fitness-main-title">Your training</h1>
         </div>
 
         {/* Global Nav Tabs */}
@@ -157,21 +166,21 @@ export default function FitnessView() {
             className={`fv-tab ${tab === "schedule" ? "on" : ""}`}
             onClick={() => setTab("schedule")}
           >
-            🏋️ Training Split
+            Training
           </button>
           <button
             type="button"
             className={`fv-tab ${tab === "nutrition" ? "on" : ""}`}
             onClick={() => setTab("nutrition")}
           >
-            🥩 Lean Bulk Nutrition
+            Nutrition
           </button>
           <button
             type="button"
             className={`fv-tab ${tab === "tips" ? "on" : ""}`}
             onClick={() => setTab("tips")}
           >
-            🧭 Gym Anxiety &amp; Etiquette
+            Gym guide
           </button>
         </div>
       </div>
@@ -189,7 +198,7 @@ export default function FitnessView() {
                   key={d.day}
                   type="button"
                   className={`fit-day-btn ${activeDayIdx === i ? "on" : ""}`}
-                  style={activeDayIdx === i ? { borderColor: d.color, color: d.color } : {}}
+                  aria-pressed={activeDayIdx === i}
                   onClick={() => setActiveDayIdx(i)}
                 >
                   <span className="fit-day-name">{d.day.slice(0, 3).toUpperCase()}</span>
@@ -201,10 +210,9 @@ export default function FitnessView() {
             {/* Current Day Header Banner */}
             <div
               className="fit-current-banner"
-              style={{ borderLeftColor: current.color }}
             >
               <div className="fcb-left">
-                <div className="fcb-day mono" style={{ color: current.color }}>
+                <div className="fcb-day mono">
                   {current.day.toUpperCase()}
                 </div>
                 <div className="fcb-label">{current.label}</div>
@@ -230,10 +238,12 @@ export default function FitnessView() {
               )}
             </div>
 
+            {!current.isRest && <div className="fit-session-progress" role="progressbar" aria-label="Session completion" aria-valuemin={0} aria-valuemax={100} aria-valuenow={workoutPct}><span style={{width: `${workoutPct}%`}} /></div>}
+            {saveError && <p role="alert">{saveError}</p>}
             {/* Rest Timer Bar */}
             {!current.isRest && (
               <div className="fit-rest-timer-bar mono">
-                <span className="frt-label">⏱️ Rest Between Sets:</span>
+                <span className="frt-label">Rest timer</span>
                 <div className="frt-buttons">
                   <button type="button" className="frt-btn" onClick={() => startRestTimer(60)}>
                     60s
@@ -246,7 +256,8 @@ export default function FitnessView() {
                   </button>
                   {isResting && (
                     <div className="frt-active">
-                      <span className="frt-clock">
+                      <span className="fit-timer-progress" aria-hidden="true" style={{"--rest-progress": `${restInitial ? restSeconds / restInitial * 360 : 0}deg`} as React.CSSProperties} />
+                      <span className="frt-clock" aria-label="Rest remaining">
                         {Math.floor(restSeconds / 60)}:{String(restSeconds % 60).padStart(2, "0")}
                       </span>
                       <button type="button" className="frt-stop" onClick={cancelRestTimer}>
@@ -268,10 +279,10 @@ export default function FitnessView() {
                 </p>
                 <div className="fit-exercises-list">
                   {current.home.map((ex, i) => (
-                    <div key={i} className="fit-exercise-card" style={{ borderLeftColor: current.color }}>
+                    <div key={i} className="fit-exercise-card">
                       <div className="fec-top">
                         <span className="fec-name">{ex.name}</span>
-                        <span className="fec-sets mono" style={{ background: current.color, color: "#000" }}>
+                        <span className="fec-sets mono">
                           {ex.sets}
                         </span>
                       </div>
@@ -287,18 +298,18 @@ export default function FitnessView() {
                   <button
                     type="button"
                     className={`fmt-btn ${view === "gym" ? "on" : ""}`}
-                    style={view === "gym" ? { background: current.color, color: "#000" } : {}}
+                    aria-pressed={view === "gym"}
                     onClick={() => setView("gym")}
                   >
-                    🏋️ GYM MACHINES
+                    Gym
                   </button>
                   <button
                     type="button"
                     className={`fmt-btn ${view === "home" ? "on" : ""}`}
-                    style={view === "home" ? { background: current.color, color: "#000" } : {}}
+                    aria-pressed={view === "home"}
                     onClick={() => setView("home")}
                   >
-                    🏠 HOME &amp; BANDS
+                    Home & bands
                   </button>
                 </div>
 
@@ -309,20 +320,20 @@ export default function FitnessView() {
                     const setCount = match ? parseInt(match[1], 10) : 3;
 
                     return (
-                      <div key={i} className="fit-exercise-card" style={{ borderLeftColor: current.color }}>
+                      <div key={i} className="fit-exercise-card">
                         <div className="fec-top">
                           <div className="fec-info">
                             <span className="fec-num mono">0{i + 1}</span>
                             <span className="fec-name">{ex.name}</span>
                           </div>
-                          <span className="fec-sets mono" style={{ background: current.color, color: "#000" }}>
+                          <span className="fec-sets mono">
                             {ex.sets}
                           </span>
                         </div>
 
                         {/* Interactive Set Checkboxes */}
                         <div className="fec-sets-checkboxes mono">
-                          <span className="fec-set-lbl">Log Sets:</span>
+                          <span className="fec-set-lbl">Sets</span>
                           {Array.from({ length: setCount }, (_, sIdx) => {
                             const setNum = sIdx + 1;
                             const key = `${weekStart}:${current.day}:${ex.name}:${setNum}`;
@@ -333,18 +344,19 @@ export default function FitnessView() {
                                 key={setNum}
                                 type="button"
                                 className={`fec-set-pill ${isDone ? "done" : ""}`}
+                                aria-pressed={isDone}
+                                aria-label={`${ex.name}, set ${setNum}`}
+                                disabled={!weekStart}
                                 onClick={() => toggleSet(key)}
                                 title={`Toggle Set ${setNum}`}
                               >
-                                {isDone ? `✓ S${setNum}` : `S${setNum}`}
+                                {isDone ? `✓ ${setNum}` : `${setNum}`}
                               </button>
                             );
                           })}
                         </div>
 
-                        <div className="fec-tip mono">
-                          <span className="fec-tip-icon">💡 Coaching Form Cue:</span> {ex.tip}
-                        </div>
+                        <details className="fec-tip"><summary>Form cue</summary><p>{ex.tip}</p></details>
                       </div>
                     );
                   })}
@@ -365,15 +377,15 @@ export default function FitnessView() {
           <div className="card-body">
             <div className="fit-nutrition-grid">
               {NUTRITION_GUIDE.map((n, i) => (
-                <div key={i} className="fit-nutrition-card" style={{ borderTopColor: n.color }}>
+                <div key={i} className="fit-nutrition-card">
                   <div className="fnc-head">
                     <span className="fnc-icon">{n.icon}</span>
-                    <span className="fnc-title" style={{ color: n.color }}>{n.title}</span>
+                    <span className="fnc-title">{n.title}</span>
                   </div>
                   <ul className="fnc-list">
                     {n.items.map((it, j) => (
                       <li key={j}>
-                        <span className="fnc-dot" style={{ color: n.color }}>▸</span>
+                        <span className="fnc-dot">▸</span>
                         <span>{it}</span>
                       </li>
                     ))}
@@ -418,15 +430,15 @@ export default function FitnessView() {
           <div className="card-body">
             <div className="fit-tips-grid">
               {GYM_TIPS.map((sec, i) => (
-                <div key={i} className="fit-tip-card" style={{ borderTopColor: sec.color }}>
+                <div key={i} className="fit-tip-card">
                   <div className="ftc-head">
                     <span className="ftc-icon">{sec.icon}</span>
-                    <span className="ftc-title" style={{ color: sec.color }}>{sec.title}</span>
+                    <span className="ftc-title">{sec.title}</span>
                   </div>
                   <ul className="ftc-list">
                     {sec.tips.map((t, j) => (
                       <li key={j}>
-                        <span className="ftc-bullet" style={{ color: sec.color }}>▸</span>
+                        <span className="ftc-bullet">▸</span>
                         <span>{t}</span>
                       </li>
                     ))}

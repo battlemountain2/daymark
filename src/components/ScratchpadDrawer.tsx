@@ -2,6 +2,7 @@
 import { cloudStorage, getCloudStatus } from "@/lib/cloud-storage";
 
 
+import {noteIndex, resolveWiki, wikiReference, backlinks, noteReference, renameNotebook, type LinkableNote} from "@/lib/notebook-links";
 import {NOTEBOOK_KEY,editNotebookNote,noteTitle,type NotebookNote} from "@/lib/notebook";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {usePersonalRecords} from "@/lib/use-personal-records";
@@ -30,12 +31,13 @@ const DEFAULT_TAGS = [
 const STORAGE_KEY = "hb:scratchpad:v2";
 const WIDTH_STORAGE_KEY = "hb:scratchpad-width";
 const SIDEBAR_STORAGE_KEY = "hb:scratchpad-sidebar";
-const DEFAULT_DRAWER_WIDTH = 600;
+const DEFAULT_DRAWER_WIDTH = 1000;
 
 export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "General" }: ScratchpadDrawerProps) {
   const cloudRevision = useCloudRevision();
   const notebook = usePersonalRecords<NotebookNote>(NOTEBOOK_KEY);
   const [editingContent,setEditingContent] = useState<string|null>(null);
+  const pendingEdit = useRef(false);
   const connectedCards=usePersonalRecords<Flashcard>("hb:custom-anki-cards");
   const noteLinks=usePersonalRecords<{from:string;to:string;highlight?:string}>("daymark:note-links");
   const passages=usePersonalRecords<{file:string;page:number;quote?:string;comment?:string}>("daymark:highlights");
@@ -64,9 +66,9 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
 
   // Sidebar State
   const [showSidebar, setShowSidebar] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
+    if (typeof window === "undefined") return true;
     const saved = cloudStorage.getItem(SIDEBAR_STORAGE_KEY);
-    return saved !== null ? saved === "true" : false;
+    return saved !== null ? saved === "true" : true;
   });
   const [sidebarSearch, setSidebarSearch] = useState("");
   const [allVaultNotes, setAllVaultNotes] = useState<VaultNote[]>([]);
@@ -101,6 +103,15 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
   const [ankiBack, setAnkiBack] = useState("");
   const [ankiSource, setAnkiSource] = useState("");
 
+  const [titleEdit, setTitleEdit] = useState("");
+  const [linkQuery, setLinkQuery] = useState<{start:number; end:number; query:string}|null>(null);
+  const [linkChoice, setLinkChoice] = useState(0);
+  const [ambiguousLinks, setAmbiguousLinks] = useState<LinkableNote[]>([]);
+  const navigation = useRef<{course:string; id:string; content?:string}[]>([]);
+  const navPosition = useRef(-1);
+  const [navState,setNavState] = useState({back:false,forward:false});
+  const searchRef = useRef<HTMLInputElement>(null);
+  const closeAction = useRef(onClose);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   useEffect(() => {
     try { const saved = JSON.parse(cloudStorage.getItem(STORAGE_KEY) || "null"); if (saved) setNotes(saved); } catch {}
@@ -126,6 +137,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
   // Sync defaultTag if provided
   useEffect(() => {
     if (defaultTag) {
+      if(pendingEdit.current && !latestCommit.current(latestContent.current)) return;
       setActiveTag(defaultTag);
       setSelectedNoteId("draft");
       setEditingContent(null);
@@ -210,13 +222,14 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return;
       if (e.key === "Escape") {
         if (showAnkiModal) {
           setShowAnkiModal(false);
         } else if (isFullscreen) {
           setIsFullscreen(false);
         } else {
-          onClose();
+          closeAction.current();
         }
       }
     };
@@ -225,6 +238,11 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
   }, [isOpen, onClose, showAnkiModal, isFullscreen]);
 
   const currentContent = editingContent ?? notebook.records[selectedNoteId]?.content ?? notes[activeTag] ?? "";
+  const currentTitle = notebook.records[selectedNoteId]?.title || noteTitle(currentContent);
+  useEffect(() => { setTitleEdit(currentTitle === "Untitled note" ? "" : currentTitle); }, [selectedNoteId, currentTitle]);
+  const index = noteIndex(notebook.records,notes);
+  const linkableNotes = [...index, ...allVaultNotes.filter(n=>!index.some(item=>item.id===n.id)).map(n=>({id:n.id,title:n.title,course:n.course,content:n.rawBody||n.content,kind:"vault" as const}))];
+  const linkSuggestions = linkQuery ? linkableNotes.filter(n=>n.id!==selectedNoteId&&`${n.title} ${n.course}`.toLowerCase().includes(linkQuery.query.toLowerCase())).slice(0,7) : [];
   const noteIdentity = notebook.records[selectedNoteId] ? selectedNoteId : activeTag;
   const courses = Array.from(new Set([...DEFAULT_TAGS.map(t=>t.id),...Object.keys(notes),...Object.values(notebook.records).map(n=>n.course),...allVaultNotes.map(n=>n.course),activeTag]));
   function persistDraft(course:string,content:string) {
@@ -235,12 +253,14 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
   }
   function commitContent(content:string) {
     setEditingContent(content);
+    pendingEdit.current = true;
     if (selectedNoteId === "draft" && !content.trim()) {
-      try { persistDraft(activeTag,content); return true; } catch { setBannerMsg("Could not save on this device. Copy your text before leaving."); return false; }
+      try { persistDraft(activeTag,content); pendingEdit.current = false; return true; } catch { setBannerMsg("Could not save on this device. Copy your text before leaving."); return false; }
     }
     const id = notebook.records[selectedNoteId] ? selectedNoteId : `note-${crypto.randomUUID()}`;
-    const saved = notebook.write(id,editNotebookNote(id,activeTag,content,notebook.records[id]));
+    const saved = notebook.update(id,current=>editNotebookNote(id,activeTag,content,current));
     if (saved) {
+      pendingEdit.current = false;
       setSelectedNoteId(id);
       setEditingContent(null);
       // Keep an empty capture inbox above the saved entry. Save the entry first.
@@ -248,6 +268,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
     }
     return saved;
   }
+  closeAction.current = () => { if(pendingEdit.current && !commitContent(currentContent)) return; setLinkQuery(null); onClose(); };
   const latestContent = useRef(currentContent);
   latestContent.current = currentContent;
   const latestCommit = useRef(commitContent);
@@ -269,7 +290,27 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
     finally { setIsSavingVault(false); }
   };
 
-  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => { commitContent(e.target.value); };
+  function updateLinkQuery(el: HTMLTextAreaElement) {
+    const cursor = el.selectionStart, before = el.value.slice(0,cursor), start = before.lastIndexOf("[["), query = before.slice(start + 2);
+    if(start >= 0 && !/[\]\n]/.test(query) && !before.slice(start).includes("]]")) { setLinkQuery({start,end:cursor,query}); setLinkChoice(0); } else setLinkQuery(null);
+  }
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => { commitContent(e.target.value); updateLinkQuery(e.target); };
+  function insertNoteLink(note: LinkableNote) {
+    if(!linkQuery) return;
+    const suffix = currentContent.slice(linkQuery.end).replace(/^\]\]/,"");
+    const text = `[[${noteReference(note,linkableNotes,activeTag)}]]`;
+    if(commitContent(currentContent.slice(0,linkQuery.start)+text+suffix)) {
+      const cursor = linkQuery.start + text.length;
+      setLinkQuery(null);
+      requestAnimationFrame(()=>{textareaRef.current?.focus();textareaRef.current?.setSelectionRange(cursor,cursor);});
+    }
+  }
+  function editorKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if(!linkQuery) return;
+    if(e.key === "Escape") { e.preventDefault(); e.stopPropagation(); setLinkQuery(null); }
+    if(e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); setLinkChoice(previous=>Math.max(0,Math.min(linkSuggestions.length-1,previous+(e.key === "ArrowDown" ? 1 : -1)))); }
+    if(e.key === "Enter" && linkSuggestions[linkChoice]) { e.preventDefault(); insertNoteLink(linkSuggestions[linkChoice]); }
+  }
 
   // 🎙️ Web Speech API Dictation
   const toggleListening = () => {
@@ -379,24 +420,57 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
   };
 
   // 🗂️ Select Note from Sidebar
-  const handleSelectNote = (course: string, noteId: string, noteContent?: string) => {
-    setActiveTag(course);
-    setSelectedNoteId(noteId);
-    setEditingContent(noteContent ?? null);
+  const handleSelectNote = (course: string, noteId: string, noteContent?: string, remember = true) => {
+    if(pendingEdit.current && !commitContent(currentContent)) return;
+    if(remember) {
+      if(navPosition.current < 0) { navigation.current=[{course:activeTag,id:selectedNoteId,content:editingContent ?? undefined}]; navPosition.current=0; }
+      navigation.current=navigation.current.slice(0,navPosition.current+1);
+      const last=navigation.current[navPosition.current];
+      if(last?.id!==noteId || last?.course!==course) { navigation.current.push({course,id:noteId,content:noteContent}); navPosition.current++; }
+    }
+    setNavState({back:navPosition.current>0,forward:navPosition.current<navigation.current.length-1});
+    setActiveTag(course); setSelectedNoteId(noteId); setEditingContent(noteContent ?? null);
+    setLinkQuery(null); setAmbiguousLinks([]); setBannerMsg(null);
     if (window.innerWidth < 600) setShowSidebar(false);
   };
-
+  function navigateNote(direction: number) {
+    if(pendingEdit.current && !commitContent(currentContent)) return;
+    const position=navPosition.current+direction, target=navigation.current[position];
+    if(!target) return;
+    navPosition.current=position;
+    handleSelectNote(target.course,target.id,target.content,false);
+  }
+  function createNote(title = "", targetCourse = activeTag) {
+    const id=`note-${crypto.randomUUID()}`;
+    const entry={...editNotebookNote(id,targetCourse,""),title:title.trim()||"Untitled note",customTitle:true};
+    if(!notebook.write(id,entry)) return null;
+    return {...entry,kind:"note" as const};
+  }
   const handleNewNoteDraft = (targetCourse?: string) => {
-    // A legacy capture draft must be preserved before starting another note.
-    if(selectedNoteId === "draft" && currentContent.trim() && !commitContent(currentContent)) return;
-    const course = targetCourse || activeTag;
-    setActiveTag(course);
-    setSelectedNoteId("draft");
-    setEditingContent(null);
-    setBannerMsg(null);
-    if (window.innerWidth < 600) setShowSidebar(false);
-    textareaRef.current?.focus();
+    if(pendingEdit.current && !commitContent(currentContent)) return;
+    const note=createNote("",targetCourse||activeTag);
+    if(note) { handleSelectNote(note.course,note.id); setViewMode("edit"); requestAnimationFrame(()=>dialogRef.current?.querySelector<HTMLInputElement>('[aria-label="Note title"]')?.focus()); }
   };
+  function openLinkedNote(note: LinkableNote) { handleSelectNote(note.course,note.kind === "draft" ? "draft" : note.id,note.kind === "vault" ? note.content : undefined); }
+  function openWiki(reference: string) {
+    const matches=resolveWiki(reference,linkableNotes,activeTag);
+    if(matches.length===1) { openLinkedNote(matches[0]); return; }
+    if(matches.length>1) { setAmbiguousLinks(matches); return; }
+    const title=wikiReference(reference).target;
+    if(!title) return;
+    if(pendingEdit.current && !commitContent(currentContent)) return;
+    const note=createNote(title);
+    if(note) openLinkedNote(note);
+  }
+  const previewOptions = {onWikiLink:openWiki,wikiState:(reference:string):"known"|"missing"|"ambiguous"=>{const count=resolveWiki(reference,linkableNotes,activeTag).length;return count===1?"known":count>1?"ambiguous":"missing";}};
+  function saveTitle() {
+    const title=titleEdit.trim();
+    if(!title || (title===currentTitle && notebook.records[selectedNoteId]?.customTitle)) return;
+    const current=notebook.records[selectedNoteId];
+    if(!current) { if(pendingEdit.current && !commitContent(currentContent)) return; const entry={...editNotebookNote(`note-${crypto.randomUUID()}`,activeTag,currentContent),title,customTitle:true}; if(notebook.write(entry.id,entry)) { setSelectedNoteId(entry.id); setEditingContent(null); if(selectedNoteId === "draft") { try { persistDraft(activeTag,""); } catch {} } } return; }
+    if(!notebook.updateAll(latest=>renameNotebook(latest,current.id,title,notes))) setBannerMsg("Could not rename your note. Please try again.");
+  }
+  const incoming = backlinks(noteIdentity,linkableNotes);
 
   const toggleFolder = (course: string) => {
     setCollapsedFolders(prev => ({ ...prev, [course]: !prev[course] }));
@@ -416,14 +490,14 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
     if (!currentContent) return;
     const now = new Date();
     const dateStr = now.toISOString().slice(0, 10);
-    const filename = `${dateStr}-${activeTag.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-notes.md`;
+    const filename = `${currentTitle.replace(/[\\/:*?"<>|]/g,"-") || "Untitled note"}.md`;
 
     let exportText = currentContent;
     if (!exportText.startsWith("---")) {
       const fm = [
         `---`,
-        `title: "${activeTag}"`,
-        `course: "${activeTag}"`,
+        `title: ${JSON.stringify(currentTitle)}`,
+        `course: ${JSON.stringify(activeTag)}`,
         `date: "${dateStr}"`,
         `tags: ["lecture", "${activeTag.toLowerCase().replace(/\s+/g, "-")}"]`,
         `vault: "Obsidian"`,
@@ -593,13 +667,27 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
   };
 
   // Metrics
+  const shortcutActions=useRef({newNote:handleNewNoteDraft,save:saveNote});
+  shortcutActions.current={newNote:handleNewNoteDraft,save:saveNote};
+  useEffect(()=>{
+    if(!isOpen)return;
+    const shortcuts=(event:KeyboardEvent)=>{
+      if(showAnkiModal || !(event.metaKey||event.ctrlKey))return;
+      if(event.key.toLowerCase()==="n"){event.preventDefault();shortcutActions.current.newNote();}
+      if(event.key.toLowerCase()==="s"){event.preventDefault();shortcutActions.current.save();}
+      if(event.key.toLowerCase()==="o"){event.preventDefault();setShowSidebar(true);requestAnimationFrame(()=>searchRef.current?.focus());}
+    };
+    window.addEventListener("keydown",shortcuts);
+    return ()=>window.removeEventListener("keydown",shortcuts);
+  },[isOpen,showAnkiModal]);
+
   const words = currentContent.trim() ? currentContent.trim().split(/\s+/).length : 0;
   const chars = currentContent.length;
 
   if (!isOpen) return null;
 
   return (
-    <div ref={dialogRef} className="scratchpad-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label="Notebook">
+    <div ref={dialogRef} className="scratchpad-overlay" onClick={()=>closeAction.current()} role="dialog" aria-modal="true" aria-label="Notebook">
       <div
         className={`scratchpad-drawer ${isFullscreen ? "fullscreen" : ""} ${isResizing ? "resizing" : ""}`}
         style={!isFullscreen ? { width: `min(${drawerWidth}px, 100vw)` } : undefined}
@@ -634,7 +722,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
           </div>
 
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <button type="button" className="scratchpad-save-note" disabled={!currentContent.trim()} onClick={saveNote}>Save note</button>
+            <button type="button" onClick={()=>handleNewNoteDraft()}>+ New note</button>
             {/* View Mode Toggle: Edit vs Split vs Preview */}
             <div className="obs-mode-toggle mono">
               <button
@@ -676,7 +764,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
             <button
               type="button"
               className="scratchpad-close-btn mono"
-              onClick={onClose}
+              onClick={()=>closeAction.current()}
               title="Close (Esc)"
             >
               ✕
@@ -713,7 +801,9 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
               <div className="sidebar-search">
                 <input
                   type="text"
-                  placeholder="Filter notes..."
+                  ref={searchRef}
+                  aria-label="Search notes"
+                  placeholder="Search notes…"
                   value={sidebarSearch}
                   onChange={(e) => setSidebarSearch(e.target.value)}
                 />
@@ -721,7 +811,6 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
 
               {/* Folder Navigation */}
               <div className="sidebar-nav-scroll">
-                <button type="button" className={`sidebar-note-item notebook-new-draft ${selectedNoteId==='draft'?'active':''}`} onClick={()=>handleNewNoteDraft()}>New draft · {activeTag}</button>
                 {courses.map(course => {
                   const match = (value:string) => value.replace(/\s+/g,"").toUpperCase() === course.replace(/\s+/g,"").toUpperCase();
                   const query = sidebarSearch.trim().toLowerCase();
@@ -731,7 +820,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
                   if(!entries.length&&!vault.length&&!hasDraft) return null;
                   return <div key={course} className="sidebar-folder">
                     <button type="button" className="sidebar-folder-title" aria-expanded={!collapsedFolders[course]} onClick={()=>toggleFolder(course)}><span>{course}</span><span>{entries.length+vault.length+(hasDraft?1:0)}</span></button>
-                    {!collapsedFolders[course]&&<div>
+                    {(!collapsedFolders[course]||query)&&<div>
                       {hasDraft&&(!query||notes[course].toLowerCase().includes(query))&&<button type="button" className={`sidebar-note-item ${activeTag===course&&selectedNoteId==='draft'?'active':''}`} onClick={()=>handleSelectNote(course,'draft')}>{noteTitle(notes[course])}<small>Captured</small></button>}
                       {entries.filter(n=>!query||`${n.title} ${n.content}`.toLowerCase().includes(query)).map(n=><button key={n.id} type="button" className={`sidebar-note-item ${selectedNoteId===n.id?'active':''}`} onClick={()=>handleSelectNote(course,n.id)}><span className="sidebar-note-label">{n.title}</span></button>)}
                       {vault.filter(n=>!query||`${n.title} ${n.content}`.toLowerCase().includes(query)).map(n=><button key={n.id} type="button" className={`sidebar-note-item ${selectedNoteId===n.id?'active':''}`} onClick={()=>handleSelectNote(course,n.id,n.rawBody||n.content)}><span className="sidebar-note-label">{n.title.replace(new RegExp(`^${n.date}-?`),"")}</span><small>Study vault</small></button>)}
@@ -744,14 +833,23 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
 
           {/* MAIN EDITOR & ACTION PANE */}
           <div className="scratchpad-main-pane">
+            <div className="notebook-document-heading">
+              <div className="notebook-history"><button type="button" aria-label="Previous note" disabled={!navState.back} onClick={()=>navigateNote(-1)}>←</button><button type="button" aria-label="Next note" disabled={!navState.forward} onClick={()=>navigateNote(1)}>→</button><span>{activeTag}</span></div>
+              <input aria-label="Note title" placeholder="Untitled note" value={titleEdit} onChange={e=>setTitleEdit(e.target.value)} onBlur={saveTitle} onKeyDown={e=>{if(e.key==="Enter"){saveTitle();textareaRef.current?.focus();}}} />
+              <span className="sub">Markdown · type [[ to connect a note</span>
+            </div>
             {/* Note Canvas / Preview / Split View */}
             <div className={`scratchpad-editor-wrap ${viewMode === "split" ? "split-view" : ""}`}>
               {viewMode === "edit" ? (
                 <textarea
                   ref={textareaRef}
                   className="scratchpad-textarea mono"
+                  aria-label="Note body"
                   value={currentContent}
                   onChange={handleTextChange}
+                  onClick={e=>updateLinkQuery(e.currentTarget)}
+                  onKeyDown={editorKeyDown}
+                  onKeyUp={e=>{if(["ArrowLeft","ArrowRight","Home","End"].includes(e.key))updateLinkQuery(e.currentTarget);}}
                   placeholder={`Write ${activeTag} notes…`}
                   spellCheck={false}
                 />
@@ -760,21 +858,34 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
                   <textarea
                     ref={textareaRef}
                     className="scratchpad-textarea mono"
+                  aria-label="Note body"
                     value={currentContent}
                     onChange={handleTextChange}
+                  onClick={e=>updateLinkQuery(e.currentTarget)}
+                  onKeyDown={editorKeyDown}
+                  onKeyUp={e=>{if(["ArrowLeft","ArrowRight","Home","End"].includes(e.key))updateLinkQuery(e.currentTarget);}}
                     placeholder={`Write ${activeTag} notes…`}
                     spellCheck={false}
                   />
                   <div className="obsidian-preview-pane">
-                    {renderObsidianPreview(currentContent)}
+                    {renderObsidianPreview(currentContent,previewOptions)}
                   </div>
                 </>
               ) : (
                 <div className="obsidian-preview-pane">
-                  {renderObsidianPreview(currentContent)}
+                  {renderObsidianPreview(currentContent,previewOptions)}
                 </div>
               )}
             </div>
+
+            {linkQuery && viewMode!=="preview" && <div className="notebook-link-suggestions" aria-label="Note link suggestions">
+              <span className="sub">Link to a note · ↑ ↓ then Enter</span>
+              {linkSuggestions.map((note,i)=><button type="button" key={note.id} className={i===linkChoice?"selected":""} onMouseDown={e=>e.preventDefault()} onClick={()=>insertNoteLink(note)}><strong>{note.title}</strong><small>{note.course}</small></button>)}
+              {!linkSuggestions.length&&<span className="sub">Finish [[{linkQuery.query || "Note title"}]] and open it in Read to create the note.</span>}
+              <button type="button" onClick={()=>setLinkQuery(null)}>Close suggestions</button>
+            </div>}
+            {ambiguousLinks.length>0&&<div className="notebook-link-suggestions"><span>Choose the connected note</span>{ambiguousLinks.map(note=><button type="button" key={note.id} onClick={()=>openLinkedNote(note)}>{note.title} · {note.course}</button>)}<button type="button" onClick={()=>setAmbiguousLinks([])}>Cancel</button></div>}
+            <details className="notebook-backlinks" open={incoming.length>0}><summary>Backlinks · {incoming.length}</summary>{incoming.length ? incoming.map(note=><button type="button" key={note.id} onClick={()=>openLinkedNote(note)}><strong>{note.title}</strong><small>{note.course}</small></button>) : <p className="sub">Notes that link here with [[{currentTitle}]] will appear here.</p>}</details>
 
             {/* Inline Ask Copilot Bar */}
             <details className="notebook-tools notebook-copilot"><summary>Ask about this note</summary><div className="scratchpad-copilot-bar mono">

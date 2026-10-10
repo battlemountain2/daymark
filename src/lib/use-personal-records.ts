@@ -34,6 +34,28 @@ export function usePersonalRecords<T>(key: string) {
     },
     [key],
   );
-  const write = useCallback((id: string, value: T | null) => update(id, () => value), [update]);
-  return { records, write, update, error };
+  const write = useCallback(
+    (id: string, value: T | null) => update(id, () => value),
+    [update],
+  );
+  const updateAll = useCallback(
+    (change: (current: Record<string, T>) => Record<string, T>) => {
+      try {
+        const latest = JSON.parse(cloudStorage.getItem(key) || "{}");
+        const next = change(latest);
+        cloudStorage.setItem(key, JSON.stringify(next));
+        setRecords(next);
+        setError("");
+        window.dispatchEvent(new Event("daymark:cloud-updated"));
+        return true;
+      } catch {
+        setError(
+          "Could not save on this device. Copy your edit before leaving.",
+        );
+        return false;
+      }
+    },
+    [key],
+  );
+  return { records, write, update, updateAll, error };
 }

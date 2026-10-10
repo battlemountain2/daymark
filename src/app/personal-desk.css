@@ -1575,3 +1575,71 @@ body:has(.desk-focus-layer) { overflow:hidden; }
 @media(max-width:760px) {
   .desk-grid > .dashboard-panel { grid-column:1 / -1; }
 }
+
+/* Continuous reading: all pages remain reachable; nearby pages render on demand. */
+.pdf-continuous { position:relative; height:72dvh; max-height:850px; overscroll-behavior:contain; }
+.pdf-page-frame { padding-bottom:18px; background:var(--surface-2); }
+.pdf-page-label { padding:10px 12px; color:var(--ink-2); font:400 12px var(--font-body); }
+.pdf-continuous .pdf-paper { background:#fff; }
+.pdf-continuous[data-background="warm"] .pdf-paper { background:#f8efdb; }
+.pdf-continuous[data-background="dim"] .pdf-paper { background:#383832; }
+.pdf-page-placeholder { position:absolute; top:40%; width:100%; padding:20px; box-sizing:border-box; text-align:center; color:#777; }
+.pdf-continuous:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+/* A writing workspace with a quiet note browser and visible connections. */
+.personal-dashboard .scratchpad-drawer { border-left:1px solid var(--line); max-width:100vw; }
+.personal-dashboard .scratchpad-main-pane { min-width:0; }
+.personal-dashboard .scratchpad-sidebar { width:240px; flex-basis:240px; background:var(--ground); border-right:1px solid var(--line); }
+.personal-dashboard .scratchpad-header { flex-wrap:wrap; }
+.personal-dashboard .scratchpad-header > div:last-child { flex-wrap:wrap; }
+.personal-dashboard .scratchpad-header button { min-height:36px; }
+.notebook-document-heading { padding:22px 26px 14px; border-bottom:1px solid var(--line); }
+.notebook-history { display:flex; gap:6px; align-items:center; margin-bottom:14px; }
+.notebook-history button { min-width:36px; min-height:34px; }
+.notebook-history span { color:var(--ink-2); font:400 12px var(--font-body); margin-left:6px; }
+.notebook-document-heading input { width:100%; min-width:0; font:400 30px/1.25 var(--font-display); background:transparent; color:var(--ink); border:0; padding:0 0 8px; border-radius:0; }
+.notebook-document-heading .sub { font:400 12px var(--font-body); }
+.personal-dashboard .scratchpad-textarea { font:400 15px/1.8 var(--font-mono); padding:24px 26px; }
+.personal-dashboard .scratchpad-editor-wrap { min-height:240px; }
+.notebook-link-suggestions { border:1px solid var(--line); border-radius:10px; padding:12px; margin:0 18px 12px; background:var(--surface-2); display:flex; flex-direction:column; gap:4px; flex-shrink:0; max-height:260px; overflow:auto; }
+.notebook-link-suggestions button,.notebook-backlinks button { display:flex; align-items:center; justify-content:space-between; gap:12px; border:0; background:transparent; padding:10px; text-align:left; font:400 14px var(--font-body); min-height:40px; }
+.notebook-link-suggestions button.selected { background:var(--accent-soft); }
+.notebook-link-suggestions small,.notebook-backlinks small { color:var(--ink-2); }
+.notebook-backlinks { border-top:1px solid var(--line); padding:12px 20px; flex-shrink:0; max-height:180px; overflow:auto; }
+.notebook-backlinks summary { font:500 13px var(--font-body); cursor:pointer; color:var(--ink-2); }
+.notebook-backlinks button { width:100%; }
+.personal-dashboard .obsidian-preview-content .obs-wikilink { display:inline; font:inherit; color:var(--accent); background:var(--accent-soft); border:0; border-radius:3px; padding:0 3px; min-height:0; text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
+.personal-dashboard .obsidian-preview-content .obs-wikilink.missing { background:transparent; text-decoration-style:dashed; }
+.personal-dashboard .obsidian-preview-content pre { white-space:pre-wrap; overflow-wrap:anywhere; padding:14px; border-radius:8px; background:var(--surface-2); font:400 13px/1.6 var(--font-mono); }
+.personal-dashboard .obsidian-preview-content code { font-family:var(--font-mono); }
+.personal-dashboard .obs-list { padding-left:22px; }
+@media(max-width:600px) {
+ .personal-dashboard .scratchpad-sidebar { width:min(240px,75vw); flex-basis:min(240px,75vw); }
+ .notebook-document-heading { padding:18px 16px 12px; }
+ .personal-dashboard .scratchpad-textarea { padding:20px 16px; }
+ .notebook-document-heading input { font-size:26px; }
+ .personal-dashboard .scratchpad-editor-wrap.split-view { flex-direction:column; }
+ .personal-dashboard .scratchpad-editor-wrap.split-view .scratchpad-textarea,.personal-dashboard .scratchpad-editor-wrap.split-view .obsidian-preview-pane { width:100%; min-height:200px; }
+}
+.personal-dashboard .scratchpad-header { padding:12px 18px; gap:10px; }
+.personal-dashboard .scratchpad-title-group { flex-direction:row; align-items:center; flex-wrap:wrap; gap:12px; }
+.personal-dashboard .scratchpad-header .notebook-selector { font:400 12px var(--font-body); }
+.personal-dashboard .scratchpad-header .notebook-selector select { padding:6px 8px; }
+.personal-dashboard .scratchpad-header .scratchpad-save-note { display:none; }
+.personal-dashboard .scratchpad-main-pane { overflow:auto; }
+.personal-dashboard .scratchpad-editor-wrap { flex:1 0 240px; padding:0; }
+.personal-dashboard .scratchpad-editor-wrap:not(.split-view) .obsidian-preview-pane { width:100%; flex:1; padding:24px 26px; background:var(--surface); }
+.personal-dashboard .scratchpad-sidebar { min-width:0; }
+@media(max-width:600px) {
+ .personal-dashboard .scratchpad-header { padding:10px 12px; }
+ .personal-dashboard .scratchpad-title-group { gap:8px; }
+ .personal-dashboard .scratchpad-header .scratchpad-badge { display:none; }
+ .personal-dashboard .scratchpad-header .notebook-selector { gap:6px; }
+ .personal-dashboard .scratchpad-editor-wrap.split-view { display:flex; flex-direction:column; flex-basis:420px; }
+ .personal-dashboard .scratchpad-editor-wrap:not(.split-view) .obsidian-preview-pane { padding:20px 16px; }
+}
+
+@media(max-width:600px) {
+ .personal-dashboard .scratchpad-body-container:has(.scratchpad-sidebar) .scratchpad-main-pane { display:none; }
+ .personal-dashboard .scratchpad-sidebar { width:100%; max-width:none; flex:1; }
+ .personal-dashboard .scratchpad-header button { min-height:40px; }
+}

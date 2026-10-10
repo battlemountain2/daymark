@@ -1,10 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import type {
-  PDFDocumentProxy,
-  RenderTask,
-  TextLayer as TextLayerType,
-} from "pdfjs-dist";
+import type { PDFDocumentProxy } from "pdfjs-dist";
+import PdfContinuousReader, { type PdfReaderHandle, type PdfSelection } from "./PdfContinuousReader";
 import type { PrivateFile } from "@/lib/private-files";
 import { usePersonalRecords } from "@/lib/use-personal-records";
 import {uploadPdf} from "@/lib/upload-pdf";
@@ -65,10 +62,7 @@ export default function ReadingDesk({
     [notesWidth, setNotesWidth] = useState(38),
     [mobilePane, setMobilePane] = useState("page");
   const [width, setWidth] = useState(600),
-    [selection, setSelection] = useState<{
-      quote: string;
-      rects: Rect[];
-    } | null>(null),
+    [selection, setSelection] = useState<PdfSelection | null>(null),
     [chosen, setChosen] = useState<string | null>(null),
     [query, setQuery] = useState("");
   const highlights = usePersonalRecords<Highlight>("daymark:highlights"),
@@ -79,11 +73,10 @@ export default function ReadingDesk({
       to: string;
       highlight?: string;
     }>("daymark:note-links");
-  const canvas = useRef<HTMLCanvasElement>(null),
-    textLayer = useRef<HTMLDivElement>(null),
-    paper = useRef<HTMLDivElement>(null),
+  const pdfReader = useRef<PdfReaderHandle>(null),
     container = useRef<HTMLDivElement>(null),
     initialPrefs = useRef<string | null>(null);
+  function jumpPage(next: number) { const target = Math.max(1, Math.min(count || 1, next)); setPage(target); pdfReader.current?.jumpTo(target); setSelection(null); }
   const readerRoot = useRef<HTMLElement>(null);
   const linkedReadingShown = useRef(false);
   const writePrefs = prefs.write;
@@ -166,7 +159,7 @@ export default function ReadingDesk({
       writePrefs(active, { page, zoom, background: bg, offset, notesWidth });
   }, [active, page, zoom, bg, offset, notesWidth, writePrefs, cloudReady, readerOpen]);
   useEffect(() => {
-    if (!active || !readerOpen) return;
+    if (!active || !readerOpen || !cloudReady) return;
     let disposed = false;
     let task:
       | ReturnType<(typeof import("pdfjs-dist"))["getDocument"]>
@@ -197,7 +190,7 @@ export default function ReadingDesk({
       disposed = true;
       void task?.destroy();
     };
-  }, [active, readerOpen]);
+  }, [active, readerOpen, cloudReady]);
   useEffect(() => {
     const el = container.current;
     if (!el) return;
@@ -207,89 +200,6 @@ export default function ReadingDesk({
     observer.observe(el);
     return () => observer.disconnect();
   }, [active, file?.id, readerOpen]);
-  useEffect(() => {
-    if (!pdf || !canvas.current || !textLayer.current) return;
-    let disposed = false;
-    let render: RenderTask | undefined, layer: TextLayerType | undefined;
-    const el = textLayer.current;
-    el.replaceChildren();
-    setSelection(null);
-    void pdf
-      .getPage(page)
-      .then(async (p) => {
-        if (disposed) return;
-        const lib = await import("pdfjs-dist");
-        if (disposed) return;
-        const natural = p.getViewport({ scale: 1 }),
-          viewport = p.getViewport({ scale: (width / natural.width) * zoom });
-        const c = canvas.current;
-        if (!c) return;
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        c.width = Math.floor(viewport.width * dpr);
-        c.height = Math.floor(viewport.height * dpr);
-        c.style.width = `${viewport.width}px`;
-        c.style.height = `${viewport.height}px`;
-        const context = c.getContext("2d");
-        if (!context) throw Error();
-        paper.current!.style.width = `${viewport.width}px`;
-        paper.current!.style.height = `${viewport.height}px`;
-        el.style.setProperty("--scale-factor", String(viewport.scale));
-        el.style.setProperty("--total-scale-factor", String(viewport.scale));
-        render = p.render({
-          canvas: c,
-          canvasContext: context,
-          viewport,
-          transform: dpr === 1 ? undefined : [dpr, 0, 0, dpr, 0, 0],
-        });
-        await render.promise;
-        if (disposed) return;
-        layer = new lib.TextLayer({
-          textContentSource: await p.getTextContent(),
-          container: el,
-          viewport,
-        });
-        await layer.render();
-      })
-      .catch((e) => {
-        if (!disposed && e.name !== "RenderingCancelledException")
-          setMessage(
-            "This page could not render. Try another page or reopen the file.",
-          );
-      });
-    return () => {
-      disposed = true;
-      render?.cancel();
-      layer?.cancel();
-    };
-  }, [pdf, page, width, zoom, readerOpen]);
-  useEffect(() => {
-    function capture() {
-      const selected = window.getSelection();
-      if (
-        !selected?.rangeCount ||
-        !paper.current ||
-        !selected.toString().trim()
-      )
-        return;
-      const range = selected.getRangeAt(0);
-      if (!textLayer.current?.contains(range.commonAncestorContainer)) return;
-      const bounds = paper.current.getBoundingClientRect();
-      setSelection({
-        quote: selected.toString().trim().slice(0, 12000),
-        rects: [...range.getClientRects()]
-          .filter((r) => r.width > 0 && r.height > 0)
-          .map((r) => ({
-            x: (r.x - bounds.x) / bounds.width,
-            y: (r.y - bounds.y) / bounds.height,
-            w: r.width / bounds.width,
-            h: r.height / bounds.height,
-          }))
-          .slice(0, 160),
-      });
-    }
-    document.addEventListener("selectionchange", capture);
-    return () => document.removeEventListener("selectionchange", capture);
-  }, []);
   async function upload(f: File) {
     setUploading(true);
     setMessage("");
@@ -314,8 +224,8 @@ export default function ReadingDesk({
       highlights.write(id, {
         id,
         file: file.id,
-        page,
-        label: String(page + offset),
+        page: selection.page,
+        label: String(selection.page + offset),
         quote: selection.quote,
         comment: "",
         rects: selection.rects,
@@ -430,7 +340,7 @@ export default function ReadingDesk({
               <span className="mono">{file.course}</span>
               <button
                 disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
+                onClick={() => jumpPage(page - 1)}
                 aria-label="Previous PDF page"
               >
                 ←
@@ -444,7 +354,7 @@ export default function ReadingDesk({
                   max={count || 1}
                   value={page}
                   onChange={(e) =>
-                    setPage(
+                    jumpPage(
                       Math.max(
                         1,
                         Math.min(count || 1, Number(e.target.value) || 1),
@@ -456,12 +366,13 @@ export default function ReadingDesk({
               <span>of {count || "…"}</span>
               <button
                 disabled={page >= count}
-                onClick={() => setPage((p) => p + 1)}
+                onClick={() => jumpPage(page + 1)}
                 aria-label="Next PDF page"
               >
                 →
               </button>
               <button onClick={onFocus}>Focus</button>
+              <a href={`/api/files/${file.id}`} target="_blank" rel="noreferrer">Open original PDF ↗</a>
             </div>
             <details className="reader-comfort">
               <summary>Reading comfort & citation pages</summary>
@@ -541,32 +452,7 @@ export default function ReadingDesk({
                       : "Select text on the page to highlight."}
                   </span>
                 </div>
-                <div className="pdf-scroll" data-background={bg}>
-                  <div className="pdf-paper" ref={paper}>
-                    <canvas ref={canvas} />
-                    <div className="textLayer" ref={textLayer} />
-                    <div className="highlight-layer">
-                      {Object.values(highlights.records)
-                        .filter((h) => h.file === file.id && h.page === page)
-                        .map((h) =>
-                          h.rects.map((r, i) => (
-                            <button
-                              key={`${h.id}-${i}`}
-                              aria-label={`Open highlight: ${h.quote.slice(0, 70)}`}
-                              aria-hidden={i > 0} tabIndex={i > 0 ? -1 : 0}
-                              onClick={() => {setChosen(h.id);setCardFront(null);setMobilePane("notes");}}
-                              style={{
-                                left: `${r.x * 100}%`,
-                                top: `${r.y * 100}%`,
-                                width: `${r.w * 100}%`,
-                                height: `${r.h * 100}%`,
-                              }}
-                            />
-                          )),
-                        )}
-                    </div>
-                  </div>
-                </div>
+                {pdf ? <PdfContinuousReader key={file.id} ref={pdfReader} pdf={pdf} width={width} zoom={zoom} background={bg} initialPage={page} highlights={Object.values(highlights.records).filter(h => h.file === file.id)} onPage={setPage} onSelection={setSelection} onHighlight={id => { setChosen(id); setCardFront(null); setMobilePane("notes"); }} /> : <p role="status">{message || "Opening all pages…"}</p>}
               </div>
               <aside className="reader-notes-side">
                 {current && (
@@ -715,7 +601,7 @@ export default function ReadingDesk({
                       <button
                         key={h.id}
                         onClick={() => {
-                          setPage(h.page);
+                          jumpPage(h.page);
                           setChosen(h.id);
                           setMobilePane("notes");
                         }}

@@ -1,3 +1,4 @@
+import "../fitness-room.css";
 import { redirect } from "next/navigation";
 import { isSignedIn } from "@/lib/auth";
 import FitnessView from "@/components/FitnessView";

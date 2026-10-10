@@ -1,65 +1,175 @@
-import {inlineNoteParts} from "@/lib/note-links";
+import { Fragment } from "react";
+import { inlineNoteParts } from "@/lib/note-links";
+import { wikiReference } from "@/lib/notebook-links";
+type WikiOptions = {
+  onWikiLink?: (reference: string) => void;
+  wikiState?: (reference: string) => "known" | "missing" | "ambiguous";
+};
 
-  // Helper to render Obsidian Markdown preview
-export const renderObsidianPreview = (content: string) => {
-    if (!content.trim()) {
-      return (
-        <div className="sub mono" style={{ padding: 24, textAlign: "center" }}>
-          No notes to preview yet. Switch to Editor to write.
-        </div>
-      );
-    }
-
-    const lines = content.split("\n");
-    return (
-      <div className="obsidian-preview-content">
-        {lines.map((line, idx) => {
-          const trimmed = line.trim();
-          if (trimmed.startsWith("# ")) {
-            return <h1 key={idx} className="obs-h1">{trimmed.slice(2)}</h1>;
-          }
-          if (trimmed.startsWith("## ")) {
-            return <h2 key={idx} className="obs-h2">{trimmed.slice(3)}</h2>;
-          }
-          if (trimmed.startsWith("### ")) {
-            return <h3 key={idx} className="obs-h3">{trimmed.slice(4)}</h3>;
-          }
-          if (trimmed.startsWith("> [!NOTE]")) {
-            return <div key={idx} className="obs-callout note mono">💡 {trimmed.replace("> [!NOTE]", "").trim()}</div>;
-          }
-          if (trimmed.startsWith("> [!WARNING]")) {
-            return <div key={idx} className="obs-callout warn mono">⚠️ {trimmed.replace("> [!WARNING]", "").trim()}</div>;
-          }
-          if (trimmed.startsWith("> [!TIP]")) {
-            return <div key={idx} className="obs-callout tip mono">✦ {trimmed.replace("> [!TIP]", "").trim()}</div>;
-          }
-          if (trimmed.startsWith("> ")) {
-            return <blockquote key={idx} className="obs-quote">{renderWithWikiLinks(trimmed.slice(2))}</blockquote>;
-          }
-          if (trimmed === "---") {
-            return <hr key={idx} className="obs-divider" />;
-          }
-          if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
-            const text = trimmed.slice(2);
+function styledText(text: string) {
+  return text
+    .split(/(\*\*[^*]+\*\*|`[^`]+`)/g)
+    .map((part, i) =>
+      part.startsWith("**") ? (
+        <strong key={i}>{part.slice(2, -2)}</strong>
+      ) : part.startsWith("`") ? (
+        <code key={i}>{part.slice(1, -1)}</code>
+      ) : (
+        part
+      ),
+    );
+}
+export const renderWithWikiLinks = (str: string, options: WikiOptions = {}) => {
+  // Inline code is literal, so [[examples]] inside code cannot become buttons.
+  return str.split(/(`[^`]+`)/g).map((segment, index) => (
+    <Fragment key={index}>
+      {segment.startsWith("`") ? (
+        <code>{segment.slice(1, -1)}</code>
+      ) : (
+        inlineNoteParts(segment).map((part, i) => {
+          if (part.kind === "link")
             return (
-              <li key={idx} className="obs-li">
-                {renderWithWikiLinks(text)}
-              </li>
+              <a
+                key={i}
+                href={part.url}
+                target={part.url.startsWith("/") ? undefined : "_blank"}
+                rel="noreferrer"
+              >
+                {part.text}
+              </a>
             );
-          }
-          if (!trimmed) {
-            return <div key={idx} style={{ height: 8 }} />;
-          }
-          return <p key={idx} className="obs-p">{renderWithWikiLinks(line)}</p>;
-        })}
+          if (part.kind !== "wiki")
+            return <Fragment key={i}>{styledText(part.text)}</Fragment>;
+          const reference = part.text.slice(2, -2),
+            state = options.wikiState?.(reference) || "known",
+            label = wikiReference(reference).label;
+          return options.onWikiLink ? (
+            <button
+              type="button"
+              key={i}
+              className={`obs-wikilink ${state}`}
+              onClick={() => options.onWikiLink?.(reference)}
+              title={
+                state === "missing"
+                  ? `Create note: ${label}`
+                  : state === "ambiguous"
+                    ? `Choose a note: ${label}`
+                    : `Open note: ${label}`
+              }
+            >
+              {label}
+            </button>
+          ) : (
+            <span key={i} className="obs-wikilink">
+              {label}
+            </span>
+          );
+        })
+      )}
+    </Fragment>
+  ));
+};
+export const renderObsidianPreview = (
+  content: string,
+  options: WikiOptions = {},
+) => {
+  if (!content.trim())
+    return (
+      <div className="sub" style={{ padding: 24 }}>
+        Start writing. Use [[Note title]] to connect an idea.
       </div>
     );
-  };
-
-export const renderWithWikiLinks = (str: string) => {
-    return inlineNoteParts(str).map((part,i) => part.kind === 'link'
-      ? <a key={i} href={part.url} target={part.url.startsWith('/') ? undefined : '_blank'} rel="noreferrer">{part.text}</a>
-      : part.kind === 'wiki'
-        ? <span key={i} className="obs-wikilink mono" title={`Concept Link: ${part.text.slice(2,-2)}`}>{part.text}</span>
-        : part.text);
-  };
+  let fence: string | null = null,
+    code: string[] = [];
+  const lines = content.split("\n"),
+    nodes = [];
+  for (let idx = 0; idx < lines.length; idx++) {
+    const line = lines[idx],
+      trimmed = line.trim(),
+      marker = trimmed.match(/^(`{3,}|~{3,})/);
+    if (marker && !fence) {
+      fence = marker[1];
+      continue;
+    }
+    if (fence) {
+      if (
+        marker &&
+        marker[1][0] === fence[0] &&
+        marker[1].length >= fence.length
+      ) {
+        nodes.push(
+          <pre key={idx}>
+            <code>{code.join("\n")}</code>
+          </pre>,
+        );
+        fence = null;
+        code = [];
+      } else code.push(line);
+      continue;
+    }
+    const inline = (text: string) => renderWithWikiLinks(text, options);
+    const heading = trimmed.match(/^(#{1,3})\s+(.*)$/);
+    if (heading) {
+      const text = inline(heading[2]);
+      nodes.push(
+        heading[1].length === 1 ? (
+          <h1 key={idx} className="obs-h1">
+            {text}
+          </h1>
+        ) : heading[1].length === 2 ? (
+          <h2 key={idx} className="obs-h2">
+            {text}
+          </h2>
+        ) : (
+          <h3 key={idx} className="obs-h3">
+            {text}
+          </h3>
+        ),
+      );
+    } else if (/^> \[!(NOTE|WARNING|TIP)\]/.test(trimmed)) {
+      const callout = trimmed.match(/^> \[!(NOTE|WARNING|TIP)\]\s*(.*)$/)!;
+      nodes.push(
+        <div
+          key={idx}
+          className={`obs-callout ${callout[1] === "WARNING" ? "warn" : callout[1].toLowerCase()}`}
+        >
+          {inline(callout[2])}
+        </div>,
+      );
+    } else if (trimmed === "---")
+      nodes.push(<hr key={idx} className="obs-divider" />);
+    else if (trimmed.startsWith("> "))
+      nodes.push(
+        <blockquote key={idx} className="obs-quote">
+          {inline(trimmed.slice(2))}
+        </blockquote>,
+      );
+    else if (/^[-*]\s/.test(trimmed)) {
+      const items = [trimmed.slice(2)];
+      while (idx + 1 < lines.length && /^[-*]\s/.test(lines[idx + 1].trim()))
+        items.push(lines[++idx].trim().slice(2));
+      nodes.push(
+        <ul key={idx} className="obs-list">
+          {items.map((item, i) => (
+            <li key={i} className="obs-li">
+              {inline(item)}
+            </li>
+          ))}
+        </ul>,
+      );
+    } else if (!trimmed) nodes.push(<div key={idx} style={{ height: 8 }} />);
+    else
+      nodes.push(
+        <p key={idx} className="obs-p">
+          {inline(line)}
+        </p>,
+      );
+  }
+  if (code.length)
+    nodes.push(
+      <pre key="unfinished-code">
+        <code>{code.join("\n")}</code>
+      </pre>,
+    );
+  return <div className="obsidian-preview-content">{nodes}</div>;
+};
