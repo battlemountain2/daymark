@@ -1537,7 +1537,7 @@ body:has(.desk-focus-layer) { overflow:hidden; }
 .personal-dashboard .main-heading {
   align-items:center;
   padding:clamp(22px,3vw,38px);
-  border:1px solid var(--line);
+  border:0;
   border-radius:20px;
   background:linear-gradient(115deg,var(--surface),color-mix(in srgb,var(--accent-soft) 38%,var(--surface)));
   gap:24px;
@@ -1552,7 +1552,7 @@ body:has(.desk-focus-layer) { overflow:hidden; }
 .personal-dashboard .main-actions button { min-height:44px; text-align:left; padding:10px 16px; }
 .personal-dashboard .main-actions .main-focus-action { background:var(--accent-soft); border-color:var(--line-strong); color:var(--ink); }
 .main-focus-action span { float:right; margin-left:18px; }
-.personal-dashboard .space-main .dashboard-panel:not(.is-collapsed) { border:1px solid var(--line); }
+.personal-dashboard .space-main .dashboard-panel:not(.is-collapsed) { border:0; }
 .personal-dashboard .space-main .gmail-card .personal-item { font-family:"Source Sans 3",sans-serif; gap:6px; padding:14px 0 8px; }
 .personal-dashboard .space-main .gmail-card .personal-item strong { font:500 17px/1.4 var(--font-display); }
 .personal-dashboard .space-main .mail-unread .personal-item strong { color:var(--ink); }
