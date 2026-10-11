@@ -3,7 +3,7 @@ import { cloudStorage, getCloudStatus } from "@/lib/cloud-storage";
 
 
 import {noteIndex, resolveWiki, wikiReference, backlinks, noteReference, renameNotebook, type LinkableNote} from "@/lib/notebook-links";
-import {NOTEBOOK_KEY,editNotebookNote,noteTitle,type NotebookNote} from "@/lib/notebook";
+import {NOTEBOOK_KEY,editNotebookNote,noteTitle,trashNotebookNote,restoreNotebookNote,type NotebookNote} from "@/lib/notebook";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {usePersonalRecords} from "@/lib/use-personal-records";
 import { useCloudRevision } from "@/lib/use-cloud-revision";
@@ -14,6 +14,7 @@ import {renderObsidianPreview,renderWithWikiLinks} from "./NotebookPreview";
 import type { VaultNote } from "@/lib/vault";
 import Link from "next/link";
 import NotebookBackupTools from "./NotebookBackupTools";
+import NotebookTrash from "./NotebookTrash";
 import { formatNote, continueNoteList, NOTE_TEMPLATES, recordEdit, type EditorEdit, type EditHistory, type FormatAction } from "@/lib/notebook-editing";
 
 interface ScratchpadDrawerProps {
@@ -97,6 +98,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
   const [sidebarSearch, setSidebarSearch] = useState("");
   const [allVaultNotes, setAllVaultNotes] = useState<VaultNote[]>([]);
   const [selectedNoteId, setSelectedNoteId] = useState<string>("draft");
+  const [lastDeleted, setLastDeleted] = useState<string | null>(null);
   const [collapsedFolders, setCollapsedFolders] = useState<Record<string, boolean>>({});
 
   // Notifications & State Feedback
@@ -168,7 +170,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
     if (!id) { openedInitial.current = true; return; }
     const vaultNote = allVaultNotes.find(n => n.id === id);
     const note = notebook.records[id] || vaultNote;
-    if (!note) return;
+    if (!note || note.deletedAt !== undefined) return;
     setActiveTag(note.course); setSelectedNoteId(id); setEditingContent(notebook.records[id] ? null : vaultNote?.rawBody || vaultNote?.content || null);
     openedInitial.current = true;
   }, [presentation, initialNoteId, notebook.records, allVaultNotes]);
@@ -297,7 +299,8 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
     return sizeToContent(titleRef.current);
   }, [titleEdit, showSidebar, drawerWidth, isFullscreen, notebook.loaded, isOpen]);
   const index = noteIndex(notebook.records,notes);
-  const linkableNotes = [...index, ...allVaultNotes.filter(n=>!index.some(item=>item.id===n.id)).map(n=>({id:n.id,title:n.title,course:n.course,content:n.rawBody||n.content,kind:"vault" as const}))];
+  const linkableNotes = [...index, ...allVaultNotes.filter(n=>!notebook.records[n.id]).map(n=>({id:n.id,title:n.title,course:n.course,content:n.rawBody||n.content,kind:"vault" as const}))];
+  const trashedNotes = Object.values(notebook.records).filter(n => n.deletedAt !== undefined).sort((a,b) => b.deletedAt! - a.deletedAt!);
   const linkSuggestions = linkQuery ? linkableNotes.filter(n=>n.id!==selectedNoteId&&`${n.title} ${n.course}`.toLowerCase().includes(linkQuery.query.toLowerCase())).slice(0,7) : [];
   const noteIdentity = selectedNoteId !== "draft" ? selectedNoteId : activeTag;
   useEffect(() => {
@@ -319,6 +322,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
     }
     const id = notebook.records[selectedNoteId] ? selectedNoteId : `note-${crypto.randomUUID()}`;
     const saved = notebook.update(id,current=> {
+      if (current?.deletedAt !== undefined) throw new Error("Note is in Trash");
       const entry = editNotebookNote(id,activeTag,content,current);
       return !current && allVaultNotes.some(n => n.id === selectedNoteId) ? { ...entry, title: currentTitle, customTitle: true } : entry;
     });
@@ -526,6 +530,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
 
   // 🗂️ Select Note from Sidebar
   const handleSelectNote = (course: string, noteId: string, noteContent?: string, remember = true, prepared = false) => {
+    if (!prepared && notebook.records[noteId]?.deletedAt !== undefined) { setBannerMsg("This note is in Trash. Restore it to open it again."); return; }
     if (!prepared && !prepareNote()) return;
     if(remember) {
       if(navPosition.current < 0) { navigation.current=[{course:activeTag,id:selectedNoteId,content:editingContent ?? undefined}]; navPosition.current=0; }
@@ -567,6 +572,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
     const matches=resolveWiki(reference,linkableNotes,activeTag);
     if(matches.length===1) { openLinkedNote(matches[0]); return; }
     if(matches.length>1) { setAmbiguousLinks(matches); return; }
+    if (resolveWiki(reference,trashedNotes.map(n=>({...n,kind:"note" as const})),activeTag).length) { setBannerMsg("This note is in Trash. Restore it to open it again."); return; }
     const title=wikiReference(reference).target;
     if(!title) return;
     if (!prepareNote()) return;
@@ -592,6 +598,48 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
     return saved;
   }
   const incoming = backlinks(noteIdentity,linkableNotes);
+
+  function deleteNote() {
+    // Read the latest saved copy. A dirty title is applied to the deleted snapshot.
+    try {
+      const latest: Record<string, NotebookNote> = JSON.parse(cloudStorage.getItem(NOTEBOOK_KEY) || "{}");
+      const saved = latest[selectedNoteId];
+      const vault = allVaultNotes.find(n => n.id === selectedNoteId);
+      if (saved?.deletedAt !== undefined) return;
+      if (!saved && !vault && !currentContent.trim() && !titleEdit.trim()) return;
+      const id = saved?.id || vault?.id || `note-${crypto.randomUUID()}`;
+      const entry = editNotebookNote(id,activeTag,currentContent,saved);
+      const title = titleEdit.trim() || currentTitle;
+      latest[id] = trashNotebookNote({ ...entry, title, customTitle: true,
+        ...(saved && title !== saved.title ? { aliases: [...new Set([...(saved.aliases || []),saved.title])] } : {}) });
+      const writes: Record<string,string> = { [NOTEBOOK_KEY]: JSON.stringify(latest) };
+      if (selectedNoteId === "draft") {
+        const drafts = JSON.parse(cloudStorage.getItem(STORAGE_KEY) || "{}");
+        drafts[activeTag] = "";
+        writes[STORAGE_KEY] = JSON.stringify(drafts);
+      }
+      cloudStorage.setItems(writes);
+      pendingEdit.current = false; unsavedTitle.current = false; editHistory.current = null;
+      setLastDeleted(id); setSelectedNoteId("draft"); setEditingContent(null); setTitleEdit("");
+      setLinkQuery(null); setAmbiguousLinks([]); setBannerMsg(null);
+      navigation.current = []; navPosition.current = -1; setNavState({back:false,forward:false});
+      try { localStorage.removeItem("daymark:notebook:active"); } catch {}
+      window.dispatchEvent(new Event("daymark:cloud-updated"));
+    } catch { setBannerMsg("Could not delete on this device. Your note is still here; try again."); }
+  }
+  function restoreDeletedNote(id: string) {
+    if (!prepareNote()) return;
+    let restored: NotebookNote | undefined;
+    const saved = notebook.update(id,current=> {
+      if (!current || current.deletedAt === undefined) return current || null;
+      restored = restoreNotebookNote(current);
+      return restored;
+    });
+    if (!saved || !restored) return;
+    setLastDeleted(null);
+    handleSelectNote(restored.course,id,undefined,true,true);
+    setBannerMsg("Note restored. Its connections are available again.");
+  }
 
   const toggleFolder = (course: string) => {
     setCollapsedFolders(prev => ({ ...prev, [course]: !prev[course] }));
@@ -896,6 +944,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
           </div>
         </div>
         <NotebookBackupTools prepare={prepareNote} />
+        <NotebookTrash notes={trashedNotes} lastDeleted={lastDeleted} onRestore={restoreDeletedNote} />
 
         {/* Status Notification Banner */}
         {bannerMsg && (
@@ -939,8 +988,8 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
                 {courses.map(course => {
                   const match = (value:string) => value.replace(/\s+/g,"").toUpperCase() === course.replace(/\s+/g,"").toUpperCase();
                   const query = sidebarSearch.trim().toLowerCase();
-                  const entries = Object.values(notebook.records).filter(n=>match(n.course)).sort((a,b)=>b.updatedAt-a.updatedAt);
-                  const vault = allVaultNotes.filter(n=>match(n.course));
+                  const entries = Object.values(notebook.records).filter(n=>n.deletedAt === undefined && match(n.course)).sort((a,b)=>b.updatedAt-a.updatedAt);
+                  const vault = allVaultNotes.filter(n=>!notebook.records[n.id] && match(n.course));
                   const hasDraft = Boolean(notes[course]?.trim());
                   if(!entries.length&&!vault.length&&!hasDraft) return null;
                   return <div key={course} className="sidebar-folder">
@@ -959,7 +1008,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
           {/* MAIN EDITOR & ACTION PANE */}
           <div className="scratchpad-main-pane">
             <div className="notebook-document-heading">
-              <div className="notebook-history"><button type="button" aria-label="Previous note" disabled={!navState.back} onClick={()=>navigateNote(-1)}>←</button><button type="button" aria-label="Next note" disabled={!navState.forward} onClick={()=>navigateNote(1)}>→</button><span>{activeTag}</span></div>
+              <div className="notebook-history"><button type="button" aria-label="Previous note" disabled={!navState.back} onClick={()=>navigateNote(-1)}>←</button><button type="button" aria-label="Next note" disabled={!navState.forward} onClick={()=>navigateNote(1)}>→</button><span>{activeTag}</span><button type="button" className="notebook-delete" disabled={selectedNoteId === "draft" && !currentContent.trim() && !titleEdit.trim()} onClick={deleteNote}>Delete note</button></div>
               <textarea
                 ref={titleRef}
                 rows={1}
@@ -1077,7 +1126,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
             </div>
 
             </details>
-            <details className="notebook-tools notebook-connections"><summary>Connected notes & passages</summary><label className="desk-field">Link a note<select aria-label="Link a notebook note" defaultValue="" onChange={e=>{if(e.target.value)noteLinks.write(crypto.randomUUID(),{from:noteIdentity,to:e.target.value});e.target.value='';}}><option value="">Choose a note…</option>{Object.values(notebook.records).filter(n=>n.id!==noteIdentity).map(n=><option key={n.id} value={n.id}>{n.title}</option>)}{Object.keys(notes).filter(key=>key!==noteIdentity&&notes[key]?.trim()).map(key=><option key={key}>{key}</option>)}</select></label>{Object.entries(noteLinks.records).filter(([,l])=>l.from===noteIdentity||l.to===noteIdentity).map(([id,l])=>{const passage=l.highlight?passages.records[l.highlight]:null;const target=l.from===noteIdentity?l.to:l.from;return <p key={id}>{passage?<a href={`/?space=school&reading=${passage.file}&page=${passage.page}&highlight=${l.highlight}`}>Page {passage.page} · source passage ↗</a>:<button onClick={()=>handleSelectNote(notebook.records[target]?.course||target,notebook.records[target]?target:'draft')}>{l.from===noteIdentity?(notebook.records[target]?.title||target):`Linked from ${notebook.records[target]?.title||target}`}</button>} <button onClick={()=>noteLinks.write(id,null)} aria-label="Remove note connection">×</button>{passage?.quote&&<span className="notebook-source-excerpt" style={{display:"block"}}>{passage.quote.length>220?passage.quote.slice(0,220)+"…":passage.quote}</span>}</p>;})}{Object.values(connectedCards.records).filter(c=>c.sourceNote===noteIdentity||Object.values(noteLinks.records).some(l=>l.from===noteIdentity&&l.highlight&&c.id===`highlight-${l.highlight}`)).map(c=><details key={c.id} className="connected-card"><summary>Card · {c.front}</summary><p>{c.back}</p><div className="sub">{inlineNoteParts(c.source.replace(/.*? · (?=\/)/,"Source: ")).map((part,i)=>part.kind==='link'?<a key={i} href={part.url}>{part.text}</a>:<span key={i}>{part.text}</span>)}</div><a href="/study">Cards & review</a></details>)}{noteLinks.error&&<p role="status">{noteLinks.error}</p>}</details>
+            <details className="notebook-tools notebook-connections"><summary>Connected notes & passages</summary><label className="desk-field">Link a note<select aria-label="Link a notebook note" defaultValue="" onChange={e=>{if(e.target.value)noteLinks.write(crypto.randomUUID(),{from:noteIdentity,to:e.target.value});e.target.value='';}}><option value="">Choose a note…</option>{Object.values(notebook.records).filter(n=>n.deletedAt === undefined && n.id!==noteIdentity).map(n=><option key={n.id} value={n.id}>{n.title}</option>)}{Object.keys(notes).filter(key=>key!==noteIdentity&&notes[key]?.trim()).map(key=><option key={key}>{key}</option>)}</select></label>{Object.entries(noteLinks.records).filter(([,l])=>l.from===noteIdentity||l.to===noteIdentity).map(([id,l])=>{const passage=l.highlight?passages.records[l.highlight]:null;const target=l.from===noteIdentity?l.to:l.from;return <p key={id}>{passage?<a href={`/?space=school&reading=${passage.file}&page=${passage.page}&highlight=${l.highlight}`}>Page {passage.page} · source passage ↗</a>:<button onClick={()=>handleSelectNote(notebook.records[target]?.course||target,notebook.records[target]?target:'draft')}>{l.from===noteIdentity?(notebook.records[target]?.title||target):`Linked from ${notebook.records[target]?.title||target}`}</button>} <button onClick={()=>noteLinks.write(id,null)} aria-label="Remove note connection">×</button>{passage?.quote&&<span className="notebook-source-excerpt" style={{display:"block"}}>{passage.quote.length>220?passage.quote.slice(0,220)+"…":passage.quote}</span>}</p>;})}{Object.values(connectedCards.records).filter(c=>c.sourceNote===noteIdentity||Object.values(noteLinks.records).some(l=>l.from===noteIdentity&&l.highlight&&c.id===`highlight-${l.highlight}`)).map(c=><details key={c.id} className="connected-card"><summary>Card · {c.front}</summary><p>{c.back}</p><div className="sub">{inlineNoteParts(c.source.replace(/.*? · (?=\/)/,"Source: ")).map((part,i)=>part.kind==='link'?<a key={i} href={part.url}>{part.text}</a>:<span key={i}>{part.text}</span>)}</div><a href="/study">Cards & review</a></details>)}{noteLinks.error&&<p role="status">{noteLinks.error}</p>}</details>
             {/* Footer & Metrics */}
             <div className="scratchpad-footer">
               <div className="scratchpad-metrics mono">

@@ -24,7 +24,7 @@ export function noteIndex(
   drafts: Record<string, string>,
 ): LinkableNote[] {
   return [
-    ...Object.values(records).map((n) => ({ ...n, kind: "note" as const })),
+    ...Object.values(records).filter(n => n.deletedAt === undefined).map((n) => ({ ...n, kind: "note" as const })),
     ...Object.entries(drafts)
       .filter(([, content]) => content.trim())
       .map(([course, content]) => ({

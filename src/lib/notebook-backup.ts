@@ -33,7 +33,7 @@ export function parseNotebookBackup(raw: string): NotebookBackup {
   let value: unknown;
   try { value = JSON.parse(raw); } catch { throw new Error("This file is not a readable notebook backup."); }
   if (!object(value) || value.format !== "daymark-notebook" || value.version !== 1 || !timestamp(value.exportedAt) || typeof value.includesStudyVault !== "boolean") throw new Error("Choose a Daymark notebook backup (version 1).");
-  const notes = records<NotebookNote>(value.notes, (n, id) => object(n) && n.id === id && identity(n.course) && text(n.title, 2000) && text(n.content, 200000) && timestamp(n.createdAt) && timestamp(n.updatedAt) && (n.customTitle === undefined || typeof n.customTitle === "boolean") && (n.restoredFrom === undefined || identity(n.restoredFrom)) && (n.restoredAt === undefined || timestamp(n.restoredAt)) && (n.restoreFingerprint === undefined || text(n.restoreFingerprint, 100)) && (n.aliases === undefined || Array.isArray(n.aliases) && n.aliases.length <= 100 && n.aliases.every(a => text(a, 2000))));
+  const notes = records<NotebookNote>(value.notes, (n, id) => object(n) && n.id === id && identity(n.course) && text(n.title, 2000) && text(n.content, 200000) && timestamp(n.createdAt) && timestamp(n.updatedAt) && (n.deletedAt === undefined || timestamp(n.deletedAt)) && (n.customTitle === undefined || typeof n.customTitle === "boolean") && (n.restoredFrom === undefined || identity(n.restoredFrom)) && (n.restoredAt === undefined || timestamp(n.restoredAt)) && (n.restoreFingerprint === undefined || text(n.restoreFingerprint, 100)) && (n.aliases === undefined || Array.isArray(n.aliases) && n.aliases.length <= 100 && n.aliases.every(a => text(a, 2000))));
   const drafts = records<string>(value.drafts, d => text(d, 200000));
   const connections = records<NoteConnection>(value.connections, c => object(c) && identity(c.from) && identity(c.to) && (c.highlight === undefined || identity(c.highlight)));
   const passages = records<NotePassage>(value.passages, p => object(p) && identity(p.file) && typeof p.page === "number" && Number.isSafeInteger(p.page) && p.page > 0 && p.page <= 100000 && (p.quote === undefined || text(p.quote, 200000)) && (p.comment === undefined || text(p.comment, 200000)));
@@ -52,10 +52,10 @@ export function makeNotebookBackup(snapshot: NotebookSnapshot, vault: { id: stri
   return parseNotebookBackup(JSON.stringify({ ...snapshot, notes, format: "daymark-notebook", version: 1, exportedAt: now, includesStudyVault }));
 }
 function sameNote(a: NotebookNote, b: NotebookNote) {
-  return a.title === b.title && a.course === b.course && a.content === b.content && Boolean(a.customTitle) === Boolean(b.customTitle) && JSON.stringify(a.aliases || []) === JSON.stringify(b.aliases || []);
+  return a.deletedAt === b.deletedAt && a.title === b.title && a.course === b.course && a.content === b.content && Boolean(a.customTitle) === Boolean(b.customTitle) && JSON.stringify(a.aliases || []) === JSON.stringify(b.aliases || []);
 }
 function fingerprint(note: NotebookNote) {
-  const raw = JSON.stringify([note.course, note.title, note.content, note.customTitle || false, note.aliases || []]);
+  const raw = JSON.stringify([note.course, note.title, note.content, note.customTitle || false, note.aliases || [], note.deletedAt ?? null]);
   let first = 2166136261, second = 5381;
   for (let i = 0; i < raw.length; i++) { first = Math.imul(first ^ raw.charCodeAt(i), 16777619); second = Math.imul(second, 33) ^ raw.charCodeAt(i); }
   return `${first >>> 0}-${second >>> 0}`;
@@ -84,7 +84,7 @@ function rewriteConnections(content: string, course: string, index: ReturnType<t
 export function planNotebookRestore(current: NotebookSnapshot, backup: NotebookBackup, newId: () => string = () => `note-${crypto.randomUUID()}`) {
   const next: NotebookSnapshot = { notes: { ...current.notes }, drafts: { ...current.drafts }, connections: { ...current.connections }, passages: { ...current.passages } };
   const mapped = new Map<string, string>(), highlights = new Map<string, string>();
-  const backupIndex = noteIndex(backup.notes, backup.drafts);
+  const backupIndex = [...Object.values(backup.notes).map(n => ({...n,kind:"note" as const})), ...noteIndex({},backup.drafts)];
   let added = 0, copies = 0, skipped = 0;
   const imported: NotebookNote[] = [];
   const sourceNotes = [...Object.values(backup.notes)];

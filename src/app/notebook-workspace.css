@@ -41,6 +41,14 @@
 .personal-dashboard .notebook-task input { flex-shrink:0; width:17px; height:17px; cursor:pointer; }
 .notebook-task input:checked + span { text-decoration:line-through; color:var(--ink-2); }
 .notebook-workspace .scratchpad-footer { margin-top:auto; }
+.notebook-trash { padding:8px 20px; flex-shrink:0; border-bottom:1px solid var(--line); max-height:30dvh; overflow:auto; font:400 13px/1.5 var(--font-body); }
+.notebook-trash summary { cursor:pointer; width:fit-content; color:var(--ink-2); }
+.notebook-trash-row,.notebook-trash-undo { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 0; }
+.notebook-trash-row > div,.notebook-trash-undo > span { min-width:0; overflow-wrap:anywhere; }
+.notebook-trash-row strong { font-weight:500; }
+.notebook-trash-row small { display:block; color:var(--ink-2); }
+.notebook-trash button { flex-shrink:0; min-height:36px; }
+.personal-dashboard .notebook-history .notebook-delete { margin-left:auto; width:auto; padding:6px 10px; color:var(--ink-2); }
 @media (max-width:600px) {
   .personal-dashboard .notebook-page .scratchpad-sidebar { width:100%; flex-basis:100%; }
   .personal-dashboard .notebook-page .notebook-document-heading { padding:20px 16px 12px; }

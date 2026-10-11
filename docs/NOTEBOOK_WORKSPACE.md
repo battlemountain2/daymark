@@ -11,6 +11,7 @@ The dashboard's Notebook link now opens a dedicated `/notebook` workspace. Quick
 - Lecture and reading templates create separate notes.
 - Read-view checklists update the underlying Markdown.
 - Existing wiki links, backlinks, course links and passage connections remain available.
+- Delete note moves saved notes, captured drafts and notebook views of study-vault notes to recoverable Trash. Undo restores immediately; Trash also survives reload and cloud sync. Writing, aliases and connection identities are kept. Vault source data stays intact; a notebook record hides it from the notebook while trashed. Backups include Trash and preserve deleted status on import.
 - Note changes save locally immediately and queue for cloud sync. Failed saves keep the current text available and block navigation that would discard it.
 
 ## Backup and restore
@@ -23,7 +24,7 @@ Backups are limited to 10 MB, 5,000 entries per collection and 200,000 character
 
 ## Verification
 
-- 91 automated tests pass, including formatting/history, restore conflicts, cyclic links, repeated imports, invalid files, storage rollback and bounded sync batches.
+- 94 automated tests pass, including formatting/history, restore conflicts, cyclic links, repeated imports, invalid files, storage rollback, bounded sync batches and delete/restore identity preservation.
 - Production build and TypeScript checks pass. Lint has no errors and six existing warnings outside the changed notebook components.
 - Browser checks cover formatting, templates, checklist editing, autosave, backup download, conflict restore and duplicate-free repeat restore.
 - Restored notes and the active reading note were verified in an isolated local database after sync; reload reopens the selected note.

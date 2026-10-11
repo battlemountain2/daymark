@@ -12,6 +12,7 @@ export type NotebookNote = {
   restoredFrom?: string;
   restoredAt?: number;
   restoreFingerprint?: string;
+  deletedAt?: number;
 };
 export function noteTitle(content: string): string {
   const line =
@@ -35,9 +36,20 @@ export function editNotebookNote(
     title: current?.customTitle ? current.title : noteTitle(content),
     ...(current?.customTitle ? { customTitle: true } : {}),
     ...(current?.aliases ? { aliases: current.aliases } : {}),
+    ...(current?.deletedAt !== undefined ? { deletedAt: current.deletedAt } : {}),
     ...(current?.restoredFrom ? { restoredFrom: current.restoredFrom, restoredAt: current.restoredAt, restoreFingerprint: current.restoreFingerprint } : {}),
     content,
     createdAt: current?.createdAt ?? now,
     updatedAt: now,
   };
+}
+
+/** Keep the identity and writing so links recover when a note is restored. */
+export function trashNotebookNote(note: NotebookNote, now = Date.now()): NotebookNote {
+  return note.deletedAt !== undefined ? note : { ...note, deletedAt: now, updatedAt: now };
+}
+export function restoreNotebookNote(note: NotebookNote, now = Date.now()): NotebookNote {
+  if (note.deletedAt === undefined) return note;
+  const { deletedAt: _deletedAt, ...restored } = note;
+  return { ...restored, updatedAt: now };
 }
