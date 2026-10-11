@@ -76,7 +76,7 @@ export default function MusicPanel({ promise,compact=false }: { promise: Promise
   const rest = m.recent.slice(1, compact ? 3 : 6);
 
   return (
-    <section className={`card span12 musiccard${compact?' music-compact':''}`}>
+    <section className={`card span12 musiccard${compact?' music-compact':''}${!lead&&deckMode==='stream'?' music-empty':''}`}>
       <div className="card-head" id="listening">
         <h2>Listening Corner</h2>
         <div className="personal-tabs" aria-label="Listening view">

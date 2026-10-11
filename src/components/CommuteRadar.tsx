@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { hhmm } from "@/lib/schedule";
+import { hhmm, isOnline } from "@/lib/schedule";
 
 type Props = {
   nextClass: {
@@ -113,16 +113,9 @@ export default function CommuteRadar({ nextClass, nowMinutes, weather, doneForTo
     return `${h12}:${m.toString().padStart(2, "0")} ${ampm}`;
   };
 
-  if (!nextClass || !commutePlan) {
+  if (!nextClass || !commutePlan || isOnline(nextClass.where)) {
     return (
-      <div className="commute-radar-card mono">
-        <div className="cr-header">
-          <span className="cr-icon">🚗</span>
-          <span className="cr-title">UNM Commute Radar</span>
-          <span className="cr-tag">{doneForToday ? "Done for today" : "Standby"}</span>
-        </div>
-        <p className="cr-desc sub">{doneForToday ? "All classes finished." : "No campus commute today."}</p>
-      </div>
+      <p className="commute-quiet sub">{nextClass&&isOnline(nextClass.where)?'Online class · no campus trip':doneForToday?'Done for today · campus trips finished.':'No campus trip today.'}</p>
     );
   }
 

@@ -1,7 +1,7 @@
 "use client";
 import {useEffect,useSyncExternalStore} from 'react';
 import {cloudStorage} from './cloud-storage';
-import {FOCUS_SESSION_KEY,newFocusSession,restoreFocusSession,reconcileFocus,startFocus,pauseFocus,nextFocusPhase,phaseSeconds,validFocusDuration,recordFocusCompletion,type FocusPhase,type FocusSession} from './focus-session';
+import {FOCUS_SESSION_KEY,newFocusSession,restoreFocusSession,reconcileFocus,startFocus,pauseFocus,nextFocusPhase,phaseSeconds,validFocusDuration,recordFocusCompletion,type FocusPhase,type FocusSession,type FocusTarget} from './focus-session';
 type Snapshot = {session:FocusSession|null;foreground:boolean;error:string};
 const empty:Snapshot = {session:null,foreground:false,error:''};
 let snapshot = empty;
@@ -70,11 +70,12 @@ function update(change:(session:FocusSession)=>FocusSession, foreground = snapsh
 export const focusActions = {
   start() {update(s=>startFocus(s,Date.now()),true);},
   pause() {update(s=>pauseFocus(s,Date.now()));},
-  reset() {update(s=>newFocusSession(crypto.randomUUID(),Date.now(),s.phase,s.duration,s.task,s.completedFocus));},
-  choose(phase:FocusPhase,minutes = phaseSeconds(phase)/60) {if (!Number.isInteger(minutes) || !validFocusDuration(minutes*60)) return;update(s=>newFocusSession(crypto.randomUUID(),Date.now(),phase,minutes*60,s.task,s.completedFocus));},
-  duration(phase:FocusPhase,seconds:number) {if (!validFocusDuration(seconds)) return;update(s=>newFocusSession(crypto.randomUUID(),Date.now(),phase,seconds,s.task,s.completedFocus));},
-  next() {update(s=>{if(s.completedAt === null)return s;const phase=nextFocusPhase(s);return startFocus(newFocusSession(crypto.randomUUID(),Date.now(),phase,phaseSeconds(phase),s.task,s.completedFocus),Date.now());},true);},
-  task(task:string) {update(s=>({...s,task:task.slice(0,500)}));},
+  reset() {update(s=>({...newFocusSession(crypto.randomUUID(),Date.now(),s.phase,s.duration,s.task,s.completedFocus),target:s.target}));},
+  choose(phase:FocusPhase,minutes = phaseSeconds(phase)/60) {if (!Number.isInteger(minutes) || !validFocusDuration(minutes*60)) return;update(s=>({...newFocusSession(crypto.randomUUID(),Date.now(),phase,minutes*60,s.task,s.completedFocus),target:s.target}));},
+  duration(phase:FocusPhase,seconds:number) {if (!validFocusDuration(seconds)) return;update(s=>({...newFocusSession(crypto.randomUUID(),Date.now(),phase,seconds,s.task,s.completedFocus),target:s.target}));},
+  next() {update(s=>{if(s.completedAt === null)return s;const phase=nextFocusPhase(s);return startFocus({...newFocusSession(crypto.randomUUID(),Date.now(),phase,phaseSeconds(phase),s.task,s.completedFocus),target:s.target},Date.now());},true);},
+  target(target:FocusTarget) {update(s=>({...s,target,task:target.title.slice(0,500)}));},
+  task(task:string) {update(s=>({...s,task:task.slice(0,500),target:undefined}));},
   foreground(value:boolean) {snapshot={...snapshot,foreground:value};emit();},
 };
 export function useFocusSession() {

@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
+import { localDay } from "@/lib/localtime";
 import type { StudyHubData } from "@/lib/study-hub-types";
 import { getDueCards, loadSRSStore, type SRSStore } from "@/lib/spaced-repetition";
 import QuickStudyModal from "@/components/QuickStudyModal";
 import { useCloudRevision } from "@/lib/use-cloud-revision";
+import {recentReviewTopics} from "@/lib/review-insights";
 
 type Props = {
   promise: Promise<StudyHubData>;
@@ -14,29 +16,25 @@ type Props = {
 export default function StudyGlance({ promise }: Props) {
   const data = use(promise);
   const cloudRevision = useCloudRevision();
-  const { courses, weeklyReview, allCards, overallDeckStats } = data;
+  const { courses, allCards, overallDeckStats } = data;
 
   const [srsStore, setSrsStore] = useState<SRSStore>({});
   const [isQuickReviewOpen, setIsQuickReviewOpen] = useState<boolean>(false);
-  const [todayIso, setTodayIso] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [todayIso, setTodayIso] = useState<string>(() => localDay());
 
   useEffect(() => {
     setSrsStore(loadSRSStore());
-    try {
-      const parts = new Intl.DateTimeFormat("en-CA", {
-        timeZone: "America/Denver",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      }).format(new Date());
-      setTodayIso(parts);
-    } catch {}
+    const updateDay = () => setTodayIso(localDay());
+    updateDay();
+    const timer = setInterval(updateDay, 60000);
+    window.addEventListener("focus", updateDay);
+    return () => {clearInterval(timer);window.removeEventListener("focus", updateDay);};
   }, [cloudRevision]);
 
   const dueCards = getDueCards(allCards, todayIso, srsStore);
   const total = allCards.length;
   const verifiedPct = total > 0 ? Math.round((overallDeckStats.verified / total) * 100) : 0;
-  const topWeak = weeklyReview.weakAreas?.[0];
+  const topWeak = recentReviewTopics(allCards,srsStore,todayIso)[0];
 
   return (
     <section className="card span5 study-glance-card">
@@ -50,7 +48,7 @@ export default function StudyGlance({ promise }: Props) {
       <div className="card-body">
         <div className="study-preview"><div><span className="mono sub">WEEK {data.currentWeekNumber} · {courses.length} COURSES</span><h3>Review queue</h3></div><div className="study-queue"><strong>{dueCards.length}</strong><span>{dueCards.length ? "cards ready to review" : "Nothing due today"}</span><small className="sub">{verifiedPct}% source-verified</small></div></div>
         <div className="study-preview-actions">{dueCards.length > 0 ? <button type="button" onClick={() => setIsQuickReviewOpen(true)}>Start a short review →</button> : <Link href="/study">Open practice →</Link>}<Link href="/study?mode=quiz">Try a quiz</Link></div>
-        {topWeak && <details className="personal-setup"><summary>Worth another look · {topWeak.course}</summary><h3>{topWeak.topic}</h3><p className="sub">{topWeak.reason}</p></details>}
+        {topWeak && <details className="personal-setup"><summary>Recent reviews · {topWeak.course}</summary><p className="sub">{topWeak.count} {topWeak.count===1?'card was':'cards were'} rated Again or Hard in the last seven days. These may be worth another look.</p><Link href={`/study?course=${encodeURIComponent(topWeak.course)}`}>Open course cards ↗</Link></details>}
 
       </div>
 

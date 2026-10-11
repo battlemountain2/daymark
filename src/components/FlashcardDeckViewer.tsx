@@ -2,7 +2,7 @@
 import { cloudStorage } from "@/lib/cloud-storage";
 
 
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useCloudRevision } from "@/lib/use-cloud-revision";
 import type { Flashcard, CardStatus, CourseStudyInfo } from "@/lib/study-hub-types";
 import {
@@ -89,6 +89,7 @@ export default function FlashcardDeckViewer({
   const cloudRevision = useCloudRevision();
   const [sessionStreak, setSessionStreak] = useState<number>(0);
   const [sessionReviewed, setSessionReviewed] = useState<number>(0);
+  const [saveError, setSaveError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Swipe gesture state
@@ -229,21 +230,6 @@ export default function FlashcardDeckViewer({
     setQuizChoices(choices);
   }, [currentIndex, viewMode, currentCard, cards]);
 
-  // Quiz timer countdown
-  useEffect(() => {
-    if (viewMode !== "quiz" || selectedChoiceIdx !== null || quizComplete) return;
-    const interval = setInterval(() => {
-      setQuizTimer((t) => {
-        if (t <= 1) {
-          handleQuizSelect(-1); // Time out
-          return 0;
-        }
-        return t - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [viewMode, selectedChoiceIdx, currentIndex, quizComplete]);
-
   const handleShuffleDeck = () => {
     setRandomSeed(Date.now());
     setSortMode("shuffle");
@@ -251,7 +237,7 @@ export default function FlashcardDeckViewer({
     setIsFlipped(false);
   };
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     if (filteredCards.length === 0) return;
     setIsFlipped(false);
     setSelectedChoiceIdx(null);
@@ -263,47 +249,59 @@ export default function FlashcardDeckViewer({
     }
 
     setCurrentIndex((prev) => (prev + 1) % filteredCards.length);
-  };
+  }, [filteredCards.length,viewMode,currentIndex]);
 
-  const handlePrev = () => {
+  const handlePrev = useCallback(() => {
     if (filteredCards.length === 0) return;
     setIsFlipped(false);
     setSelectedChoiceIdx(null);
     setSwipeOffset(0);
     setCurrentIndex((prev) => (prev - 1 + filteredCards.length) % filteredCards.length);
-  };
+  }, [filteredCards.length]);
 
   const handleFlip = () => {
     setIsFlipped((prev) => !prev);
   };
 
-  const handleSRSGrade = (grade: SRSGrade) => {
+  const handleSRSGrade = useCallback((grade: SRSGrade) => {
     if (!currentCard) return;
     const prevSRS = srsStore[currentCard.id] || INITIAL_SRS_STATE(currentCard.id);
     const updated = calculateNextSRS(prevSRS, grade);
-    const newStore = saveSRSCard(updated);
+    let newStore: SRSStore;
+    try {
+      newStore = saveSRSCard(updated);
+      setSaveError("");
+    } catch {
+      setSaveError("Your review could not be saved. Choose your rating again to retry; this card has not advanced.");
+      return;
+    }
     setSrsStore(newStore);
-
-    let newStatus: CardStatus = currentCard.status;
     if (grade === 1) {
-      newStatus = "Needs review";
       setSessionStreak(0);
     } else if (grade >= 3) {
-      newStatus = "Verified";
       setSessionStreak((s) => s + 1);
     }
-    setCards((prev) => prev.map((c) => (c.id === currentCard.id ? { ...c, status: newStatus } : c)));
     setSessionReviewed((r) => r + 1);
 
     handleNext();
-  };
+  }, [currentCard,srsStore,handleNext]);
 
-  const handleQuizSelect = (choiceIdx: number) => {
+  const handleQuizSelect = useCallback((choiceIdx: number) => {
     if (selectedChoiceIdx !== null) return;
+    const isCorrect = choiceIdx >= 0 && quizChoices[choiceIdx]?.isCorrect;
+    if (currentCard) {
+      const prevSRS = srsStore[currentCard.id] || INITIAL_SRS_STATE(currentCard.id);
+      try {
+        setSrsStore(saveSRSCard(calculateNextSRS(prevSRS, isCorrect ? 3 : 1)));
+        setSaveError("");
+      } catch {
+        setSaveError("Your answer could not be saved. The quiz is paused—select your answer again to retry.");
+        return;
+      }
+    }
     setSelectedChoiceIdx(choiceIdx);
     setQuizAnsweredCount((c) => c + 1);
 
-    const isCorrect = choiceIdx >= 0 && quizChoices[choiceIdx]?.isCorrect;
     if (isCorrect) {
       const streakBonus = quizStreak * 25;
       const speedBonus = quizTimer * 5;
@@ -311,25 +309,25 @@ export default function FlashcardDeckViewer({
       setQuizStreak((st) => st + 1);
       setQuizCorrectCount((cc) => cc + 1);
 
-      if (currentCard) {
-        const prevSRS = srsStore[currentCard.id] || INITIAL_SRS_STATE(currentCard.id);
-        const updated = calculateNextSRS(prevSRS, 3);
-        setSrsStore(saveSRSCard(updated));
-      }
     } else {
       setQuizStreak(0);
       if (currentCard) {
         setMissedCardIds((prev) => [...prev, currentCard.id]);
-        const prevSRS = srsStore[currentCard.id] || INITIAL_SRS_STATE(currentCard.id);
-        const updated = calculateNextSRS(prevSRS, 1);
-        setSrsStore(saveSRSCard(updated));
       }
     }
 
     setTimeout(() => {
       handleNext();
     }, 1400);
-  };
+  }, [selectedChoiceIdx,quizChoices,currentCard,srsStore,quizStreak,quizTimer,handleNext]);
+
+  // Keep writes outside timer state updaters: React may evaluate updaters more than once.
+  useEffect(() => {
+    if(viewMode!=="quiz"||selectedChoiceIdx!==null||quizComplete||saveError)return;
+    if(quizTimer===0){handleQuizSelect(-1);return;}
+    const timer=setTimeout(()=>setQuizTimer(t=>Math.max(0,t-1)),1000);
+    return()=>clearTimeout(timer);
+  },[viewMode,selectedChoiceIdx,quizComplete,saveError,quizTimer,handleQuizSelect]);
 
   const handleRestartQuiz = () => {
     setRandomSeed(Date.now());
@@ -471,7 +469,7 @@ export default function FlashcardDeckViewer({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [currentCard, filteredCards.length, isFlipped, viewMode, quizChoices, quizComplete]);
+  }, [currentCard, filteredCards.length, isFlipped, viewMode, quizChoices, quizComplete,handleNext,handlePrev,handleQuizSelect,handleSRSGrade]);
 
   const total = filteredCards.length;
   const verifiedCount = filteredCards.filter((c) => c.status === "Verified").length;
@@ -489,6 +487,7 @@ export default function FlashcardDeckViewer({
 
   return (
     <div className="deck-viewer zen-mode built-in">
+      {saveError && <p role="alert" className="review-save-error">{saveError}</p>}
       {/* Hidden File Input for CSV Import */}
       <input
         ref={fileInputRef}

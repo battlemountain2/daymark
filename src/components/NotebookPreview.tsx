@@ -79,7 +79,7 @@ export const renderObsidianPreview = (
   if (!content.trim())
     return (
       <div className="sub" style={{ padding: 24 }}>
-        Start writing. Use [[Note title]] to connect an idea.
+        Your formatted note will appear here as you write. Use Connect note to link an idea.
       </div>
     );
   let fence: string | null = null,

@@ -171,9 +171,10 @@ export function parseAnkiCsv(csvContent: string): Flashcard[] {
     const rawStatus = (statusIdx >= 0 ? row[statusIdx] : row[5] || "Draft").trim();
 
     let status: CardStatus = "Draft";
-    if (/verified/i.test(rawStatus)) status = "Verified";
-    else if (/needs review|review/i.test(rawStatus)) status = "Needs review";
-    else if (/exported/i.test(rawStatus)) status = "Exported";
+    const normalizedStatus = rawStatus.toLowerCase().replace(/\s+/g, " ");
+    if (normalizedStatus === "verified") status = "Verified";
+    else if (["needs review", "review"].includes(normalizedStatus)) status = "Needs review";
+    else if (normalizedStatus === "exported") status = "Exported";
 
     const parsedTag = parseHierarchyTag(tags);
     const codeMatch = parsedTag.courseCode.match(/^([A-Za-z]+)(\d+.*)$/);

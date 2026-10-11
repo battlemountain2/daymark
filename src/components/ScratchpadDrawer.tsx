@@ -69,6 +69,8 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
   const dialogRef = useRef<HTMLDivElement>(null);
   const [activeTag, setActiveTag] = useState<string>(defaultTag);
   const [viewMode, setViewMode] = useState<"edit" | "split" | "preview">("edit");
+  const [connectSelection,setConnectSelection]=useState<{start:number;end:number}|null>(null);
+  const [connectSearch,setConnectSearch]=useState("");
   const [notes, setNotes] = useState<Record<string, string>>(() => {
     if (typeof window === "undefined") return { General: "" };
     try {
@@ -303,6 +305,7 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
   const trashedNotes = Object.values(notebook.records).filter(n => n.deletedAt !== undefined).sort((a,b) => b.deletedAt! - a.deletedAt!);
   const linkSuggestions = linkQuery ? linkableNotes.filter(n=>n.id!==selectedNoteId&&`${n.title} ${n.course}`.toLowerCase().includes(linkQuery.query.toLowerCase())).slice(0,7) : [];
   const noteIdentity = selectedNoteId !== "draft" ? selectedNoteId : activeTag;
+  useEffect(()=>{setConnectSelection(null);},[noteIdentity]);
   useEffect(() => {
     if (selectedNoteId === "draft") return;
     try { localStorage.setItem("daymark:notebook:active", selectedNoteId); } catch {}
@@ -908,15 +911,15 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
                 type="button"
                 className={`obs-btn ${viewMode === "split" ? "active" : ""}`}
                 onClick={() => setViewMode("split")}
-                title="Split Side-by-Side Mode"
+                title="Write with a live preview beside your note"
               >
-                Split
+                Write + preview
               </button>
               <button
                 type="button"
                 className={`obs-btn ${viewMode === "preview" ? "active" : ""}`}
                 onClick={() => setViewMode("preview")}
-                title="Rendered Obsidian View"
+                title="Read your formatted note"
               >
                 Read
               </button>
@@ -1024,13 +1027,16 @@ export default function ScratchpadDrawer({ isOpen, onClose, defaultTag = "Genera
                   }
                 }}
               />
-              <span className="sub">Markdown · type [[ to connect a note</span>
+              <span className="sub">Write normally. Use the buttons to format text or connect a note.</span>
             </div>
             {viewMode !== "preview" && <div className="notebook-format-toolbar" role="toolbar" aria-label="Note formatting">
-              {([["bold", "Bold"], ["italic", "Italic"], ["heading", "Heading"], ["bullet", "List"], ["checklist", "Checklist"], ["quote", "Quote"], ["link", "Link note"]] as const).map(([action,label])=><button key={action} type="button" onMouseDown={e=>e.preventDefault()} onClick={()=>applyFormat(action)}>{label}</button>)}
+              {([["bold", "Bold"], ["italic", "Italic"], ["heading", "Heading"], ["bullet", "List"], ["checklist", "Checklist"], ["quote", "Quote"]] as const).map(([action,label])=><button key={action} type="button" onMouseDown={e=>e.preventDefault()} onClick={()=>applyFormat(action)}>{label}</button>)}
+              <button type="button" onMouseDown={e=>e.preventDefault()} onClick={()=>{const editor=textareaRef.current;if(editor){setConnectSelection({start:editor.selectionStart,end:editor.selectionEnd});setConnectSearch("");}}}>Connect note</button>
               <button type="button" onMouseDown={e=>e.preventDefault()} onClick={()=>undoEdit(-1)}>Undo</button>
               <button type="button" onMouseDown={e=>e.preventDefault()} onClick={()=>undoEdit(1)}>Redo</button>
             </div>}
+            {connectSelection&&viewMode!=="preview"&&<section className="notebook-connect-picker" aria-label="Choose a note to connect"><label>Find a note<input aria-label="Find a note to connect" value={connectSearch} onChange={e=>setConnectSearch(e.target.value)} placeholder="Search by title or course"/></label><div>{linkableNotes.filter(note=>note.id!==selectedNoteId&&`${note.title} ${note.course}`.toLowerCase().includes(connectSearch.toLowerCase())).slice(0,30).map(note=><button type="button" key={note.id} onClick={()=>{const reference=`[[${noteReference(note,linkableNotes,activeTag)}]]`;const content=currentContent.slice(0,connectSelection.start)+reference+currentContent.slice(connectSelection.end);const cursor=connectSelection.start+reference.length;applyEditorEdit({content,start:cursor,end:cursor});setConnectSelection(null);}}><strong>{note.title}</strong><span className="sub">{note.course} · {note.kind==="draft"?"Draft":note.kind==="vault"?"Saved copy":"Note"}</span><span className="sub">{note.content.replace(/[\[\]#*_`]/g,"").replace(/\s+/g," " ).slice(0,110)||"Empty note"}</span></button>)}</div><button type="button" onClick={()=>setConnectSelection(null)}>Close picker</button></section>}
+            {viewMode!=="preview"&&<details className="notebook-writing-help"><summary>How formatting works</summary><p>Select some words and choose Bold or Italic. Heading, List and Checklist format the current line. Connect note lets you choose an existing note.</p><p>The buttons add small formatting symbols while you write. Choose Read to see the finished note, or Write + preview to see both. You can also leave everything as plain text.</p></details>}
             {/* Note Canvas / Preview / Split View */}
             <div className={`scratchpad-editor-wrap ${viewMode === "split" ? "split-view" : ""}`}>
               {viewMode === "edit" ? (

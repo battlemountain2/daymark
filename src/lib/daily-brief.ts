@@ -6,6 +6,7 @@ export function dailyBrief(input: LedeInputs, source: 'loading' | 'ready' | 'una
   const result = lede({ ...input, items: source === 'ready' || hasOpenWork ? input.items : null });
   return {
     ...result,
+    ...(result.tone === 'clear' && input.classes.length === 0 ? {sub:result.sub?.replace(/^(?:No classes on [A-Za-z]+s\.|Break — no classes today\.)\s*/, '') || null} : {}),
     availability: source === 'loading' ? 'Checking assignments…'
       : source === 'unavailable' ? 'Canvas unavailable · showing saved tasks only.' : null,
   };

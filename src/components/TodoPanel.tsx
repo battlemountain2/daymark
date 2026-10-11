@@ -143,7 +143,7 @@ export default function TodoPanel({ promise, st, busy, nowIso, mutate, onRead }:
         </details>
 
         <div className="card-body">
-          {canvasError && <div className="sub" style={{ marginBottom: 12 }}>{canvasError}</div>}
+          {canvasError && <div className="sub" style={{ marginBottom: 12 }}>{"Assignments are unavailable right now. Your saved tasks still work."}</div>}
 
           {filteredItems.length === 0 && (
             <div className="mono sub" style={{ padding: "20px 0", textAlign: "center", color: "var(--ink-3)" }}>
@@ -190,6 +190,7 @@ export default function TodoPanel({ promise, st, busy, nowIso, mutate, onRead }:
                   <div className="sub task-meta" style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                     {readingsForAssignment(readingLinks.records,it.id).map((r,i)=><a key={`${r.file}:${i}`} href={readingUrl(r.file)} onClick={e=>{if(onRead){e.preventDefault();onRead(r.file);}}}>Read {r.title}</a>)}
                     {source.url && <a href={source.url} target="_blank" rel="noreferrer">Open source ↗</a>}
+                    {!it.mine&&<><a href={`/notebook?course=${encodeURIComponent(it.code)}`}>Course notes ↗</a><a href={`/study?course=${encodeURIComponent(it.code)}`}>Review cards ↗</a></>}
                     <span>due {longDate(it.due)}</span>
                     <span>{it.kind === 1 ? " · quiz" : it.kind === 2 ? " · exam" : it.mine ? " · yours" : ""}</span>
 

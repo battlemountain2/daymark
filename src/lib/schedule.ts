@@ -55,6 +55,12 @@ export function classesOn(term: Term, iso: string, dow: number): ClassBlock[] {
 
 export type Gap = { afterIndex: number; minutes: number; from: string; to: string };
 
+/** Usable minutes still ahead; travel time is reserved before the next class. */
+export function remainingStudyMinutes(from: string, to: string, nowMinutes: number, buffer = 0): number {
+  if (!Number.isFinite(nowMinutes) || !Number.isFinite(buffer) || buffer < 0) return 0;
+  return Math.max(0, Math.floor(hhmm(to) - Math.max(hhmm(from), nowMinutes) - buffer));
+}
+
 /** Open blocks of >= `min` minutes between consecutive classes. */
 export function gaps(list: ClassBlock[], min = 45): Gap[] {
   const out: Gap[] = [];

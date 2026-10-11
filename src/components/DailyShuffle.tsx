@@ -6,7 +6,11 @@ import albums from "@/data/albums.json";
 import { soundtracks } from "@/lib/soundtracks";
 import { dayOfYear, pickForDay } from "@/lib/shuffle";
 import AlbumArtwork from "@/components/AlbumArtwork";
+import {usePersonalRecords} from "@/lib/use-personal-records";
+import {rediscoverPool} from "@/lib/rediscover";
+import type {Pick} from "@/lib/entertainment";
 export default function DailyShuffle({ promise }: { promise: Promise<Music> }) {
+  const collection=usePersonalRecords<Pick>('daymark:backlog'),history=usePersonalRecords<Pick>('daymark:media-history');
   const music = use(promise),
     [slide, setSlide] = useState(0),
     [offset, setOffset] = useState(0),
@@ -36,15 +40,8 @@ export default function DailyShuffle({ promise }: { promise: Promise<Music> }) {
   }, [slide,storage]);
   const day = daySeed + offset,
     photo = photos.length ? photos[pickForDay(photos.length, day)] : null;
-  const recent = new Set(
-    music.recent.map((t) => `${t.artist}:${t.album}`.toLowerCase()),
-  );
-  const pool = albums.filter(
-    (a) => !recent.has(`${a.artist}:${a.album}`.toLowerCase()),
-  );
-  const album = (pool.length ? pool : albums)[
-      pickForDay(pool.length || albums.length, day)
-    ],
+  const pool=rediscoverPool(music,Object.values(collection.records),Object.values(history.records),albums);
+  const album = pool[pickForDay(pool.length,day)] || {...albums[0],source:'Daymark picks'},
     ost = soundtracks[pickForDay(soundtracks.length, day)];
   async function upload(f: File) {
       if (
@@ -136,6 +133,7 @@ export default function DailyShuffle({ promise }: { promise: Promise<Music> }) {
               <div>
                 <h3>{slide === 0 ? album.album : ost.title}</h3>
                 <p>{slide === 0 ? album.artist : ost.artist}</p>
+                {slide===0&&<p className="sub shuffle-origin">{album.source}</p>}
                 {slide===0&&<a className="shuffle-listen" href={`https://music.apple.com/us/search?term=${encodeURIComponent(`${album.artist} ${album.album}`)}`} target="_blank" rel="noreferrer">Find on Apple Music ↗</a>}
                 {slide === 1 && <a className="shuffle-listen" href={ost.source} target="_blank" rel="noreferrer">Listen on Apple Music ↗</a>}
               </div>

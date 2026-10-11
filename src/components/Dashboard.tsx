@@ -1,5 +1,7 @@
 "use client";
 import DailyBrief from "@/components/DailyBrief";
+import {personalSettings} from "@/lib/personal-settings";
+import TodayPriorities from "@/components/TodayPriorities";
 import DailyShuffle from "@/components/DailyShuffle";
 import EntertainmentPanel from "@/components/EntertainmentPanel";
 import GmailPanel from "@/components/GmailPanel";
@@ -16,6 +18,8 @@ const ReadingDesk = dynamic(() => import("@/components/ReadingDesk"));
 import DeskMode from "@/components/DeskMode";
 import DayPlan from "@/components/DayPlan";
 import {useFocusSession} from "@/lib/use-focus-session";
+import FocusChoice from "./FocusChoice";
+import type {FocusTarget} from "@/lib/focus-session";
 import ProjectShelf from "@/components/ProjectShelf";
 import QuickCapture, { type CaptureSeed } from "@/components/QuickCapture";
 import {
@@ -69,6 +73,8 @@ import {
   hhmm,
   localParts,
   leaveAdvice,
+  remainingStudyMinutes,
+  isOnline,
   building,
   type ClassBlock,
 } from "@/lib/schedule";
@@ -191,9 +197,24 @@ export default function Dashboard({
 }: Props) {
   const router = useRouter();
   const focus = useFocusSession();
+  const [focusWindowChoice, setFocusWindowChoice] = useState<number | null>(null);
+  const [focusTargetChoice,setFocusTargetChoice]=useState<FocusTarget|null>(null);
+  function focusOnTarget(target:FocusTarget){
+    const session=focus.session;
+    if(session&&session.completedAt===null&&(session.deadline!==null||session.remaining<session.duration)&&session.target?.id!==target.id){setFocusTargetChoice(target);return;}
+    if(session?.completedAt!==null)focus.actions.choose("focus");
+    focus.actions.target(target);startDeskFocus();
+  }
   function startDeskFocus(gap?: number) {
-    if (focus.session?.completedAt !== null && focus.session) focus.actions.choose("focus");
-    else if (gap && focus.session?.deadline === null && focus.session.remaining === focus.session.duration) focus.actions.choose("focus", Math.min(1440, Math.max(1, Math.floor(gap))));
+    if (gap !== undefined && gap < 1) return;
+    const session = focus.session;
+    if (gap && session && session.completedAt === null &&
+        (session.deadline !== null || session.remaining < session.duration) && session.remaining > gap * 60) {
+      setFocusWindowChoice(gap);
+      return;
+    }
+    if (session && session.completedAt !== null) focus.actions.choose("focus", gap);
+    else if (gap && session?.deadline === null && session.remaining === session.duration) focus.actions.choose("focus", gap);
     focus.actions.start();
     setDesk(true);
   }
@@ -334,7 +355,7 @@ export default function Dashboard({
       body.action === "addTodo"
         ? {
             ...body,
-            id: `${TEMP_PREFIX}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`,
+            id: body.id || `${TEMP_PREFIX}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`,
           }
         : body;
 
@@ -564,7 +585,7 @@ export default function Dashboard({
   const preferences = spacePreference(layout, tab);
   const theme = useDeskTheme(tab, layout);
   const schedule = (
-    <section className="card span7 day-glance-card">
+    <section className={`card span7 day-glance-card${tab==="main"&&viewMode==="today"&&!todayClasses.length?" quiet-today":""}`}>
       <div className="card-head">
         <h2>{viewMode === "week" ? "Weekly Timetable" : "Day at a glance"}</h2>
         <div className="view-toggle mono">
@@ -592,6 +613,7 @@ export default function Dashboard({
           <WeeklyTimetable
             term={term}
             now={now}
+            travelBuffer={personalSettings(layout).travelBuffer}
             onSelectBrief={(brief) => setActiveBrief(brief)}
             onStartFocus={(gap) => startDeskFocus(gap)}
             onOpenReadings={(course) => {setReadingFile(undefined);setReadingCourse(course);setReadingRequest(n=>n+1);jumpPanel("readings");}}
@@ -600,7 +622,7 @@ export default function Dashboard({
         ) : (
           <>
             <div>
-              {!todayClasses.length && (
+              {!todayClasses.length && tab !== "main" && (
                 <div className="sub" style={{ padding: "18px 0" }}>
                   {emptyWhy}
                 </div>
@@ -616,9 +638,10 @@ export default function Dashboard({
                         const g = openBlocks.find(
                           (x) => x.afterIndex === i - 1,
                         )!;
-                        if (hhmm(g.to) <= now.minutes) return null;
-                        const h = Math.floor(g.minutes / 60),
-                          m = g.minutes % 60;
+                        const buffer = isOnline(c.where) ? 0 : personalSettings(layout).travelBuffer;
+                        const available = remainingStudyMinutes(g.from, g.to, now.minutes, buffer);
+                        if (!available) return null;
+                        const h = Math.floor(available / 60), m = available % 60;
                         return (
                           <div className="gap">
                             <div className="gline" />
@@ -631,15 +654,15 @@ export default function Dashboard({
                             </div>
                             <div className="gtxt">
                               <span className="gtxt-desc">
-                                open block — {fmtTime(hhmm(g.from))} to{" "}
-                                {fmtTime(hhmm(g.to))}
+                                {now.minutes >= hhmm(g.from) ? "time remaining" : "open block"} — {fmtTime(hhmm(g.from))} to{" "}
+                                {fmtTime(hhmm(g.to))}{buffer > 0 && ` · ${buffer}m reserved for class`}
                               </span>
                               <button
                                 type="button"
                                 className="mono gap-study-btn"
-                                onClick={() => startDeskFocus(g.minutes)}
+                                onClick={() => startDeskFocus(available)}
                               >
-                                ✦ Focus ({g.minutes}m)
+                                ✦ Focus ({available}m)
                               </button>
                             </div>
                           </div>
@@ -686,7 +709,7 @@ export default function Dashboard({
             </div>
 
             {/* UNM South Lot Commute Radar */}
-            <CommuteRadar
+            {(tab!=="main"||todayClasses.length>0)&&<CommuteRadar
               nextClass={
                 todayClasses.find((c) => hhmm(c.end) > now.minutes) || null
               }
@@ -695,7 +718,8 @@ export default function Dashboard({
                 todayClasses.every((c) => hhmm(c.end) <= now.minutes)
               }
               nowMinutes={now.minutes}
-            />
+            />}
+            {tab === "main" && <Suspense fallback={null}><TodayPriorities promise={canvasPromise} state={st} date={now.iso} busy={busy} onChange={mutate} onFocus={focusOnTarget} /></Suspense>}
 
             {leave?.hop && (
               <div className="callout leave-callout">
@@ -741,7 +765,7 @@ export default function Dashboard({
         <MusicPanel promise={musicPromise} compact={tab === "main"} />
       </Suspense>
     ),
-    projects: <ProjectShelf />,
+    projects: <ProjectShelf tasks={st.todos} onTask={(id,title)=>mutate({action:"addTodo",id,title,due:now.iso})} onFocus={focusOnTarget} />,
     readings: (
       <ReadingDesk
         term={term} assignments={work||[]} fileRequest={readingFile}
@@ -763,7 +787,7 @@ export default function Dashboard({
         <Milestones term={term} promise={canvasPromise} st={st} />
       </Suspense>
     ),
-    fitness: <FitnessGlance />,
+    fitness: <FitnessGlance now={now} />,
     todo: (
       <Suspense fallback={<TodoSkeleton />}>
         <TodoPanel
@@ -859,10 +883,9 @@ export default function Dashboard({
           <>
             <header className={`desk-heading${tab === "main" ? " main-heading" : ""}`}>
               <div>
-                {tab === "main" && <span className="desk-eyebrow mono">Your day, at a glance</span>}
                 <h1>
                   {tab === "main"
-                    ? `${greeting}, Brayan.`
+                    ? `${greeting}, ${personalSettings(layout).name}.`
                     : tab === "school"
                       ? "This week."
                       : "Media room."}
@@ -872,7 +895,7 @@ export default function Dashboard({
               {tab === "main" && <div className="main-actions" aria-label="Daily actions">
                 <button type="button" className="main-focus-action" onClick={() => startDeskFocus()}>Start focus <span aria-hidden="true">↗</span></button>
                 <button type="button" onClick={() => jumpPanel("todo", "school")}>View tasks</button>
-                <button type="button" onClick={() => setScratchpadOpen(true)}>Notebook</button>
+                <Link href="/notebook">Notebook</Link>
               </div>}
               {tab === "school" && <Link href="/study">Cards & review ↗</Link>}
             </header>
@@ -884,7 +907,7 @@ export default function Dashboard({
             </div>
             <div className="desk-bottom">
               <button onClick={() => setScratchpadOpen(true)}>
-                Open notebook · ⌘J
+                Quick note · ⌘J
               </button>
               <CommandPalette
                 commands={commands}
@@ -918,6 +941,18 @@ export default function Dashboard({
           onClose={() => setCustomize(false)}
         />
       )}
+      {focusWindowChoice !== null && <FocusChoice title="Fit focus into this gap?" onClose={()=>setFocusWindowChoice(null)}>
+        <p>Your timer has {Math.ceil((focus.session?.remaining || 0) / 60)} minutes left. This gap has {focusWindowChoice} minutes available for focus.</p>
+        <p className="sub">Starting a new session replaces the current timer.</p>
+        <button type="button" onClick={()=>{focus.actions.choose("focus",focusWindowChoice);focus.actions.start();setFocusWindowChoice(null);setDesk(true);}}>Start {focusWindowChoice}-minute session</button>
+        <button type="button" onClick={()=>{focus.actions.start();setFocusWindowChoice(null);setDesk(true);}}>Keep existing timer</button>
+      </FocusChoice>}
+      {focusTargetChoice&&<FocusChoice title="Start focus on this item?" onClose={()=>setFocusTargetChoice(null)}>
+        <p>You already have a timer in progress. Start a new session for {focusTargetChoice.title}, or continue your existing timer.</p>
+        <p className="sub">A new session replaces the unfinished timer. Its earlier time will not be assigned to this item.</p>
+        <button type="button" onClick={()=>{focus.actions.choose("focus");focus.actions.target(focusTargetChoice);focus.actions.start();setFocusTargetChoice(null);setDesk(true);}}>Start new session</button>
+        <button type="button" onClick={()=>{focus.actions.start();setFocusTargetChoice(null);setDesk(true);}}>Keep existing timer</button>
+      </FocusChoice>}
       {capture && (
         <QuickCapture
           seed={capture}

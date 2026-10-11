@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { Flashcard } from "@/lib/study-hub-types";
 import {
   calculateNextSRS,
@@ -23,10 +23,38 @@ export default function QuickStudyModal({ dueCards, onClose, onFinish }: Props) 
   const [isFlipped, setIsFlipped] = useState<boolean>(false);
   const [srsStore, setSrsStore] = useState<SRSStore>({});
   const [reviewedCount, setReviewedCount] = useState<number>(0);
+  const [saveError, setSaveError] = useState("");
 
   useEffect(() => {
     setSrsStore(loadSRSStore());
   }, [dueCards]);
+
+  const currentCard = cards[idx];
+
+  const handleGrade = useCallback((grade: SRSGrade) => {
+    if (!currentCard || !isFlipped) return;
+    const prevSRS = srsStore[currentCard.id] || INITIAL_SRS_STATE(currentCard.id);
+    const updated = calculateNextSRS(prevSRS, grade);
+    let newStore: SRSStore;
+    try {
+      newStore = saveSRSCard(updated);
+      setSaveError("");
+    } catch {
+      setSaveError("Your review could not be saved. This card is still here—choose your rating again to retry.");
+      return;
+    }
+    setSrsStore(newStore);
+    setReviewedCount((r) => r + 1);
+
+    if (idx + 1 < cards.length) {
+      setIsFlipped(false);
+      setIdx((i) => i + 1);
+    } else {
+      // Completed all due cards!
+      setIdx(cards.length);
+      if (onFinish) onFinish();
+    }
+  }, [currentCard,isFlipped,srsStore,idx,cards.length,onFinish]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -41,27 +69,7 @@ export default function QuickStudyModal({ dueCards, onClose, onFinish }: Props) 
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [idx, cards, isFlipped]);
-
-  const currentCard = cards[idx];
-
-  const handleGrade = (grade: SRSGrade) => {
-    if (!currentCard || !isFlipped) return;
-    const prevSRS = srsStore[currentCard.id] || INITIAL_SRS_STATE(currentCard.id);
-    const updated = calculateNextSRS(prevSRS, grade);
-    const newStore = saveSRSCard(updated);
-    setSrsStore(newStore);
-    setReviewedCount((r) => r + 1);
-
-    if (idx + 1 < cards.length) {
-      setIsFlipped(false);
-      setIdx((i) => i + 1);
-    } else {
-      // Completed all due cards!
-      setIdx(cards.length);
-      if (onFinish) onFinish();
-    }
-  };
+  }, [handleGrade,onClose]);
 
   const isComplete = idx >= cards.length;
 
@@ -83,6 +91,7 @@ export default function QuickStudyModal({ dueCards, onClose, onFinish }: Props) 
 
         {/* Card Body */}
         <div className="qs-body">
+          {saveError && <p role="alert" className="review-save-error">{saveError}</p>}
           {isComplete ? (
             <div className="qs-complete-state">
               <div className="qsc-icon">🎉</div>

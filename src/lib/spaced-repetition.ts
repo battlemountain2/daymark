@@ -1,4 +1,5 @@
 import { cloudStorage } from "@/lib/cloud-storage";
+import { localDay } from "@/lib/localtime";
 /**
  * SuperMemo SM-2 Spaced Repetition Algorithm.
  *
@@ -28,7 +29,7 @@ export const INITIAL_SRS_STATE = (cardId: string): SRSCardState => ({
   reps: 0,
   intervalDays: 0,
   easeFactor: DEFAULT_EASE_FACTOR,
-  dueDate: new Date().toISOString().slice(0, 10),
+  dueDate: localDay(),
   lastReviewed: "",
   history: [],
 });
@@ -39,7 +40,7 @@ export const INITIAL_SRS_STATE = (cardId: string): SRSCardState => ({
 export function calculateNextSRS(
   current: SRSCardState,
   grade: SRSGrade,
-  todayIso: string = new Date().toISOString().slice(0, 10)
+  todayIso: string = localDay()
 ): SRSCardState {
   let { reps, intervalDays, easeFactor } = current;
 
@@ -100,12 +101,12 @@ export function loadSRSStore(): SRSStore {
   }
 }
 
-export function saveSRSCard(state: SRSCardState): SRSStore {
-  const store = loadSRSStore();
+export function saveSRSCard(state: SRSCardState, storage: Pick<Storage, "getItem" | "setItem"> = cloudStorage): SRSStore {
+  // Read errors must not replace an unreadable review history with an empty one.
+  const store: SRSStore = JSON.parse(storage.getItem(LOCAL_STORAGE_KEY) || "{}");
+  if (!store || typeof store !== "object" || Array.isArray(store)) throw new Error("Review history could not be read.");
   store[state.cardId] = state;
-  try {
-    cloudStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(store));
-  } catch {}
+  storage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(store));
   return store;
 }
 

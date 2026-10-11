@@ -5,7 +5,7 @@ import FitnessView from "@/components/FitnessView";
 
 export const dynamic = "force-dynamic";
 
-export default async function FitnessPage() {
+export default async function FitnessPage({searchParams}:{searchParams?:Promise<{session?:string}>}) {
   if (!(await isSignedIn())) redirect("/login");
-  return <FitnessView />;
+  return <FitnessView initialSessionId={(await searchParams)?.session} />;
 }

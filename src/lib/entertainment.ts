@@ -1,5 +1,5 @@
 import films from '@/data/letterboxd.json';
-export type Pick = { id: string; title: string; kind: string; url: string; detail: string; artwork?:string; occurredAt?:string; minutes?:number; year?:number; imdb?:string; tmdb?:number };
+export type Pick = { id: string; title: string; kind: string; url: string; detail: string; artwork?:string; occurredAt?:string; minutes?:number; year?:number; imdb?:string; tmdb?:number; artist?:string; album?:string };
 export type Entertainment = { films: Pick[]; games: Pick[]; recent: Pick[]; watching: Pick[]; releases: Pick[]; notes: string[]; refreshedAt: string };
 async function json(url: string, headers?: Record<string,string>) {
   const r = await fetch(url, { headers, signal: AbortSignal.timeout(8000), cache: 'no-store' });

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { spacePreference, validPalette, type DashboardLayout, type DashboardTab } from "./dashboard-layout";
+import {personalSettings} from './personal-settings';
 /** A shared palette and accent, with independent spacing for each space. */
 export function useDeskTheme(tab: DashboardTab, layout: DashboardLayout) {
   const [saved, setSaved] = useState<string | null>(null);
@@ -12,8 +13,10 @@ export function useDeskTheme(tab: DashboardTab, layout: DashboardLayout) {
   const shared = validPalette(layout.palette) ? layout.palette : saved || "forest";
   const accent = spacePreference(layout, tab).accent;
   const appearance = ["light", "dark"].includes(String(layout.appearance)) ? String(layout.appearance) : "system";
+  const textSize=personalSettings(layout).textSize;
   useEffect(() => {
     if (saved === null) return;
+    document.documentElement.dataset.textSize=textSize;
     if (shared === "forest") document.documentElement.removeAttribute("data-palette");
     else document.documentElement.dataset.palette = shared;
     if (accent === "palette") document.documentElement.removeAttribute("data-accent");
@@ -24,7 +27,7 @@ export function useDeskTheme(tab: DashboardTab, layout: DashboardLayout) {
       localStorage.setItem("hb:pal", shared);
       localStorage.setItem("palette", shared);
     } catch {}
-  }, [shared, appearance, accent, saved]);
+  }, [shared, appearance, accent, saved, textSize]);
   const prefs = spacePreference(layout, tab);
   return { palette: saved === null && !validPalette(layout.palette) ? undefined : shared, accent: prefs.accent, appearance, density: prefs.density };
 }

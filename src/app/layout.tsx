@@ -5,6 +5,7 @@ import "./personal-desk.css";
 import "./desk-palettes.css";
 import "./weather-glance.css";
 import "./notebook-workspace.css";
+import "./dashboard-updates.css";
 import CloudSync from "@/components/CloudSync";
 
 export const metadata: Metadata = {
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           dangerouslySetInnerHTML={{
             __html:
               `try{var l=JSON.parse(localStorage.getItem("daymark:layout")||"{}");var p=l.palette||localStorage.getItem("hb:pal")||localStorage.getItem("palette");` +
+              `document.documentElement.setAttribute("data-text-size",l.textSize==="large"?"large":"standard");` +
               `if(l.appearance==="light"||l.appearance==="dark")document.documentElement.setAttribute("data-theme",l.appearance);` +
               `if(["sage","terracotta","dusk"].includes(l.accent))document.documentElement.setAttribute("data-accent",l.accent);` +
               `if(p&&p!=="forest")document.documentElement.setAttribute("data-palette",p);` +

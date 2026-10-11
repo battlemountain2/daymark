@@ -8,10 +8,10 @@ export const dynamic = "force-dynamic";
 export default async function StudyPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ mode?: string }>;
+  searchParams?: Promise<{ mode?: string; course?:string }>;
 }) {
   if (!(await isSignedIn())) redirect("/login");
   const data = await getStudyHubData();
   const params = searchParams ? await searchParams : undefined;
-  return <StudyView data={data} initialMode={params?.mode} />;
+  return <StudyView data={data} initialMode={params?.mode} initialCourse={params?.course} />;
 }

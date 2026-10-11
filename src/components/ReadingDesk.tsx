@@ -27,6 +27,7 @@ type ReaderPrefs = {
   background: string;
   offset: number;
   notesWidth: number;
+  bookmarks?:number[];
 };
 export default function ReadingDesk({
   onFocus,
@@ -79,7 +80,7 @@ export default function ReadingDesk({
   function jumpPage(next: number) { const target = Math.max(1, Math.min(count || 1, next)); setPage(target); pdfReader.current?.jumpTo(target); setSelection(null); }
   const readerRoot = useRef<HTMLElement>(null);
   const linkedReadingShown = useRef(false);
-  const writePrefs = prefs.write;
+  const writePrefs = prefs.update;
   const skipRestoreSave = useRef(false);
   const [cloudReady, setCloudReady] = useState(false);
   const [cardFront, setCardFront] = useState<string | null>(null);
@@ -156,7 +157,7 @@ export default function ReadingDesk({
       return;
     }
     if (readerOpen && active && cloudReady && initialPrefs.current === active)
-      writePrefs(active, { page, zoom, background: bg, offset, notesWidth });
+      writePrefs(active, current=>({...current,page,zoom,background:bg,offset,notesWidth}));
   }, [active, page, zoom, bg, offset, notesWidth, writePrefs, cloudReady, readerOpen]);
   useEffect(() => {
     if (!active || !readerOpen || !cloudReady) return;
@@ -372,6 +373,9 @@ export default function ReadingDesk({
                 →
               </button>
               <button onClick={onFocus}>Focus</button>
+              <a href={`/notebook?course=${encodeURIComponent(file.course)}`}>Course notes ↗</a>
+              <button type="button" aria-pressed={prefs.records[file.id]?.bookmarks?.includes(page)||false} onClick={()=>prefs.update(file.id,current=>({...current,page,zoom,background:bg,offset,notesWidth,bookmarks:current?.bookmarks?.includes(page)?current.bookmarks.filter(p=>p!==page):Array.from(new Set([...(current?.bookmarks||[]),page])).sort((a,b)=>a-b)}))}>{prefs.records[file.id]?.bookmarks?.includes(page)?'Remove bookmark':'Bookmark page'}</button>
+              {!!prefs.records[file.id]?.bookmarks?.length&&<label>Bookmarks<select aria-label="PDF bookmarks" value="" onChange={e=>{if(e.target.value)jumpPage(Number(e.target.value));}}><option value="">Jump to page…</option>{prefs.records[file.id].bookmarks!.map(bookmark=><option key={bookmark} value={bookmark}>Page {bookmark}</option>)}</select></label>}
               <a href={`/api/files/${file.id}`} target="_blank" rel="noreferrer">Open original PDF ↗</a>
             </div>
             <details className="reader-comfort">

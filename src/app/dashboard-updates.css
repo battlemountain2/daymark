@@ -1,0 +1,66 @@
+/* Scoped additions: keep the dashboard's borderless cards and existing palettes. */
+.github-project-picker { margin-bottom: 18px; }
+.github-project-picker summary,.notebook-writing-help summary { cursor: pointer; color: var(--muted); }
+.github-project-form { display:flex; align-items:flex-end; gap:10px; margin:16px 0; }
+.github-project-form label { display:grid; gap:6px; flex:1; min-width:0; }
+.github-project-form input,.notebook-connect-picker input { width:100%; box-sizing:border-box; background:var(--ground); color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:10px; font:inherit; }
+.github-project-form button { flex-shrink:0; }
+.github-repository-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.github-repository-list>div { background:var(--ground); border-radius:10px; padding:14px; }
+.github-repository-list p { margin:6px 0 12px; }
+.project-repository { margin-bottom:18px; overflow-wrap:anywhere; }
+.project-work-actions { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+.project-linked-tasks { margin:16px 0; }
+.project-tiles button .sub { overflow-wrap:anywhere; }
+.notebook-connect-picker { margin:12px 0; padding:16px; background:var(--ground); border-radius:12px; }
+.notebook-connect-picker label { display:grid; gap:8px; }
+.notebook-connect-picker>div { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; max-height:260px; overflow:auto; margin:12px 0; }
+.notebook-connect-picker>div button { display:grid; text-align:left; gap:4px; padding:12px; }
+.notebook-writing-help { margin:12px 0; font-size:14px; }
+.notebook-writing-help p { line-height:1.65; max-width:70ch; color:var(--muted); }
+.media-recap-count { display:flex; flex-wrap:wrap; align-items:baseline; gap:7px; }
+.media-recap-count strong { font-size:28px; color:var(--ink); }
+.media-recap-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; margin:20px 0; }
+.media-recap-grid>a { display:grid; gap:6px; color:inherit; text-decoration:none; min-width:0; }
+.media-recap-grid img,.recap-cover-fallback { width:100%; aspect-ratio:1; object-fit:cover; border-radius:10px; background:var(--ground); }
+.recap-cover-fallback { display:flex; flex-direction:column; justify-content:space-between; padding:12px; box-sizing:border-box; overflow:hidden; }
+.recap-cover-fallback span { font-size:11px; color:var(--muted); }
+.recap-cover-fallback strong { font-family:var(--font-display); font-size:20px; }
+.media-recap-grid>a>strong,.media-recap-grid .sub { overflow-wrap:anywhere; }
+.personal-dashboard .media-empty-section { padding-block:8px; }
+.personal-dashboard .music-empty .card-body { padding-top:8px; padding-bottom:12px; }
+.focus-choice { max-width:480px; }
+.focus-choice button { margin:6px 8px 6px 0; }
+.today-priorities { margin-top:16px; }
+.today-priorities ul { list-style:none; padding:0; margin:12px 0; }
+.today-priorities li { display:flex; align-items:center; gap:10px; margin:10px 0; }
+.today-priorities li label { flex:1; display:flex; align-items:center; gap:10px; }
+.today-priorities details>label { display:flex; align-items:center; gap:10px; padding:8px 0; }
+.today-priorities li button { flex-shrink:0; }
+html[data-text-size="large"] :is(.obsidian-preview-content,.scratchpad-textarea,.project-editor textarea,.training-plan-list p,.training-exercise p,.card-body>p) { font-size:18px; line-height:1.7; }
+@media (max-width:760px) {
+  .personal-dashboard .desk-rail { padding:12px 16px; gap:8px; }
+  .personal-dashboard .desk-rail-bottom { display:flex; flex-wrap:nowrap; gap:2px; }
+  .personal-dashboard .desk-rail-bottom :is(a,button) { width:auto; min-height:40px; padding:8px; font-size:14px; white-space:nowrap; }
+  .personal-dashboard .desk-rail-bottom button:not(:first-child),.personal-dashboard .desk-rail-bottom :is(a,button):last-child { display:none; }
+  .personal-dashboard .desk-rail nav { gap:4px; }
+  .personal-dashboard .desk-rail nav :is(a,button) { text-align:center; padding:8px; font-size:15px; }
+  .personal-dashboard .desk-topbar { margin-bottom:18px; }
+  .personal-dashboard .main-heading { padding-block:12px 20px; }
+  .personal-dashboard .main-heading h1 { font-size:32px; margin-top:0; margin-bottom:10px; }
+  .github-project-form { flex-wrap:wrap; }
+  .github-project-form label { flex-basis:100%; }
+  .github-project-form input,.notebook-connect-picker input { font-size:16px; }
+  .github-repository-list,.notebook-connect-picker>div { grid-template-columns:1fr; }
+  .media-recap-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+
+.personal-dashboard .quiet-today .card-head { padding-block:0 8px; }
+.personal-dashboard .quiet-today .card-body { padding-top:6px; }
+.personal-dashboard .quiet-today .commute-quiet { margin:0; }
+.personal-dashboard .quiet-today .day-flexible-plan { margin-top:16px; padding-top:14px; }
+
+html[data-text-size="large"] .personal-dashboard :is(.scratchpad-textarea,.obsidian-preview-content p,.obsidian-preview-content li) { font-size:20px; line-height:1.75; }
+
+.personal-dashboard .dashboard-panel .quiet-today>.card-head { margin-bottom:0; }
+.personal-dashboard .quiet-today .today-priorities { margin-top:6px; }

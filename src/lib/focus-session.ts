@@ -1,8 +1,10 @@
 export type FocusPhase = 'focus' | 'shortBreak' | 'longBreak';
+export type FocusTarget = {kind:'project'|'task';id:string;title:string};
 export type FocusSession = {
   version: 2; id: string; phase: FocusPhase; duration: number; remaining: number;
   deadline: number | null; observedAt: number; completedAt: number | null;
   completedFocus: number; task: string;
+  target?: FocusTarget;
 };
 export const FOCUS_SESSION_KEY = 'daymark:focus-session';
 export const phaseName = (phase: FocusPhase) => phase === 'focus' ? 'Focus' : phase === 'shortBreak' ? 'Short break' : 'Long break';
@@ -53,11 +55,13 @@ export function restoreFocusSession(raw: unknown, now: number): FocusSession | n
   if (typeof count !== 'number' || !Number.isSafeInteger(count) || count < 0) return null;
   const observedAt = r.version === 2 ? r.observedAt : now;
   if (typeof observedAt !== 'number' || !Number.isFinite(observedAt)) return null;
-  return reconcileFocus({version:2,id:r.id,phase:phase as FocusPhase,duration:r.duration,remaining:Math.min(r.duration,Math.ceil(r.remaining)),deadline:deadline as number|null,task:r.task.slice(0,500),completedFocus:count,observedAt,completedAt:completedAt as number|null},now);
+  const candidate=r.target as Partial<FocusTarget>|undefined;
+  const target=candidate&&['project','task'].includes(candidate.kind||'')&&typeof candidate.id==='string'&&typeof candidate.title==='string'?{kind:candidate.kind!,id:candidate.id.slice(0,100),title:candidate.title.slice(0,200)}:undefined;
+  return reconcileFocus({version:2,id:r.id,phase:phase as FocusPhase,duration:r.duration,remaining:Math.min(r.duration,Math.ceil(r.remaining)),deadline:deadline as number|null,task:r.task.slice(0,500),completedFocus:count,observedAt,completedAt:completedAt as number|null,...(target?{target}:{})},now);
 }
 export function focusHistoryEntry(session: FocusSession) {
   if (session.completedAt === null) return null;
-  return {date:new Date(session.completedAt).toISOString(),minutes:session.duration / 60,task:session.task,kind:session.phase === 'focus' ? 'focus' : 'break'};
+  return {date:new Date(session.completedAt).toISOString(),minutes:session.duration / 60,task:session.task,kind:session.phase === 'focus' ? 'focus' : 'break',...(session.target?{target:session.target}:{})};
 }
 export function recordFocusCompletion(session:FocusSession,storage:{getItem:(key:string)=>string|null;setItem:(key:string,value:string)=>void}) {
   const entry=focusHistoryEntry(session);

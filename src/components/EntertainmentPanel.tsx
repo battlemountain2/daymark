@@ -6,13 +6,15 @@ import type {Entertainment,Pick} from '@/lib/entertainment';
 import {usePersonalRecords} from '@/lib/use-personal-records';
 import {contextPool,inPastWeek,type SavedMedia} from '@/lib/media-context';
 import {dayOfYear,pickForDay} from '@/lib/shuffle';
+import MediaWeekRecap from './MediaWeekRecap';
 export default function EntertainmentPanel({musicPromise}:{musicPromise:Promise<Music>}) {
  const saved=usePersonalRecords<SavedMedia>('daymark:backlog'),shelves=usePersonalRecords<{name:string}>('daymark:shelves'),history=usePersonalRecords<Pick>('daymark:media-history');
+ const [removed,setRemoved]=useState<{id:string;item:SavedMedia}|null>(null);
  const positionPrefs=usePersonalRecords<{id:string}>('daymark:layout');
  const writeHistory=history.write;
  const [albumChoices,setAlbumChoices]=useState<Pick[]>([]),[data,setData]=useState<Entertainment|null>(null),[error,setError]=useState(''),[kind,setKind]=useState('movie'),[budget,setBudget]=useState(0),[company,setCompany]=useState('either'),[shelf,setShelf]=useState(''),[roulette,setRoulette]=useState(false),[day,setDay]=useState(0);
  const touch=useRef<number|null>(null);
- useEffect(()=>{setDay(dayOfYear());let alive=true;void Promise.resolve(musicPromise).then(m=>{if(!alive)return;setAlbumChoices(Array.from(new Map(m.recent.filter(t=>t.album).map(t=>[`album:${t.artist}:${t.album}`,{id:`album:${t.artist}:${t.album}`,title:t.album!,kind:'album',url:t.url||'https://www.last.fm',detail:t.artist,artwork:t.art||undefined}])).values()));for(const t of m.recent){if(!t.playedAt)continue;const id=`listen:${t.playedAt}:${t.artist}:${t.title}`;writeHistory(id,{id,title:t.title,kind:'Listening',url:t.url||'https://www.last.fm',detail:t.artist,artwork:t.art||undefined,occurredAt:t.playedAt});}}).catch(()=>{});return()=>{alive=false;};},[musicPromise,writeHistory]);
+ useEffect(()=>{setDay(dayOfYear());let alive=true;void Promise.resolve(musicPromise).then(m=>{if(!alive)return;setAlbumChoices(Array.from(new Map(m.recent.filter(t=>t.album).map(t=>[`album:${t.artist}:${t.album}`,{id:`album:${t.artist}:${t.album}`,title:t.album!,kind:'album',url:t.url||'https://www.last.fm',detail:t.artist,artist:t.artist,artwork:t.art||undefined}])).values()));for(const t of m.recent){if(!t.playedAt)continue;const id=`listen:${t.playedAt}:${t.artist}:${t.title}`;writeHistory(id,{id,title:t.title,kind:'Listening',url:t.url||'https://www.last.fm',detail:t.artist,artist:t.artist,album:t.album||undefined,artwork:t.art||undefined,occurredAt:t.playedAt});}}).catch(()=>{});return()=>{alive=false;};},[musicPromise,writeHistory]);
  useEffect(()=>{for(const p of data?.watching||[])if(p.occurredAt)writeHistory(`${p.id}:${p.occurredAt}`,p);},[data,writeHistory]);
  useEffect(()=>{const c=new AbortController();fetch('/api/entertainment',{signal:c.signal}).then(r=>{if(!r.ok)throw Error();return r.json();}).then(setData).catch(e=>{if(e.name!=='AbortError')setError('Could not load your collection. Refresh to try again.');});return()=>c.abort();},[]);
  const collected=Object.values(saved.records);
@@ -37,12 +39,12 @@ export default function EntertainmentPanel({musicPromise}:{musicPromise:Promise<
    {current?<div className="media-feature-track"><div className="media-feature-slide"><MediaPick key={current.id} pick={current}>{pickContent(current)}</MediaPick></div>{next&&<div className="media-feature-peek" aria-hidden="true" inert><MediaPick key={next.id} pick={next}><h3>{next.title}</h3></MediaPick></div>}</div>:<p className="sub">{!data&&!error?'Loading your collection…':budget?'No picks with a saved length fit. Try a longer window or add a runtime.':roulette?'Save films or find unplayed games for your backlog.':'No picks match these filters. Try another type or shelf.'}</p>}
   </div>
   <div className="media-carousel-controls"><button type="button" aria-label="Previous media pick" disabled={pool.length<2} onClick={()=>move(-1)}>←</button><span className="mono" aria-live="polite">{pool.length?`${position+1} / ${pool.length}`:'0 picks'}</span><button type="button" aria-label="Next media pick" disabled={pool.length<2} onClick={()=>move(1)}>→</button><button type="button" aria-pressed={roulette} onClick={()=>{setRoulette(!roulette);}}>{roulette?'All picks':'Backlog roulette'}</button></div>
-  <section className="media-room-section"><h3>Continue playing</h3>{data?.recent.length?<div className="media-art-row">{data.recent.map(p=><MediaPick key={p.id} pick={p}>{pickContent(p)}</MediaPick>)}</div>:<p className="sub">{data?'No recent games returned by Steam.':'Loading recent games…'}</p>}</section>
-  <section className="media-room-section"><h3>Continue watching</h3>{data?.watching.length?<><p className="sub">Last watched episodes · Trakt</p><div className="media-art-row">{data.watching.map(p=><MediaPick key={p.id} pick={p}>{pickContent(p)}</MediaPick>)}</div></>:<p className="sub">{data?'No recent viewing returned by Trakt.':'Loading recent viewing…'}</p>}</section>
+  <section className={`media-room-section${data&&!data.recent.length?" media-empty-section":""}`}><h3>Continue playing</h3>{data?.recent.length?<div className="media-art-row">{data.recent.map(p=><MediaPick key={p.id} pick={p}>{pickContent(p)}</MediaPick>)}</div>:<p className="sub">{data?data.notes.some(n=>n.startsWith('Steam is not connected'))?'Steam isn’t connected yet.':'No recent games returned by Steam.':'Loading recent games…'}</p>}</section>
+  <section className={`media-room-section${data&&!data.watching.length?" media-empty-section":""}`}><h3>Continue watching</h3>{data?.watching.length?<><p className="sub">Last watched episodes · Trakt</p><div className="media-art-row">{data.watching.map(p=><MediaPick key={p.id} pick={p}>{pickContent(p)}</MediaPick>)}</div></>:<p className="sub">{data?data.notes.some(n=>n.startsWith('Trakt is not connected'))?'Trakt isn’t connected yet.':'No recent viewing returned by Trakt.':'Loading recent viewing…'}</p>}</section>
   <section className="media-room-section"><h3>Personal shelves</h3>{Object.entries(shelves.records).map(([id,s])=><div className="media-shelf" key={id}><h4>{s.name}</h4><div className="media-art-row">{collected.filter(p=>p.shelf===id&&!p.finished).map(p=><MediaPick key={p.id} pick={p}>{pickContent(p)}</MediaPick>)}</div>{!collected.some(p=>p.shelf===id&&!p.finished)&&<p className="sub">No saved items here yet.</p>}</div>)}
    <details className="personal-setup"><summary>{Object.keys(shelves.records).length?'Add a shelf':'Create your first shelf'}</summary><form className="reader-toolbar" onSubmit={e=>{e.preventDefault();const name=String(new FormData(e.currentTarget).get('name')||'').trim();if(name)shelves.write(crypto.randomUUID(),{name});e.currentTarget.reset();}}><input name="name" aria-label="New shelf name" placeholder="Comfort films, anime to start…" required maxLength={80}/><button>Add shelf</button></form></details>
   </section>
-  <details className="personal-setup media-week"><summary>Week in Media · {watched.length+recentFinished.length} recorded</summary><div className="media-week-list">{[...watched,...recentFinished].map(p=><a className="personal-item" key={`${p.id}:${p.occurredAt||('finished' in p?p.finished:'')}`} href={p.url} target="_blank" rel="noreferrer"><strong>{p.title}</strong><span className="sub">{p.detail}</span></a>)}{!watched.length&&!recentFinished.length&&<p className="sub">Nothing recorded this week yet.</p>}</div><p className="sub">Saved listening, reported viewing, and items marked finished. Steam’s two-week playtime is excluded.</p></details>
+  <MediaWeekRecap events={[...watched,...recentFinished]}/>
         <details className="personal-setup">
           <summary>Manage your collection</summary>
           <form
@@ -67,6 +69,7 @@ export default function EntertainmentPanel({musicPromise}:{musicPromise:Promise<
                 url,
                 kind: String(f.get("kind")),
                 detail: "Saved by you",
+                artist: String(f.get("artist") || "").trim() || undefined,
                 minutes: Number(f.get("minutes")) || undefined,
                 company: String(f.get("company")) as SavedMedia["company"],
                 shelf: String(f.get("shelf")) || undefined,
@@ -88,6 +91,7 @@ export default function EntertainmentPanel({musicPromise}:{musicPromise:Promise<
                 <option value="album">Album</option>
               </select>
             </label>
+            <label>Artist (for albums)<input name="artist" maxLength={160}/></label>
             <label>
               Source link
               <input name="url" type="url" required maxLength={1000} />
@@ -161,10 +165,12 @@ export default function EntertainmentPanel({musicPromise}:{musicPromise:Promise<
               >
                 {p.finished ? "Return to backlog" : "Mark finished"}
               </button>
+              <button type="button" onClick={()=>{if(saved.write(id,null))setRemoved({id,item:p});}}>Remove saved item</button>
             </div>
           ))}
         </details>
 
+ {removed&&<p className="sub" role="status">{removed.item.title} removed from your collection. <button type="button" onClick={()=>{if(saved.update(removed.id,current=>current||removed.item))setRemoved(null);}}>Undo removal</button></p>}
  {!!data?.notes.length&&<details className="personal-setup"><summary>Connection status</summary>{data.notes.map(n=><p className="sub" key={n}>{n}</p>)}</details>}
  {(error||saved.error||shelves.error)&&<p role="status">{error||saved.error||shelves.error}</p>}
  </div></section>;

@@ -9,6 +9,15 @@
 
 export const TZ = "America/Denver";
 
+/** Calendar day in the dashboard's timezone, including evening and DST boundaries. */
+export function localDay(now = new Date(), tz = TZ): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(now);
+  const part = (type: string) => parts.find(p => p.type === type)!.value;
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
 /** How far the zone sits from UTC at this instant, in milliseconds. */
 export function zoneOffsetMs(ms: number, tz: string = TZ): number {
   const parts = new Intl.DateTimeFormat("en-CA", {

@@ -45,12 +45,12 @@ function LiveClock() {
   );
 }
 
-export default function StudyView({ data, initialMode }: { data: StudyHubData; initialMode?: string }) {
+export default function StudyView({ data, initialMode, initialCourse }: { data: StudyHubData; initialMode?: string; initialCourse?:string }) {
   const [activeTab, setActiveTab] = useState<"cards" | "courses" | "coding" | "review">(
     initialMode === "coding" || initialMode === "python" ? "coding" : "cards"
   );
   const [synthesisView, setSynthesisView] = useState<"takeaways" | "evidence">("takeaways");
-  const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<string | null>(data.courses.find(course=>course.code.replace(/\s/g,'').toLowerCase()===initialCourse?.replace(/\s/g,'').toLowerCase())?.code || null);
   const [activeBrief, setActiveBrief] = useState<PreClassBrief | null>(null);
   const [isWizardOpen, setIsWizardOpen] = useState<boolean>(false);
 
@@ -66,7 +66,7 @@ export default function StudyView({ data, initialMode }: { data: StudyHubData; i
   return (
     <PersonalPage>
       <div className="desk-topbar"><Link href="/?space=school">← School</Link><span className="mono sub"><LiveClock /></span></div>
-      <header className="desk-heading"><div><span className="mono sub">{data.activeTerm} · WEEK {data.currentWeekNumber}</span><h1>Study desk.</h1></div><Link href="/?space=school#readings">Open reading desk ↗</Link></header>
+      <header className="desk-heading"><div><span className="mono sub">{data.activeTerm} · WEEK {data.currentWeekNumber}</span><h1>Study desk.</h1><p className="sub">Saved study material updated {Number.isFinite(Date.parse(data.lastSynced))?new Date(data.lastSynced).toLocaleDateString('en-US',{timeZone:'America/Denver',month:'short',day:'numeric',year:'numeric'}):'on an unknown date'}. Review results are recorded separately.</p></div><Link href="/?space=school#readings">Open reading desk ↗</Link></header>
       <div className="study-summary"><span><strong>{courses.length}</strong> courses</span><span><strong>{allCards.length}</strong> cards</span><span><strong>{verifiedPct}%</strong> source-verified</span></div>
       <nav className="personal-tabs study-navigation" aria-label="Study sections">{([['cards', 'Practice'], ['courses', 'Courses & readings'], ['coding', 'Python & GIS'], ['review', 'Weekly review']] as const).map(([id, title]) => <button key={id} aria-pressed={activeTab === id} onClick={() => setActiveTab(id)}>{title}</button>)}</nav>
       {/* Main Tab Content */}
@@ -240,7 +240,7 @@ export default function StudyView({ data, initialMode }: { data: StudyHubData; i
                           <div key={idx} className={`weak-card ${w.ck}`}>
                             <div className="weak-top mono">
                               <span className="w-course">{w.course}</span>
-                              <span className="w-badge">Needs Review</span>
+                              <span className="w-badge">Saved review topic</span>
                             </div>
                             <div className="weak-topic">{w.topic}</div>
                             <div className="weak-reason">{w.reason}</div>
