@@ -7,6 +7,7 @@ import { usePersonalRecords } from "@/lib/use-personal-records";
 import { patchExistingRecord } from "@/lib/personal-records";
 import { contextPool, inPastWeek, type SavedMedia } from "@/lib/media-context";
 import { dayOfYear, pickForDay } from "@/lib/shuffle";
+import RecordTrash from "./RecordTrash";
 import MediaWeekRecap from "./MediaWeekRecap";
 export default function EntertainmentPanel({
   musicPromise,
@@ -132,6 +133,10 @@ export default function EntertainmentPanel({
     positionPrefs.write(`media-pick:${kind}`, { id: p.id });
   }
   function add(p: Pick) {
+    if (saved.trash[p.id]) {
+      if (saved.restore(p.id)) setRemoved(null);
+      return;
+    }
     saved.write(p.id, {
       ...p,
       added: new Date().toISOString(),
@@ -152,7 +157,9 @@ export default function EntertainmentPanel({
           </a>
           {!saved.records[p.id] && (
             <button type="button" onClick={() => add(p)}>
-              Save to a shelf
+              {saved.trash[p.id]
+                ? "Restore to your collection"
+                : "Save to a shelf"}
             </button>
           )}
         </div>
@@ -563,16 +570,22 @@ export default function EntertainmentPanel({
             <button
               type="button"
               onClick={() => {
-                if (
-                  saved.update(removed.id, (current) => current || removed.item)
-                )
-                  setRemoved(null);
+                if (saved.restore(removed.id)) setRemoved(null);
               }}
             >
               Undo removal
             </button>
           </p>
         )}
+        <RecordTrash
+          items={saved.trash}
+          title={(item) => item.title}
+          onRestore={(id) => {
+            const restored = saved.restore(id);
+            if (restored) setRemoved(null);
+            return restored;
+          }}
+        />
         {!!data?.notes.length && (
           <details className="personal-setup">
             <summary>Connection status</summary>

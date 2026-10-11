@@ -1,14 +1,21 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { cloudStorage } from "@/lib/cloud-storage";
 import { useCloudRevision } from "@/lib/use-cloud-revision";
 import {
   readPersonalRecords,
   updatePersonalRecords,
 } from "@/lib/personal-records";
+import {
+  RECOVERABLE_COLLECTIONS,
+  partitionRecords,
+  isTrashed,
+  trashRecord,
+  restoreRecord,
+} from "@/lib/record-recovery";
 export function usePersonalRecords<T>(key: string) {
   const revision = useCloudRevision();
-  const [records, setRecords] = useState<Record<string, T>>({});
+  const [allRecords, setRecords] = useState<Record<string, T>>({});
   const [error, setError] = useState("");
   const [readError, setReadError] = useState("");
   const [loaded, setLoaded] = useState(false);
@@ -22,6 +29,10 @@ export function usePersonalRecords<T>(key: string) {
       setLoaded(true);
     }
   }, [key, revision]);
+  const { records, trash } = useMemo(
+    () => partitionRecords(key, allRecords),
+    [key, allRecords],
+  );
   const update = useCallback(
     (id: string, change: (current: T | undefined) => T | null) => {
       try {
@@ -29,9 +40,16 @@ export function usePersonalRecords<T>(key: string) {
           cloudStorage,
           key,
           (current) => {
-            const value = change(
-              Object.hasOwn(current, id) ? current[id] : undefined,
-            );
+            const previous = Object.hasOwn(current, id)
+              ? current[id]
+              : undefined;
+            if (RECOVERABLE_COLLECTIONS.has(key) && isTrashed(previous))
+              throw Error("Restore this item from Trash before editing it.");
+            const changed = change(previous);
+            const value =
+              changed === null && RECOVERABLE_COLLECTIONS.has(key)
+                ? trashRecord(previous)
+                : changed;
             const next = { ...current };
             if (value === null) delete next[id];
             else
@@ -52,6 +70,30 @@ export function usePersonalRecords<T>(key: string) {
         setError(
           "Could not save on this device. Copy your edit before leaving.",
         );
+        return false;
+      }
+    },
+    [key],
+  );
+  const restore = useCallback(
+    (id: string) => {
+      try {
+        const latest = updatePersonalRecords<T>(
+          cloudStorage,
+          key,
+          (current) => {
+            const value = restoreRecord(
+              Object.hasOwn(current, id) ? current[id] : undefined,
+            );
+            return { ...current, [id]: value };
+          },
+        );
+        setRecords(latest);
+        setError("");
+        window.dispatchEvent(new Event("daymark:cloud-updated"));
+        return true;
+      } catch {
+        setError("Could not restore this item. It is still in Trash.");
         return false;
       }
     },
@@ -80,6 +122,8 @@ export function usePersonalRecords<T>(key: string) {
   );
   return {
     records,
+    trash,
+    restore,
     write,
     update,
     updateAll,

@@ -31,7 +31,8 @@ export default function GmailPanel({onCapture}:{onCapture?:(seed:{title:string;u
  }
  const accounts=new Set(inbox?.accounts.map(a=>a.email.toLowerCase())||[]);
  const hidden=Object.entries(dismissed.records).filter(([,m])=>m&&accounts.has(m.account)).sort(([,a],[,b])=>b.dismissedAt.localeCompare(a.dismissedAt));
- return <section className="card span12 gmail-card">
+ const quiet=!!inbox&&inbox.accounts.every(account=>!visibleGmailMessages(account.email,account.messages,dismissed.records).length);
+ return <section className={`card span12 gmail-card${quiet?" gmail-quiet":""}`}>
   <div className="card-head"><h2>Worth opening</h2><button ref={refreshButton} type="button" disabled={busy} onClick={refresh}>{busy?'Refreshing…':'Refresh'}</button></div>
   <div className="card-body">
    {feedback&&<p role="status" className="sub">{feedback}</p>}

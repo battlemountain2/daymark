@@ -22,6 +22,7 @@ export type WorkoutSession = {
   title: string;
   mode: "gym" | "home";
   unit: WeightUnit;
+  durationMinutes?: number;
   startedAt: string;
   finishedAt: string | null;
   updatedAt: string;
@@ -183,14 +184,17 @@ export function finishWorkout(
 }
 
 export function workoutMinutes(session: WorkoutSession): number {
-  return Math.max(
-    0,
-    Math.round(
-      (Date.parse(session.finishedAt || session.updatedAt) -
-        Date.parse(session.startedAt)) /
-        60000,
-    ),
-  );
+  if (
+    Number.isInteger(session.durationMinutes) &&
+    session.durationMinutes! >= 0 &&
+    session.durationMinutes! <= 1440
+  )
+    return session.durationMinutes!;
+  const elapsed =
+    (Date.parse(session.finishedAt || session.updatedAt) -
+      Date.parse(session.startedAt)) /
+    60000;
+  return Number.isFinite(elapsed) ? Math.max(0, Math.round(elapsed)) : 0;
 }
 
 export function exerciseResult(ex: LoggedExercise, unit: WeightUnit) {

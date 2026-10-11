@@ -64,3 +64,39 @@ html[data-text-size="large"] .personal-dashboard :is(.scratchpad-textarea,.obsid
 
 .personal-dashboard .dashboard-panel .quiet-today>.card-head { margin-bottom:0; }
 .personal-dashboard .quiet-today .today-priorities { margin-top:6px; }
+
+/* Quiet Main sections take a row, rather than another full-height card. */
+.personal-dashboard .space-main .dashboard-panel.is-collapsed { grid-column:span 4; padding:6px 0; border:0; align-self:start; }
+.personal-dashboard .space-main .is-collapsed .panel-tools { min-height:44px; gap:2px; }
+.personal-dashboard .space-main .is-collapsed .panel-tools h2 { font-size:18px; line-height:1.3; }
+.personal-dashboard .space-main .is-collapsed .panel-tools button,.personal-dashboard .space-main .is-collapsed .panel-options summary { min-height:44px; }
+.personal-dashboard .space-main .dashboard-panel:has(.gmail-quiet,.music-empty) { align-self:stretch; padding-block:18px; }
+.personal-dashboard .space-main .dashboard-panel:has(.gmail-quiet,.music-empty)>.panel-tools { margin-bottom:8px; }
+.personal-dashboard .space-main .gmail-quiet .card-head { margin-bottom:6px; }
+.personal-dashboard .space-main .gmail-quiet .personal-setup { margin-top:8px; }
+.personal-dashboard .space-main .project-tiles button { min-height:94px; padding:18px; gap:6px; }
+.personal-dashboard .space-main .project-tiles button strong { font:400 20px/1.3 var(--font-body); }
+.personal-dashboard .space-main .project-tiles .project-symbol { display:none; }
+.record-trash { margin-top:24px; padding-top:14px; border-top:1px solid var(--line); }
+.record-trash summary,.project-optional-notes summary { cursor:pointer; color:var(--ink-2); }
+.record-trash-row { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 0; }
+.record-trash-row>div { display:grid; gap:4px; min-width:0; overflow-wrap:anywhere; }
+.record-trash-row button { flex-shrink:0; min-height:44px; }
+.project-optional-notes { margin:18px 0; }
+.project-optional-notes .desk-field { margin-top:14px; }
+.project-activity { margin:20px 0; padding:18px 0; border-block:1px solid var(--line); }
+.project-activity-head { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+.project-activity-head h3 { margin:0; }
+.project-activity-columns { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:16px; }
+.project-activity-columns h4 { font:500 14px/1.4 var(--font-body); margin:0 0 10px; }
+.project-activity-item { display:grid; gap:8px; padding:12px 0; color:inherit; text-decoration:none; overflow-wrap:anywhere; }
+.project-activity-item a { display:grid; gap:4px; text-decoration:none; }
+.project-activity-item strong { font-weight:500; font-size:15px; }
+.project-activity-item button { justify-self:start; min-height:36px; }
+@media(max-width:1200px) { .personal-dashboard .space-main .dashboard-panel.is-collapsed { grid-column:span 6; } }
+@media(max-width:760px) {
+  .personal-dashboard .space-main .project-tiles button { display:flex; flex-direction:column; min-height:94px; }
+  .personal-dashboard .space-main .dashboard-panel.is-collapsed { grid-column:1/-1; padding:2px 0; }
+  .personal-dashboard .space-main .dashboard-panel:has(.gmail-quiet,.music-empty) { padding-block:16px; }
+  .project-activity-columns { grid-template-columns:1fr; gap:16px; }
+}

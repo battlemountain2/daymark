@@ -1,7 +1,10 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePersonalRecords } from "@/lib/use-personal-records";
 import { patchExistingRecord } from "@/lib/personal-records";
+import RecordTrash from "./RecordTrash";
+import { useProjectDrafts } from "@/lib/use-project-drafts";
+import GitHubProjectActivity from "./GitHubProjectActivity";
 import GitHubProjectPicker from "./GitHubProjectPicker";
 import { projectTaskId, type Project } from "@/lib/github-projects";
 import type { State } from "@/lib/db";
@@ -15,13 +18,26 @@ export default function ProjectShelf({
   onTask?: (id: string, title: string) => Promise<boolean>;
   onFocus?: (target: FocusTarget) => void;
 }) {
-  const { records, write, update, error } =
+  const { records, trash, restore, write, update, error } =
       usePersonalRecords<Project>("daymark:projects"),
     [selected, setSelected] = useState<string | null>(null),
     [removed, setRemoved] = useState<{ id: string; project: Project } | null>(
       null,
     );
-  const [drafts, setDrafts] = useState<Record<string, Partial<Project>>>({});
+  const {
+    drafts,
+    setDrafts,
+    error: recoveryError,
+    loaded: draftsLoaded,
+  } = useProjectDrafts();
+  const recovered = useRef(false);
+  useEffect(() => {
+    if (draftsLoaded && !recovered.current) {
+      recovered.current = true;
+      const id = Object.keys(drafts)[0];
+      if (id) setSelected(id);
+    }
+  }, [draftsLoaded, drafts]);
   const [draftError, setDraftError] = useState("");
   const pending = Object.keys(drafts).length > 0;
   useEffect(() => {
@@ -56,6 +72,7 @@ export default function ProjectShelf({
     setDraftError("");
   }
   function retry() {
+    setDraftError("");
     for (const [id, fields] of Object.entries(drafts))
       if (update(id, (current) => patchExistingRecord(current, fields)))
         setDrafts((old) => {
@@ -77,7 +94,7 @@ export default function ProjectShelf({
       <div className="card-head">
         <h2>On your desk</h2>
         <button
-          disabled={pending}
+          disabled={pending || !draftsLoaded}
           onClick={() => {
             const id = crypto.randomUUID();
             if (write(id, { title: "New project", note: "" })) setSelected(id);
@@ -109,6 +126,19 @@ export default function ProjectShelf({
               setSelected(found[0]);
               return true;
             }
+            const removedRepo = Object.entries(trash).find(
+              ([, project]) =>
+                project.repository?.fullName.toLowerCase() ===
+                repo.fullName.toLowerCase(),
+            );
+            if (removedRepo) {
+              if (restore(removedRepo[0])) {
+                setSelected(removedRepo[0]);
+                setRemoved(null);
+                return true;
+              }
+              return false;
+            }
             const id = crypto.randomUUID();
             if (
               write(id, {
@@ -132,7 +162,12 @@ export default function ProjectShelf({
             >
               <span className="project-symbol">◌</span>
               <strong>{p.title}</strong>
-              <span className="sub">{p.next || p.note.split("\n")[0]}</span>
+              <span className="sub">
+                {p.next ||
+                  (p.repository
+                    ? `${p.repository.language || "GitHub"} · ${p.repository.openItems} open ${p.repository.openItems === 1 ? "item" : "items"}`
+                    : p.note.split("\n")[0])}
+              </span>
             </button>
           ))}
         </div>
@@ -267,13 +302,46 @@ export default function ProjectShelf({
                 focused minutes recorded
               </p>
             )}
-            <label className="desk-field">
-              Project notes
-              <textarea
-                value={drafts[selected]?.note ?? p.note}
-                onChange={(e) => edit(selected, "note", e.target.value)}
+            {p.repository && (
+              <GitHubProjectActivity
+                key={p.repository.fullName}
+                repository={p.repository}
+                projectId={selected}
+                disabled={pending}
+                onTask={
+                  onTask
+                    ? async (id, title) => {
+                        if (!(await onTask(id, title))) return false;
+                        return update(selected, (current) =>
+                          patchExistingRecord(current, {
+                            taskIds: Array.from(
+                              new Set([...(current?.taskIds || []), id]),
+                            ),
+                          }),
+                        );
+                      }
+                    : undefined
+                }
+                onDetails={(repo) =>
+                  update(selected, (current) =>
+                    patchExistingRecord(current, { repository: repo }),
+                  )
+                }
               />
-            </label>
+            )}
+            <details
+              className="project-optional-notes"
+              open={p.note || drafts[selected]?.note ? true : undefined}
+            >
+              <summary>Notes · optional</summary>
+              <label className="desk-field">
+                Project notes
+                <textarea
+                  value={drafts[selected]?.note ?? p.note}
+                  onChange={(e) => edit(selected, "note", e.target.value)}
+                />
+              </label>
+            </details>
             <button
               onClick={() => {
                 if (pending) {
@@ -318,9 +386,7 @@ export default function ProjectShelf({
             {removed.project.title} removed.{" "}
             <button
               onClick={() => {
-                if (
-                  update(removed.id, (current) => current || removed.project)
-                ) {
+                if (restore(removed.id)) {
                   setSelected(removed.id);
                   setRemoved(null);
                 }
@@ -330,9 +396,35 @@ export default function ProjectShelf({
             </button>
           </p>
         )}
-        {(error || draftError) && (
+        <RecordTrash
+          items={trash}
+          title={(project) => project.title}
+          onRestore={(id) => {
+            if (pending && !drafts[id]) {
+              setDraftError(
+                "Save your edits before restoring another project.",
+              );
+              return false;
+            }
+            if (restore(id)) {
+              setSelected(id);
+              setRemoved(null);
+              return true;
+            }
+            return false;
+          }}
+        />
+        {pending && !error && !draftError && !recoveryError && (
+          <p className="sub" role="status">
+            Recovered edits are kept on this device.{" "}
+            <button type="button" onClick={retry}>
+              Retry saving
+            </button>
+          </p>
+        )}
+        {(error || draftError || recoveryError) && (
           <p role="alert">
-            {draftError || error}
+            {draftError || error || recoveryError}
             {pending && (
               <button type="button" onClick={retry}>
                 Retry saving

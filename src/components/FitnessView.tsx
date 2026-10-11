@@ -19,10 +19,13 @@ import {
   type WorkoutSession,
   type WeightUnit,
 } from "@/lib/workout-sessions";
+import RecordTrash from "./RecordTrash";
+import WorkoutProgress from "./WorkoutProgress";
+import { parseWorkoutDuration } from "@/lib/workout-progress";
 import FitnessResources from "./FitnessResources";
 import WorkoutExercise from "./WorkoutExercise";
 
-type Tab = "plan" | "session" | "history" | "nutrition" | "tips";
+type Tab = "plan" | "session" | "history" | "progress" | "nutrition" | "tips";
 export type PendingWorkoutInput = {
   exercise: string;
   index: number;
@@ -35,7 +38,7 @@ export default function FitnessView({
 }: {
   initialSessionId?: string;
 }) {
-  const { records, write, update, error, loaded } =
+  const { records, trash, restore, write, update, error, loaded } =
     usePersonalRecords<WorkoutSession>(WORKOUT_SESSIONS_KEY);
   const [tab, setTab] = useState<Tab>(initialSessionId ? "session" : "plan"),
     [dayIndex, setDayIndex] = useState(1);
@@ -48,6 +51,10 @@ export default function FitnessView({
     ),
     [message, setMessage] = useState("");
   const [draftNote, setDraftNote] = useState<{
+    id: string;
+    value: string;
+  } | null>(null);
+  const [durationDraft, setDurationDraft] = useState<{
     id: string;
     value: string;
   } | null>(null);
@@ -66,7 +73,10 @@ export default function FitnessView({
     session = selected ? records[selected] : active;
   const plan = WORKOUT_DAYS[dayIndex],
     exercises = mode === "gym" ? plan.gym : plan.home;
-  const pending = Object.keys(inputs).length > 0 || draftNote !== null,
+  const pending =
+      Object.keys(inputs).length > 0 ||
+      draftNote !== null ||
+      durationDraft !== null,
     progress = session ? workoutProgress(session) : { done: 0, total: 0 };
   const [openedSaved, setOpenedSaved] = useState(false);
   useEffect(() => {
@@ -227,13 +237,18 @@ export default function FitnessView({
             }),
           s,
         );
-        return draftNote?.id === s.id
-          ? { ...next, note: draftNote.value }
-          : next;
+        return {
+          ...next,
+          ...(draftNote?.id === s.id ? { note: draftNote.value } : {}),
+          ...(durationDraft?.id === s.id
+            ? { durationMinutes: parseWorkoutDuration(durationDraft.value) }
+            : {}),
+        };
       })
     ) {
       setInputs({});
       setDraftNote(null);
+      setDurationDraft(null);
     }
   }
   function start() {
@@ -296,7 +311,7 @@ export default function FitnessView({
           <h1>Your training</h1>
         </div>
         <nav className="training-tabs" aria-label="Training views">
-          {(["plan", "session", "history"] as const).map((view) => (
+          {(["plan", "session", "history", "progress"] as const).map((view) => (
             <button
               type="button"
               key={view}
@@ -327,7 +342,7 @@ export default function FitnessView({
           <button
             type="button"
             onClick={() => {
-              if (update(discarded.id, (current) => current || discarded)) {
+              if (restore(discarded.id)) {
                 setSelected(discarded.id);
                 setDiscarded(null);
                 setTab("session");
@@ -565,6 +580,49 @@ export default function FitnessView({
                 />
               ))}
             </div>
+            {session.finishedAt && (
+              <form
+                className="training-duration"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (
+                    changeSession((s) => ({
+                      ...s,
+                      durationMinutes: parseWorkoutDuration(
+                        durationDraft?.id === session.id
+                          ? durationDraft.value
+                          : String(workoutMinutes(session)),
+                      ),
+                    }))
+                  )
+                    setDurationDraft(null);
+                }}
+              >
+                <label>
+                  Session duration · minutes
+                  <input
+                    inputMode="numeric"
+                    value={
+                      durationDraft?.id === session.id
+                        ? durationDraft.value
+                        : String(workoutMinutes(session))
+                    }
+                    onChange={(e) =>
+                      setDurationDraft({
+                        id: session.id,
+                        value: e.target.value,
+                      })
+                    }
+                  />
+                </label>
+                <button type="submit">Save duration</button>
+                <p className="sub">
+                  {session.durationMinutes === undefined
+                    ? "Elapsed time from start to finish. Correct it if you left the session open."
+                    : "Your corrected duration is used in progress totals."}
+                </p>
+              </form>
+            )}
             <label className="training-session-note">
               Session notes
               <textarea
@@ -741,6 +799,25 @@ export default function FitnessView({
             </details>
           )}
         </section>
+      )}
+      {tab === "progress" && (
+        <WorkoutProgress sessions={sessions} unit={unit} />
+      )}
+      {(tab === "history" || tab === "plan") && (
+        <RecordTrash
+          items={trash}
+          title={(item) => `${item.title} · ${longDate(item.performedOn)}`}
+          onRestore={(id) => {
+            if (pending) return false;
+            if (restore(id)) {
+              setSelected(id);
+              setTab("session");
+              setDiscarded(null);
+              return true;
+            }
+            return false;
+          }}
+        />
       )}
       <details className="training-resources">
         <summary>Nutrition & gym guide</summary>
