@@ -135,7 +135,7 @@ export default function EvidenceBank() {
       }
       return true;
     });
-  }, [search, selectedCourse]);
+  }, [allEvidence, search, selectedCourse]);
 
   const copyToClipboard = async (text: string, id: string) => {
     try {

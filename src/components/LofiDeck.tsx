@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useCallback, useState, useEffect, useRef } from "react";
 
 type SoundPreset = {
   id: string;
@@ -106,7 +106,7 @@ export default function LofiDeck() {
   };
 
   // Disconnect and stop currently playing sound generators WITHOUT suspending the context
-  const stopActiveNodes = () => {
+  const stopActiveNodes = useCallback(() => {
     for (const node of activeNodesRef.current) {
       try {
         if (typeof node.stop === "function") {
@@ -118,15 +118,15 @@ export default function LofiDeck() {
       } catch {}
     }
     activeNodesRef.current = [];
-  };
+  }, []);
 
   // Stop audio and suspend context (used when explicitly pausing)
-  const stopAudio = () => {
+  const stopAudio = useCallback(() => {
     stopActiveNodes();
     if (audioCtxRef.current && audioCtxRef.current.state === "running") {
       audioCtxRef.current.suspend().catch(() => {});
     }
-  };
+  }, [stopActiveNodes]);
 
   // Build audio synthesizer according to preset
   const startAudio = async (presetId: string) => {
@@ -426,7 +426,7 @@ export default function LofiDeck() {
         audioCtxRef.current.close().catch(() => {});
       }
     };
-  }, []);
+  }, [stopAudio]);
 
   const fmtTime = (s: number) => {
     const mins = Math.floor(s / 60);

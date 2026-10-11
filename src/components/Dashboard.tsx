@@ -75,7 +75,6 @@ import {
   leaveAdvice,
   remainingStudyMinutes,
   isOnline,
-  building,
   type ClassBlock,
 } from "@/lib/schedule";
 import type { Term } from "@/lib/term";
@@ -170,20 +169,6 @@ const fmtTime = (m: number) => {
   return `${h % 12 || 12}:${String(mm).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`;
 };
 
-function jumpToCard(heading: string) {
-  const h2s = Array.from(document.querySelectorAll(".card-head h2"));
-  const target = h2s.find(
-    (h) => (h.textContent ?? "").trim().toLowerCase() === heading.toLowerCase(),
-  );
-  if (target) {
-    const card = target.closest(".card");
-    if (card) {
-      card.scrollIntoView({ behavior: "smooth", block: "start" });
-      return;
-    }
-  }
-}
-
 export default function Dashboard({
   state,
   term,
@@ -201,7 +186,7 @@ export default function Dashboard({
   const [focusTargetChoice,setFocusTargetChoice]=useState<FocusTarget|null>(null);
   function focusOnTarget(target:FocusTarget){
     const session=focus.session;
-    if(session&&session.completedAt===null&&(session.deadline!==null||session.remaining<session.duration)&&session.target?.id!==target.id){setFocusTargetChoice(target);return;}
+    if(session&&session.completedAt===null&&(session.deadline!==null||session.remaining<session.duration)&&(session.target?.id!==target.id||session.target?.kind!==target.kind)){setFocusTargetChoice(target);return;}
     if(session?.completedAt!==null)focus.actions.choose("focus");
     focus.actions.target(target);startDeskFocus();
   }

@@ -4,7 +4,7 @@ import { cloudStorage } from "@/lib/cloud-storage";
 
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useCloudRevision } from "@/lib/use-cloud-revision";
-import type { Flashcard, CardStatus, CourseStudyInfo } from "@/lib/study-hub-types";
+import type { Flashcard, CourseStudyInfo } from "@/lib/study-hub-types";
 import {
   calculateNextSRS,
   loadSRSStore,
@@ -88,7 +88,6 @@ export default function FlashcardDeckViewer({
   const [srsStore, setSrsStore] = useState<SRSStore>({});
   const cloudRevision = useCloudRevision();
   const [sessionStreak, setSessionStreak] = useState<number>(0);
-  const [sessionReviewed, setSessionReviewed] = useState<number>(0);
   const [saveError, setSaveError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -100,6 +99,8 @@ export default function FlashcardDeckViewer({
   // Kahoot Quiz State
   const [quizChoices, setQuizChoices] = useState<QuizChoice[]>([]);
   const [selectedChoiceIdx, setSelectedChoiceIdx] = useState<number | null>(null);
+  const quizAnswerPending = useRef(false);
+  const quizQuestionKey = useRef<string | null>(null);
   const [quizScore, setQuizScore] = useState<number>(0);
   const [quizTimer, setQuizTimer] = useState<number>(20);
   const [quizStreak, setQuizStreak] = useState<number>(0);
@@ -197,9 +198,17 @@ export default function FlashcardDeckViewer({
 
   // Intelligent In-Subject Distractor Engine for Kahoot Quiz
   useEffect(() => {
-    if (viewMode !== "quiz" || !currentCard) return;
+    if (viewMode !== "quiz" || !currentCard) {
+      quizQuestionKey.current = null;
+      return;
+    }
+    const key = JSON.stringify([currentIndex, currentCard.id, currentCard.back, currentCard.courseCode, randomSeed]);
+    // A cloud refresh of the same card must not erase its answer or restart its clock.
+    if (quizQuestionKey.current === key) return;
+    quizQuestionKey.current = key;
 
     setSelectedChoiceIdx(null);
+    quizAnswerPending.current = false;
     setQuizTimer(20);
 
     // 1. Gather other answers from the SAME course first for high conceptual rigor
@@ -228,7 +237,7 @@ export default function FlashcardDeckViewer({
     ].sort(() => Math.random() - 0.5);
 
     setQuizChoices(choices);
-  }, [currentIndex, viewMode, currentCard, cards]);
+  }, [currentIndex, viewMode, currentCard, cards, randomSeed]);
 
   const handleShuffleDeck = () => {
     setRandomSeed(Date.now());
@@ -281,13 +290,13 @@ export default function FlashcardDeckViewer({
     } else if (grade >= 3) {
       setSessionStreak((s) => s + 1);
     }
-    setSessionReviewed((r) => r + 1);
 
     handleNext();
   }, [currentCard,srsStore,handleNext]);
 
   const handleQuizSelect = useCallback((choiceIdx: number) => {
-    if (selectedChoiceIdx !== null) return;
+    if (!currentCard || selectedChoiceIdx !== null || quizAnswerPending.current) return;
+    quizAnswerPending.current = true;
     const isCorrect = choiceIdx >= 0 && quizChoices[choiceIdx]?.isCorrect;
     if (currentCard) {
       const prevSRS = srsStore[currentCard.id] || INITIAL_SRS_STATE(currentCard.id);
@@ -295,6 +304,7 @@ export default function FlashcardDeckViewer({
         setSrsStore(saveSRSCard(calculateNextSRS(prevSRS, isCorrect ? 3 : 1)));
         setSaveError("");
       } catch {
+        quizAnswerPending.current = false;
         setSaveError("Your answer could not be saved. The quiz is paused—select your answer again to retry.");
         return;
       }
@@ -316,10 +326,14 @@ export default function FlashcardDeckViewer({
       }
     }
 
-    setTimeout(() => {
-      handleNext();
-    }, 1400);
-  }, [selectedChoiceIdx,quizChoices,currentCard,srsStore,quizStreak,quizTimer,handleNext]);
+  }, [selectedChoiceIdx,quizChoices,currentCard,srsStore,quizStreak,quizTimer]);
+
+  // Changing cards, leaving Quiz, or unmounting cancels the pending advance.
+  useEffect(() => {
+    if (viewMode !== "quiz" || selectedChoiceIdx === null || quizComplete) return;
+    const timer = setTimeout(handleNext, 1400);
+    return () => clearTimeout(timer);
+  }, [viewMode, selectedChoiceIdx, quizComplete, currentCard?.id, handleNext]);
 
   // Keep writes outside timer state updaters: React may evaluate updaters more than once.
   useEffect(() => {
