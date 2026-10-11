@@ -1,5 +1,6 @@
 "use client";
-import { SYNC_KEYS, splitRecords, joinRecords, type SyncRecord, type SyncEdit } from "./sync-contract";
+import { SYNC_KEYS, splitRecords, joinRecords, syncBatch, type SyncRecord, type SyncEdit } from "./sync-contract";
+import { writeStorageBatch } from "./storage-batch";
 const META = "daymark:sync:meta";
 const QUEUE = "daymark:sync:queue";
 type Meta = Record<string, number>;
@@ -21,19 +22,24 @@ function changed() {
 export const cloudStorage = {
   getItem(key: string) { return localStorage.getItem(key); },
   setItem(namespace: string, raw: string) {
-    if (!(SYNC_KEYS as readonly string[]).includes(namespace)) { localStorage.setItem(namespace, raw); return; }
-    const before = splitRecords(namespace, localStorage.getItem(namespace));
-    const after = splitRecords(namespace, raw);
+    this.setItems({ [namespace]: raw });
+  },
+  setItems(values: Record<string, string>) {
+    const synced = Object.entries(values).filter(([namespace]) => (SYNC_KEYS as readonly string[]).includes(namespace));
+    if (!synced.length) { writeStorageBatch(localStorage, values); return; }
     const queue = read<Record<string, SyncEdit>>(QUEUE, {});
     const meta = read<Meta>(META, {});
-    for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
-      if (before[key] === after[key]) continue;
-      const id = JSON.stringify([namespace, key]);
-      queue[id] = { namespace, key, value: after[key] ?? null, version: queue[id]?.version ?? meta[id] ?? 0, operation: crypto.randomUUID() };
+    for (const [namespace, raw] of synced) {
+      const before = splitRecords(namespace, localStorage.getItem(namespace));
+      const after = splitRecords(namespace, raw);
+      for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
+        if (before[key] === after[key]) continue;
+        const id = JSON.stringify([namespace, key]);
+        queue[id] = { namespace, key, value: after[key] ?? null, version: queue[id]?.version ?? meta[id] ?? 0, operation: crypto.randomUUID() };
+      }
     }
     // Persist the outbox before the visible value. Storage errors surface to callers.
-    localStorage.setItem(QUEUE, JSON.stringify(queue));
-    localStorage.setItem(namespace, raw);
+    writeStorageBatch(localStorage, { [QUEUE]: JSON.stringify(queue), ...values });
     report("pending", "Saved on this device · syncing…");
     clearTimeout(timer);
     timer = setTimeout(() => void syncCloud(), 800);
@@ -59,7 +65,8 @@ async function run() {
       }
     }
     localStorage.setItem(QUEUE, JSON.stringify(queue));
-    const batch = Object.values(queue).slice(0, 100);
+    const batch = syncBatch(Object.values(queue));
+    if (Object.keys(queue).length && !batch.length) throw new Error("A saved item is too large to sync. Export a notebook backup before splitting it into smaller notes.");
     const res = await fetch("/api/sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ edits: batch }), signal: AbortSignal.timeout(20000) });
     if (!res.ok) throw new Error(res.status === 401 ? "Sign in to resume sync." : "Cloud sync is unavailable. Your edits are queued on this device.");
     const data = await res.json() as { records: SyncRecord[]; conflicts: string[] };
@@ -82,9 +89,6 @@ async function run() {
     localStorage.setItem(META, JSON.stringify(meta));
     localStorage.setItem(QUEUE, JSON.stringify(pending));
     changed();
-    if (Object.keys(pending).length) {
-      clearTimeout(timer); timer = setTimeout(() => void syncCloud(), 200);
-    }
     if (data.conflicts.length) {
       localStorage.setItem("daymark:sync:conflicts", "true");
       report("conflict", "Another device changed the same item. Both versions are saved in recovery history.");

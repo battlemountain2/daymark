@@ -1,19 +1,22 @@
-import { Fragment } from "react";
+import { createElement, Fragment } from "react";
 import { inlineNoteParts } from "@/lib/note-links";
 import { wikiReference } from "@/lib/notebook-links";
 type WikiOptions = {
   onWikiLink?: (reference: string) => void;
   wikiState?: (reference: string) => "known" | "missing" | "ambiguous";
+  onTaskToggle?: (line: number) => void;
 };
 
 function styledText(text: string) {
   return text
-    .split(/(\*\*[^*]+\*\*|`[^`]+`)/g)
+    .split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g)
     .map((part, i) =>
       part.startsWith("**") ? (
         <strong key={i}>{part.slice(2, -2)}</strong>
       ) : part.startsWith("`") ? (
         <code key={i}>{part.slice(1, -1)}</code>
+      ) : part.startsWith("*") ? (
+        <em key={i}>{part.slice(1, -1)}</em>
       ) : (
         part
       ),
@@ -108,24 +111,10 @@ export const renderObsidianPreview = (
       continue;
     }
     const inline = (text: string) => renderWithWikiLinks(text, options);
-    const heading = trimmed.match(/^(#{1,3})\s+(.*)$/);
+    const heading = trimmed.match(/^(#{1,6})\s+(.*)$/);
     if (heading) {
       const text = inline(heading[2]);
-      nodes.push(
-        heading[1].length === 1 ? (
-          <h1 key={idx} className="obs-h1">
-            {text}
-          </h1>
-        ) : heading[1].length === 2 ? (
-          <h2 key={idx} className="obs-h2">
-            {text}
-          </h2>
-        ) : (
-          <h3 key={idx} className="obs-h3">
-            {text}
-          </h3>
-        ),
-      );
+      nodes.push(createElement(`h${heading[1].length}`, { key: idx, className: `obs-h${heading[1].length}` }, text));
     } else if (/^> \[!(NOTE|WARNING|TIP)\]/.test(trimmed)) {
       const callout = trimmed.match(/^> \[!(NOTE|WARNING|TIP)\]\s*(.*)$/)!;
       nodes.push(
@@ -145,18 +134,23 @@ export const renderObsidianPreview = (
         </blockquote>,
       );
     else if (/^[-*]\s/.test(trimmed)) {
-      const items = [trimmed.slice(2)];
+      const items = [{ text: trimmed.slice(2), line: idx }];
       while (idx + 1 < lines.length && /^[-*]\s/.test(lines[idx + 1].trim()))
-        items.push(lines[++idx].trim().slice(2));
+        items.push({ text: lines[++idx].trim().slice(2), line: idx });
       nodes.push(
         <ul key={idx} className="obs-list">
-          {items.map((item, i) => (
-            <li key={i} className="obs-li">
-              {inline(item)}
-            </li>
-          ))}
+          {items.map((item, i) => {
+            const task = item.text.match(/^\[([ xX])\] (.*)$/);
+            return <li key={i} className={`obs-li ${task ? "notebook-task" : ""}`}>
+              {task ? <label><input type="checkbox" checked={task[1].toLowerCase() === "x"} disabled={!options.onTaskToggle} onChange={() => options.onTaskToggle?.(item.line)} /><span>{inline(task[2])}</span></label> : inline(item.text)}
+            </li>;
+          })}
         </ul>,
       );
+    } else if (/^\d+\.\s/.test(trimmed)) {
+      const start = Number.parseInt(trimmed), items = [trimmed.replace(/^\d+\.\s/, "")];
+      while (idx + 1 < lines.length && /^\d+\.\s/.test(lines[idx + 1].trim())) items.push(lines[++idx].trim().replace(/^\d+\.\s/, ""));
+      nodes.push(<ol key={idx} start={start} className="obs-list">{items.map((item, i) => <li key={i}>{inline(item)}</li>)}</ol>);
     } else if (!trimmed) nodes.push(<div key={idx} style={{ height: 8 }} />);
     else
       nodes.push(

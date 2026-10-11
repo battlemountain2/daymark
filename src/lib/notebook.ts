@@ -9,6 +9,9 @@ export type NotebookNote = {
   updatedAt: number;
   aliases?: string[];
   customTitle?: boolean;
+  restoredFrom?: string;
+  restoredAt?: number;
+  restoreFingerprint?: string;
 };
 export function noteTitle(content: string): string {
   const line =
@@ -32,6 +35,7 @@ export function editNotebookNote(
     title: current?.customTitle ? current.title : noteTitle(content),
     ...(current?.customTitle ? { customTitle: true } : {}),
     ...(current?.aliases ? { aliases: current.aliases } : {}),
+    ...(current?.restoredFrom ? { restoredFrom: current.restoredFrom, restoredAt: current.restoredAt, restoreFingerprint: current.restoreFingerprint } : {}),
     content,
     createdAt: current?.createdAt ?? now,
     updatedAt: now,

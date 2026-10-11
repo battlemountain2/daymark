@@ -1,0 +1,52 @@
+/* Notebook styles stay local to writing surfaces. */
+.notebook-workspace-title { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+.notebook-opening { padding:40px; color:var(--ink-2); }
+.notebook-workspace.personal-dashboard { display:block; height:100dvh; min-height:0; overflow:hidden; }
+.notebook-workspace .notebook-page { position:static; height:100%; background:transparent; backdrop-filter:none; animation:none; }
+.personal-dashboard .notebook-page .scratchpad-drawer { width:100%; max-width:none; border:0; box-shadow:none; animation:none; }
+.notebook-page .scratchpad-body-container { flex:1; min-height:0; }
+.personal-dashboard .notebook-page .scratchpad-sidebar { width:280px; flex-basis:280px; }
+.personal-dashboard .notebook-page .scratchpad-main-pane { overflow:auto; }
+.personal-dashboard .notebook-page .notebook-document-heading { padding:30px clamp(20px,4vw,64px) 18px; border:0; }
+.personal-dashboard .notebook-document-heading textarea { display:block; width:100%; min-width:0; font:400 30px/1.25 var(--font-display); background:transparent; color:var(--ink); border:0; padding:0 0 8px; border-radius:0; resize:none; overflow:hidden; }
+.personal-dashboard .notebook-page .notebook-document-heading textarea { font-size:clamp(30px,4vw,42px); }
+.personal-dashboard .notebook-page .scratchpad-editor-wrap { min-height:40dvh; flex:0 0 auto; overflow:visible; }
+.personal-dashboard .scratchpad-textarea { font:400 16px/1.8 var(--font-body); }
+.personal-dashboard .scratchpad-sidebar .sidebar-note-item { border:0; }
+.personal-dashboard .obsidian-preview-content { font:400 16px/1.8 var(--font-body); margin:0; }
+.personal-dashboard .obsidian-preview-content :is(h1,h2,h3,h4,h5,h6) { font-family:var(--font-display); font-weight:400; color:var(--ink); text-transform:none; letter-spacing:0; }
+.personal-dashboard .obsidian-preview-content h1 { font-size:30px; }
+.personal-dashboard .obsidian-preview-content h2 { font-size:25px; margin:22px 0 12px; }
+.personal-dashboard .obsidian-preview-content h3 { font-size:21px; }
+.personal-dashboard .notebook-task input { padding:0; }
+.notebook-task label { min-height:36px; }
+.personal-dashboard .notebook-page .scratchpad-textarea { padding:20px clamp(20px,4vw,64px) 40px; min-height:40dvh; overflow:hidden; }
+.personal-dashboard .notebook-page .scratchpad-editor-wrap:not(.split-view) .obsidian-preview-pane { padding:20px clamp(20px,4vw,64px) 40px; }
+.notebook-page .obsidian-preview-content { max-width:800px; }
+.notebook-format-toolbar { display:flex; gap:4px; flex-wrap:wrap; padding:8px 22px; flex-shrink:0; border-bottom:1px solid var(--line); }
+.personal-dashboard .notebook-format-toolbar button { border:0; padding:7px 9px; font-size:13px; color:var(--ink-2); min-height:36px; }
+.notebook-format-toolbar button:first-child { font-weight:600; }
+.notebook-format-toolbar button:nth-child(2) { font-style:italic; }
+.notebook-backup-tools { border-bottom:1px solid var(--line); flex-shrink:0; font:400 13px/1.5 var(--font-body); padding:10px 20px; max-height:40dvh; overflow:auto; }
+.notebook-backup-tools summary { cursor:pointer; width:fit-content; color:var(--ink-2); }
+.notebook-backup-content { max-width:780px; padding:8px 0; }
+.notebook-backup-content p { margin:8px 0 14px; color:var(--ink-2); }
+.notebook-backup-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.notebook-backup-actions input[hidden] { display:none; }
+.notebook-restore-preview { margin-top:18px; padding:14px 18px; border-radius:10px; background:var(--surface-2); overflow-wrap:anywhere; }
+.notebook-restore-preview button { margin:0 6px 6px 0; }
+.notebook-open-page { padding:8px; font-size:13px; }
+.notebook-task { list-style:none; margin-left:-22px; }
+.notebook-task label { display:flex; align-items:baseline; gap:10px; }
+.personal-dashboard .notebook-task input { flex-shrink:0; width:17px; height:17px; cursor:pointer; }
+.notebook-task input:checked + span { text-decoration:line-through; color:var(--ink-2); }
+.notebook-workspace .scratchpad-footer { margin-top:auto; }
+@media (max-width:600px) {
+  .personal-dashboard .notebook-page .scratchpad-sidebar { width:100%; flex-basis:100%; }
+  .personal-dashboard .notebook-page .notebook-document-heading { padding:20px 16px 12px; }
+  .personal-dashboard .notebook-page .scratchpad-textarea,.personal-dashboard .notebook-page .scratchpad-editor-wrap:not(.split-view) .obsidian-preview-pane { padding:20px 16px; }
+  .notebook-format-toolbar { padding:6px 10px; gap:0; }
+  .personal-dashboard .notebook-format-toolbar button { min-height:40px; }
+  .notebook-backup-tools { padding:10px 12px; }
+  .notebook-workspace .scratchpad-footer { position:static; }
+}

@@ -6,12 +6,13 @@ export function usePersonalRecords<T>(key: string) {
   const revision = useCloudRevision();
   const [records, setRecords] = useState<Record<string, T>>({});
   const [error, setError] = useState("");
+  const [loaded, setLoaded] = useState(false);
   useEffect(() => {
     try {
       setRecords(JSON.parse(cloudStorage.getItem(key) || "{}"));
     } catch {
       setError("Could not read saved items.");
-    }
+    } finally { setLoaded(true); }
   }, [key, revision]);
   const update = useCallback(
     (id: string, change: (current: T | undefined) => T | null) => {
@@ -57,5 +58,5 @@ export function usePersonalRecords<T>(key: string) {
     },
     [key],
   );
-  return { records, write, update, updateAll, error };
+  return { records, write, update, updateAll, error, loaded };
 }

@@ -10,7 +10,8 @@ export default function DeskSidebar({space,layout,inert,desk,onSpace,onPanel,onD
   <div className="desk-pins"><span className="mono sub">Pinned</span>{pins.map(p=>onPanel?<button key={p.id} onClick={()=>onPanel(p.id)}>{p.title}</button>:<Link key={p.id} href={`/?space=${space}#${p.id}`}>{p.title}</Link>)}{!pins.length&&onCustomize&&<button onClick={onCustomize}>Choose shortcuts</button>}</div>
   <div className="desk-rail-bottom">
    {onDesk?<button aria-pressed={desk} onClick={onDesk}>Desk mode</button>:<Link href={`/?space=${space}&desk=1`}>Desk mode</Link>}
-   {onNotebook?<button onClick={onNotebook}>Notebook</button>:<Link href={`/?space=${space}&notebook=1`}>Notebook</Link>}
+   <Link href="/notebook">Notebook</Link>
+   {onNotebook&&<button onClick={onNotebook}>Quick note</button>}
    {onCustomize?<button onClick={onCustomize}>Customize</button>:<Link href={`/?space=${space}&customize=1`}>Customize</Link>}
   </div>
  </aside>;
