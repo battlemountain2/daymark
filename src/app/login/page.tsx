@@ -11,7 +11,7 @@ export default function Login() {
     e.preventDefault(); setBusy(true); setError("");
     try {
       const res = await fetch("/api/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ passphrase: pass }) });
-      if (res.ok) { router.replace("/"); router.refresh(); }
+      if (res.ok) { router.replace(new URLSearchParams(window.location.search).get("return") === "connections" ? "/connections" : "/"); router.refresh(); }
       else setError(res.status === 429 ? "Too many attempts. Give it a moment, then try again." : "That password didn’t match. Try again.");
     } catch { setError("Couldn’t reach Daymark. Check your connection and try again."); }
     finally { setBusy(false); }

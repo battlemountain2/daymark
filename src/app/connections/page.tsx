@@ -5,7 +5,7 @@ import "./connections.css";
 
 export const dynamic = "force-dynamic";
 export default async function Page({ searchParams }: { searchParams: Promise<{ youtube?: string }> }) {
-  if (!(await isSignedIn())) redirect("/login");
+  if (!(await isSignedIn())) redirect("/login?return=connections");
   const params = await searchParams;
   return <ConnectionsPage result={params.youtube?.slice(0, 40)} />;
 }

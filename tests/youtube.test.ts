@@ -12,6 +12,20 @@ import { connectionChecks, recordConnectionCheck } from "../src/lib/connection-h
 import { SYNC_KEYS, splitRecords, joinRecords } from "../src/lib/sync-contract";
 
 const id = `UC${"a".repeat(22)}`, other = `UC${"b".repeat(22)}`;
+test("OAuth starts on the registered origin before reading a session or setting state", async () => {
+  const previous = process.env.DAYMARK_URL;
+  delete process.env.DAYMARK_URL;
+  try {
+    const { GET } = await import("../src/app/api/youtube/connect/route");
+    const result = await GET(new Request("https://daymark-bry8.vercel.app/api/youtube/connect"));
+    assert.equal(result.status, 302);
+    assert.equal(result.headers.get("location"), "https://hey-brayan.vercel.app/connections?youtube=origin");
+    assert.equal(result.headers.get("set-cookie"), null);
+  } finally {
+    if (previous === undefined) delete process.env.DAYMARK_URL;
+    else process.env.DAYMARK_URL = previous;
+  }
+});
 test("YouTube validates channel selection, provider artwork, duration and separate callback", () => {
   assert.deepEqual(selectedChannels([id,id]), [id]);
   assert.throws(() => selectedChannels(["https://untrusted.test"]));

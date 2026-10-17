@@ -2,6 +2,7 @@ export const YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube.readonly";
 export function youtubeConnectionMessage(result: string) {
   const messages: Record<string, string> = {
     connected: "YouTube connected. Choose the channels you want in Media.",
+    origin: "Continue here to connect YouTube on the address registered for Google's callback.",
     setup: "Add Google OAuth credentials, enable YouTube Data API v3, and register the callback shown below.",
     expired: "The connection expired. Start again and finish within 10 minutes.",
     state_missing: "Browser verification was lost. Start a new YouTube connection.",
