@@ -13,7 +13,8 @@ export type PanelId =
   | "releases"
   | "news"
   | "projects"
-  | "readings";
+  | "readings"
+  | "youtube";
 export type PanelPreference = {
   hidden: boolean;
   collapsed: boolean;
@@ -45,6 +46,7 @@ export const PANELS: {
   },
   { id: "shuffle", title: "Daily shuffle", tabs: ["media"] },
   { id: "entertainment", title: "Media room", tabs: ["media"] },
+  { id: "youtube", title: "From your channels", tabs: ["media"] },
   {
     id: "releases",
     title: "Release radar",

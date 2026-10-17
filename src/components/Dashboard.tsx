@@ -6,7 +6,6 @@ import DailyShuffle from "@/components/DailyShuffle";
 import EntertainmentPanel from "@/components/EntertainmentPanel";
 import GmailPanel from "@/components/GmailPanel";
 import ReleaseRadar from "@/components/ReleaseRadar";
-import AgentStatus from "@/components/AgentStatus";
 import DashboardPanel from "@/components/DashboardPanel";
 import { useDeskTheme } from "@/lib/use-desk-theme";
 import CustomizeDashboard from "@/components/CustomizeDashboard";
@@ -15,6 +14,7 @@ import DeskSidebar from "@/components/DeskSidebar";
 import { cohesiveLayout } from "@/lib/dashboard-layout";
 import dynamic from "next/dynamic";
 const ReadingDesk = dynamic(() => import("@/components/ReadingDesk"));
+const YouTubePanel = dynamic(() => import("@/components/YouTubePanel"));
 import DeskMode from "@/components/DeskMode";
 import DayPlan from "@/components/DayPlan";
 import {useFocusSession} from "@/lib/use-focus-session";
@@ -738,6 +738,7 @@ export default function Dashboard({
     </section>
   );
   const panels: Record<PanelId, React.ReactNode> = {
+    youtube: <YouTubePanel />,
     schedule,
     gmail: <GmailPanel onCapture={setCapture} />,
     weather: (
@@ -907,10 +908,7 @@ export default function Dashboard({
         {!desk && focus.session && (focus.session.deadline !== null || focus.session.completedAt !== null || focus.session.remaining < focus.session.duration) && <button type="button" className="focus-resume" onClick={() => {focus.actions.foreground(true);setDesk(true);}}>{focus.session.completedAt !== null ? "Focus session complete" : `Resume timer · ${String(Math.floor(focus.session.remaining/60)).padStart(2,"0")}:${String(focus.session.remaining%60).padStart(2,"0")}`}</button>}
         {!desk && (
           <>
-            <details className="desk-connections">
-              <summary>Connections & sync</summary>
-              <AgentStatus />
-            </details>
+            <div className="desk-connections"><Link href="/connections">Connections &amp; sync ↗</Link></div>
             <PushToggle />
           </>
         )}

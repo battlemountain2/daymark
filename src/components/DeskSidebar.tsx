@@ -11,6 +11,7 @@ export default function DeskSidebar({space,layout,inert,desk,onSpace,onPanel,onD
   <div className="desk-rail-bottom">
    {onDesk?<button aria-pressed={desk} onClick={onDesk}>Desk mode</button>:<Link href={`/?space=${space}&desk=1`}>Desk mode</Link>}
    <Link href="/notebook">Notebook</Link>
+   <Link href="/connections">Connections</Link>
    {onNotebook&&<button onClick={onNotebook}>Quick note</button>}
    {onCustomize?<button onClick={onCustomize}>Customize</button>:<Link href={`/?space=${space}&customize=1`}>Customize</Link>}
   </div>

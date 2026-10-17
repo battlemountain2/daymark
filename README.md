@@ -14,6 +14,8 @@ Runs on Vercel, with a protected daily Release Radar refresh. No machine of your
 
 The personal workspace includes Gmail with Daymark-only dismissals, live listening and media collections, private photos and PDF readings, persistent highlights, autosaved notes, and a Zen focus timer. Layouts are customizable per space, with one shared palette. See [PERSONAL_FEATURES.md](PERSONAL_FEATURES.md) for integration setup and the [refinement review](docs/DAYMARK_REFINEMENT_REVIEW.md) for verification details.
 
+Connections now brings service status, recent successful checks, and agent activity into one page. YouTube has separate read-only consent, selected-channel uploads in Media, and a synced saved-video queue. See [YouTube and Connections setup](docs/YOUTUBE_AND_CONNECTIONS.md) for Google API configuration and the callback URL.
+
 ---
 
 ## Getting it running
